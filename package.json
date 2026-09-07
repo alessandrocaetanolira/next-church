@@ -14,6 +14,7 @@
     "db:tenant:migrate:dev": "prisma migrate dev --schema=prisma/tenant/schema.prisma",
     "db:global:migrate:deploy": "prisma migrate deploy --schema=prisma/global/schema.prisma",
     "db:tenant:migrate:deploy": "prisma migrate deploy --schema=prisma/tenant/schema.prisma",
+    "db:tenant:migrate:all": "tsx prisma/scripts/migrate-tenants.ts",
     "db:baseline": "tsx prisma/scripts/baseline-databases.ts",
     "db:promote-baseline": "tsx prisma/scripts/promote-baseline.ts",
     "db:seed:tenant-fixtures": "tsx prisma/scripts/seed-tenant-fixtures.ts",

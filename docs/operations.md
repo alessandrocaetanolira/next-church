@@ -14,6 +14,16 @@ DATABASE_URL="file:/caminho/absoluto/church_<databaseKey>.db" npm run db:tenant:
 
 `migrate dev` fica reservado para criar migrations em bancos de referencia. `db push` nao deve atualizar bancos reais.
 
+Migrations de todos os tenants devem usar o orquestrador, que resolve cada arquivo pelo `databaseKey`, faz preflight e cria backup antes da alteracao:
+
+```bash
+npm run db:tenant:migrate:all -- --dry-run
+npm run db:tenant:migrate:all
+npm run db:tenant:migrate:all -- --tenant ig2 --backup-dir /tmp/church-hub-migration-backup
+```
+
+Use `--output /caminho/relatorio.json` para persistir o relatorio. Uma falha em um tenant nao interrompe os demais, mas encerra o comando com codigo diferente de zero.
+
 Seed local principal:
 
 ```text

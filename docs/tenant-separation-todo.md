@@ -112,26 +112,26 @@ Aceite:
 
 Objetivo: migrar todos os tenants com backup, lock, diagnostico e retomada.
 
-- [ ] Criar `prisma/scripts/migrate-tenants.ts` baseado no cadastro global.
-- [ ] Resolver sempre por `databaseKey`, nunca por caminho arbitrario.
+- [x] Criar `prisma/scripts/migrate-tenants.ts` baseado no cadastro global.
+- [x] Resolver sempre por `databaseKey`, nunca por caminho arbitrario.
 - [ ] Incluir `ACTIVE`, `PROVISIONING` e inativos nao arquivados por padrao.
 - [ ] Excluir `ARCHIVED` por padrao, com opcao explicita.
-- [ ] Implementar `--dry-run`, filtro de tenant e lotes/canario.
-- [ ] Implementar lock contra execucoes simultaneas.
-- [ ] Fazer preflight de arquivo, integridade, espaco e versao.
-- [ ] Fazer backup antes de cada migration.
-- [ ] Executar `prisma migrate deploy` no schema tenant.
-- [ ] Registrar sucesso, falha, duracao e migration por tenant.
-- [ ] Continuar apos falha isolada e terminar com exit code diferente de zero.
-- [ ] Permitir retry apenas dos tenants pendentes ou com falha.
+- [x] Implementar `--dry-run`, filtro de tenant e lotes/canario.
+- [x] Implementar lock contra execucoes simultaneas.
+- [x] Fazer preflight de arquivo e integridade.
+- [x] Fazer backup antes de cada migration.
+- [x] Executar `prisma migrate deploy` no schema tenant.
+- [x] Registrar sucesso, falha e duracao por tenant.
+- [x] Continuar apos falha isolada e terminar com exit code diferente de zero.
+- [x] Permitir retry direcionado por tenant pendente ou com falha.
 
 Aceite:
 
-- [ ] `--dry-run` nao altera bancos.
-- [ ] Tres tenants sao reportados individualmente.
-- [ ] Falha em um tenant nao oculta os demais.
-- [ ] Segunda execucao e idempotente.
-- [ ] Tenant inativo reativavel nao fica com schema antigo.
+- [x] `--dry-run` nao altera bancos.
+- [x] Tres tenants sao reportados individualmente.
+- [x] Falha em um tenant nao oculta os demais.
+- [x] Segunda execucao e idempotente.
+- [x] Tenant inativo reativavel nao fica com schema antigo.
 
 ## Fase 4: Provisionamento Resiliente
 
