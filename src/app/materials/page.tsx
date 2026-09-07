@@ -5,14 +5,14 @@ import { useUIStore } from '@/features/ui/store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/DataTable';
-import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus, Package, AlertTriangle, Edit, Search, Trash2 } from 'lucide-react';
+import { Plus, Minus, AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ConfirmDeleteDialog, Notice, PageHeader, PageShell, SearchField } from '@/components/common';
 
 type MaterialItem = {
   id: string;
@@ -157,12 +157,21 @@ export default function MaterialsPage() {
   ];
 
   return (
-    <div className="p-4 space-y-4 max-w-5xl mx-auto">
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar materiais..." value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" />
-        </div>
+    <PageShell>
+      <PageHeader
+        title="Materiais"
+        description="Controle itens, quantidades mínimas e reposições por categoria."
+        actions={
+          <SearchField
+            placeholder="Buscar materiais..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            containerClassName="w-full sm:w-80"
+          />
+        }
+      />
+
+      <div className="flex justify-end">
         <Button onClick={() => openDialog()}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Material
@@ -170,13 +179,12 @@ export default function MaterialsPage() {
       </div>
 
       {materials.some((material) => material.quantity <= material.minQuantity) ? (
-        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-destructive" />
-          <div>
-            <p className="font-medium text-destructive">Estoque baixo!</p>
-            <p className="text-sm text-muted-foreground">{materials.filter((material) => material.quantity <= material.minQuantity).length} item(s) precisam de reposição</p>
-          </div>
-        </div>
+        <Notice
+          variant="destructive"
+          icon={<AlertTriangle className="h-5 w-5" />}
+          title="Estoque baixo"
+          description={`${materials.filter((material) => material.quantity <= material.minQuantity).length} item(s) precisam de reposição.`}
+        />
       ) : null}
 
       <DataTable
@@ -232,14 +240,19 @@ export default function MaterialsPage() {
             <Button className="w-full" onClick={saveMaterial}>
               {editingMaterial ? 'Salvar Alterações' : 'Criar Material'}
             </Button>
-            {deleteId ? (
-              <Button variant="destructive" className="w-full" onClick={() => void handleDelete()}>
-                Excluir
-              </Button>
-            ) : null}
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(deleteId)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteId(null);
+        }}
+        onConfirm={() => void handleDelete()}
+        title="Excluir material"
+        description="O material será removido da listagem. Esta ação não pode ser desfeita."
+      />
+    </PageShell>
   );
 }

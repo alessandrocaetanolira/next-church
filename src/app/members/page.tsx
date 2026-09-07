@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/DataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from 'sonner';
-import { Eye, Plus, QrCode, Search } from 'lucide-react';
+import { Eye, Plus, QrCode } from 'lucide-react';
 import { MemberForm } from '@/components/forms/MemberForm';
+import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -118,15 +118,12 @@ export default function MembersPage() {
   ];
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Lista de Membros</h2>
-          <p className="text-sm text-muted-foreground">
-            A tela principal fica focada na busca. Edição, permissões e exclusão ficam no detalhe do membro.
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <PageShell>
+      <PageHeader
+        title="Lista de Membros"
+        description="A tela principal fica focada na busca. Edição, permissões e exclusão ficam no detalhe do membro."
+        actions={
+          <>
           <Button variant="outline" onClick={() => setInviteDrawerOpen(true)}>
             <QrCode className="mr-2 h-4 w-4" />
             Convidar
@@ -135,21 +132,18 @@ export default function MembersPage() {
             <Plus className="mr-2 h-4 w-4" />
             Novo Membro
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, email ou telefone..."
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="pl-9"
-        />
-      </div>
+      <SearchField
+        placeholder="Buscar por nome, email ou telefone..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
 
       {loading ? (
-        <p>Carregando...</p>
+        <LoadingState />
       ) : (
         <>
           <div className="grid gap-3 lg:hidden">
@@ -178,11 +172,7 @@ export default function MembersPage() {
               </Card>
             ))}
             {filteredMembers.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum membro encontrado.
-                </CardContent>
-              </Card>
+              <EmptyState title="Nenhum membro encontrado." />
             ) : null}
           </div>
 
@@ -229,6 +219,6 @@ export default function MembersPage() {
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </PageShell>
   );
 }

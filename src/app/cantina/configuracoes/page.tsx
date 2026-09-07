@@ -5,12 +5,14 @@
  */
 
 import { LoyaltySettings } from "@/features/settings/components/LoyaltySettings";
+import { PageHeader } from "@/components/common/PageHeader";
+import { PageShell } from "@/components/common/PageShell";
 
 export default function ConfiguracoesCantinaPage() {
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Configurações da Cantina</h2>
+    <PageShell>
+      <PageHeader title="Configurações da Cantina" />
       <LoyaltySettings />
-    </div>
+    </PageShell>
   );
 }

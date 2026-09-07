@@ -1,0 +1,57 @@
+# Architecture
+
+## Camadas
+
+- `src/app`: rotas App Router, pages e route handlers.
+- `src/components/ui`: primitives genericos de UI baseados em shadcn/Radix.
+- `src/components/layout`: shell global, sidebar, header e bottom navigation.
+- `src/components/providers`: providers globais de auth, PWA, settings e notificacoes.
+- `src/components`: componentes compartilhados da aplicacao.
+- `src/features/<module>`: componentes, hooks, stores e servicos por dominio.
+- `src/lib`: infraestrutura compartilhada, banco, permissoes, notificacoes e utilitarios.
+- `src/test`: testes automatizados.
+- `prisma`: schema, migrations e seeds.
+
+## Regra Para UI
+
+Componentes de interface devem ser reutilizados por padrao:
+
+- Use `src/components/ui` para primitives: `Button`, `Card`, `Input`, `Select`, `Dialog`, `Drawer`, `Sheet`, `Badge`, `Table`, `Tabs`, `Switch`.
+- Crie componentes compostos em `src/components/common` quando um padrao se repetir entre modulos.
+- Crie componentes especificos em `src/features/<module>/components` quando o componente depender do dominio.
+- Evite HTML cru para controles comuns em telas de aplicacao: prefira `Button`, `Input`, `Textarea`, `Select`, `Table` e componentes derivados.
+
+## Multi-Tenancy
+
+O app usa um banco global e bancos por igreja:
+
+- `global.db`: igrejas e usuarios globais.
+- `church_<slug>.db`: dados isolados da igreja.
+
+O login recebe `churchSlug`, valida a igreja no banco global, autentica o usuario global e busca o perfil no banco do tenant. O `tenantId` entra na sessao e as APIs usam esse valor para escolher o banco correto.
+
+## Autorizacao
+
+O middleware protege rotas de pagina e redireciona acessos sem sessao. As APIs tambem precisam validar sessao e permissao internamente, pois o middleware libera rotas `/api`.
+
+Perfis principais:
+
+- `ADMIN`: acesso amplo.
+- `PASTOR`: gestao ministerial e areas administrativas relevantes.
+- `LEADER`: acesso por permissoes e, quando aplicavel, por escopo de grupo.
+- `MEMBER`: area pessoal, feed, Biblia, quiz, jogos e grupos.
+
+## Offline
+
+Dexie armazena dados locais e uma fila de sincronizacao. A estrategia atual e incremental:
+
+- Pull: buscar registros alterados depois de `lastSync`.
+- Push: enviar outbox local para APIs do tenant.
+- Soft delete: usar `deletedAt`.
+- Estoque e vendas devem ser tratados com cuidado para evitar sobrescrita indevida.
+
+## Tempo Real
+
+SSE e usado para eventos com o app aberto. O broker fica em `src/lib/server/sse-broker.ts` e o endpoint principal e `/api/events`.
+
+Web Push ainda deve ser tratado como evolucao futura, nao como funcionalidade plenamente consolidada.
