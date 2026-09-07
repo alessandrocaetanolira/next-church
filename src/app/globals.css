@@ -1,26 +1,361 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Default - Clean Light Theme */
+    --background: 0 0% 98%;
+    --foreground: 220 13% 18%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 18%;
+
+    /* Primary - Soft Blue */
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 221 83% 96%;
+    --primary-dark: 221 83% 43%;
+
+    /* Secondary */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 18%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Accent */
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 13% 18%;
+
+    /* Success */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 76% 95%;
+
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 95%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-light: 0 72% 96%;
+
+    /* Info */
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 199 89% 95%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.625rem;
+
+    /* Shadows - Lighter */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+    --game-success: 142 60% 40%;
+    --game-error: 0 72% 51%;
+    --game-highlight: 42 85% 52%;
+    --game-surface: 220 14% 96%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 13% 18%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 220 13% 18%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  :root[data-theme="amber"] {
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 38 92% 96%;
+    --primary-dark: 38 92% 40%;
+    --ring: 38 92% 50%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  :root[data-theme="emerald"] {
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 160 84% 95%;
+    --primary-dark: 160 84% 30%;
+    --ring: 160 84% 39%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-ring: 160 84% 39%;
+  }
+
+  :root[data-theme="violet"] {
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 263 70% 96%;
+    --primary-dark: 263 70% 40%;
+    --ring: 263 70% 50%;
+    --sidebar-primary: 263 70% 50%;
+    --sidebar-ring: 263 70% 50%;
+  }
+
+  :root[data-theme="rose"] {
+    --primary: 346 77% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 346 77% 96%;
+    --primary-dark: 346 77% 40%;
+    --ring: 346 77% 50%;
+    --sidebar-primary: 346 77% 50%;
+    --sidebar-ring: 346 77% 50%;
+  }
+
+  :root[data-theme="slate"] {
+    --primary: 215 16% 47%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 215 16% 95%;
+    --primary-dark: 215 16% 35%;
+    --ring: 215 16% 47%;
+    --sidebar-primary: 215 16% 47%;
+    --sidebar-ring: 215 16% 47%;
+  }
+
+  /* Dark Mode Base */
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --card: 224 71% 6%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 224 71% 6%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 221 83% 15%;
+    --primary-dark: 221 83% 63%;
+
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 222 47% 11%;
+    --accent-foreground: 213 31% 91%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-light: 142 71% 12%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 12%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 213 31% 91%;
+    --destructive-light: 0 63% 12%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    --info-light: 199 89% 12%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 221 83% 53%;
+
+    --sidebar-background: 224 71% 6%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 47% 11%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 216 34% 17%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  .dark[data-theme="amber"] {
+    --primary: 38 92% 50%;
+    --primary-foreground: 0 0% 0%;
+    --primary-light: 38 50% 15%;
+    --primary-dark: 38 92% 60%;
+    --ring: 38 92% 50%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark[data-theme="emerald"] {
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 160 50% 12%;
+    --primary-dark: 160 84% 50%;
+    --ring: 160 84% 39%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-ring: 160 84% 39%;
+  }
+
+  .dark[data-theme="violet"] {
+    --primary: 263 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 263 50% 15%;
+    --primary-dark: 263 70% 70%;
+    --ring: 263 70% 60%;
+    --sidebar-primary: 263 70% 60%;
+    --sidebar-ring: 263 70% 60%;
+  }
+
+  .dark[data-theme="rose"] {
+    --primary: 346 77% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-light: 346 50% 15%;
+    --primary-dark: 346 77% 70%;
+    --ring: 346 77% 60%;
+    --sidebar-primary: 346 77% 60%;
+    --sidebar-ring: 346 77% 60%;
+  }
+
+  .dark[data-theme="slate"] {
+    --primary: 215 20% 65%;
+    --primary-foreground: 0 0% 0%;
+    --primary-light: 215 16% 15%;
+    --primary-dark: 215 20% 75%;
+    --ring: 215 20% 65%;
+    --sidebar-primary: 215 20% 65%;
+    --sidebar-ring: 215 20% 65%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  /* * {
+    @apply border-border;
+  } */
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (max-width: 767px) {
+    input,
+    textarea,
+    select,
+    [role="combobox"] {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer utilities {
+  .text-game-success {
+    color: hsl(var(--game-success));
+  }
+
+  .text-game-error {
+    color: hsl(var(--game-error));
+  }
+
+  .bg-game-highlight {
+    background-color: hsl(var(--game-highlight));
+  }
+
+  .bg-game-surface {
+    background-color: hsl(var(--game-surface));
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-dark)) 100%);
+  }
+
+  /* Safe area para mobile */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .min-h-screen-dvh {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+@layer components {
+  .game-card {
+    @apply rounded-xl border border-border bg-card p-5 shadow-md transition-all duration-300;
+  }
+
+  .game-card:hover {
+    @apply scale-[1.02] shadow-lg;
+  }
+
+  .game-card:active {
+    @apply scale-[0.98];
+  }
+
+  .game-title {
+    @apply text-2xl font-bold text-foreground;
+    font-family: 'Cinzel', serif;
+  }
+
+  .btn-game {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all duration-200;
+  }
+
+  .btn-game:hover {
+    @apply opacity-90 shadow-md;
+  }
+
+  .btn-game:active {
+    @apply scale-95;
+  }
+
+  .font-display {
+    font-family: 'Cinzel', serif;
+  }
+
+  .letter-cell {
+    @apply flex select-none items-center justify-center rounded-md border font-bold uppercase transition-colors duration-150;
+    width: min(8.2vw, 2.5rem);
+    height: min(8.2vw, 2.5rem);
+    font-size: min(3.6vw, 1.125rem);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: none;
+  }
+
+  .word-found {
+    background-color: hsl(var(--primary) / 0.22);
+  }
+
+  .word-selecting {
+    background-color: hsl(var(--primary) / 0.14);
+  }
 }

@@ -1,0 +1,159 @@
+/**
+ * features/canteen/components/CanteenContainer.tsx
+ * 
+ * Contém a navegação e o conteúdo das abas da Cantina.
+ * Fiel ao layout original usando Tabs do shadcn/ui.
+ */
+
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { PDV } from './PDV';
+import { PreparoView } from './PreparoView';
+import { SalesHistory } from './SalesHistory';
+import { ProductsManager } from './ProductsManager';
+import { MemberOrdersView } from './MemberOrdersView';
+import { ShoppingCart, ChefHat, Package, Receipt, BellPlus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { db } from '@/lib/db';
+import { cn } from '@/lib/utils';
+import { useNotificationCenter } from '@/hooks/use-notification-center';
+import { syncCanteenSalesFromServer } from '@/features/canteen/lib/sync-sales';
+import { syncCanteenMembersFromServer } from '@/features/canteen/lib/sync-members';
+
+const VALID_TABS = ['pdv', 'orders', 'prep', 'products', 'sales'] as const;
+type CanteenTab = (typeof VALID_TABS)[number];
+
+export function CanteenContainer() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { notifications } = useNotificationCenter();
+  const tabFromUrl = searchParams.get('tab');
+  const initialTab = (VALID_TABS.includes((tabFromUrl ?? '') as CanteenTab) ? tabFromUrl : 'pdv') as CanteenTab;
+  const [activeTab, setActiveTab] = useState<CanteenTab>(initialTab);
+  const sales = useLiveQuery(() => db.sales.toArray(), []) ?? [];
+  const seenNotificationIdsRef = useRef<Set<string>>(new Set());
+  const syncingRef = useRef(false);
+  const pendingOrders = sales.filter((sale) => sale.paymentMethod === 'pending').length;
+  const preparingOrders = sales.filter(
+    (sale) =>
+      sale.paymentMethod !== 'pending' &&
+      sale.paymentMethod !== 'cancelled' &&
+      sale.orderStatus === 'preparing'
+  ).length;
+  const queryString = useMemo(() => searchParams.toString(), [searchParams]);
+
+  useEffect(() => {
+    const nextTab = VALID_TABS.includes((tabFromUrl ?? '') as CanteenTab)
+      ? (tabFromUrl as CanteenTab)
+      : 'pdv';
+
+    setActiveTab((current) => (current === nextTab ? current : nextTab));
+  }, [tabFromUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshSales = async () => {
+      if (syncingRef.current) return;
+      syncingRef.current = true;
+
+      try {
+        const [syncedSales, syncedMembers] = await Promise.all([
+          syncCanteenSalesFromServer(),
+          syncCanteenMembersFromServer(),
+        ]);
+        console.info('[canteen-fiado] refresh canteen state', {
+          sales: syncedSales.length,
+          members: syncedMembers.length,
+        });
+      } catch {
+        // Mantém o estado atual; a próxima notificação ou sync tentará novamente.
+      } finally {
+        if (!cancelled) {
+          syncingRef.current = false;
+        }
+      }
+    };
+
+    const nextIds = new Set(seenNotificationIdsRef.current);
+    const hasNewCanteenEvent = notifications.some((notification) => {
+      const isNew = !nextIds.has(notification.id);
+      nextIds.add(notification.id);
+      return isNew && notification.type.startsWith('canteen-order-');
+    });
+
+    seenNotificationIdsRef.current = nextIds;
+
+    if (hasNewCanteenEvent) {
+      void refreshSales();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [notifications]);
+
+  const handleTabChange = (value: string) => {
+    if (!VALID_TABS.includes(value as CanteenTab)) return;
+
+    const nextTab = value as CanteenTab;
+    setActiveTab(nextTab);
+
+    const params = new URLSearchParams(queryString);
+    if (nextTab === 'pdv') {
+      params.delete('tab');
+    } else {
+      params.set('tab', nextTab);
+    }
+
+    const nextQuery = params.toString();
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+  };
+
+  return (
+    <Tabs defaultValue="pdv" value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+      <TabsList className="grid h-auto w-full grid-flow-col auto-cols-max gap-1 overflow-x-auto p-1 md:grid-cols-5 md:auto-cols-fr md:overflow-visible">
+        <TabsTrigger value="pdv" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          <ShoppingCart className="w-4 h-4" />
+          <span className="hidden sm:inline">PDV</span>
+        </TabsTrigger>
+        <TabsTrigger value="orders" className="relative min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          <BellPlus className={cn('w-4 h-4', pendingOrders > 0 && 'text-primary')} />
+          <span className="hidden sm:inline">Pedidos</span>
+          {pendingOrders > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              {pendingOrders}
+            </span>
+          ) : null}
+        </TabsTrigger>
+        <TabsTrigger value="prep" className="relative min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          <ChefHat className={cn('w-4 h-4', preparingOrders > 0 && 'animate-pulse text-amber-500')} />
+          <span className="hidden sm:inline">Preparo</span>
+          {preparingOrders > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+              {preparingOrders}
+            </span>
+          ) : null}
+        </TabsTrigger>
+        <TabsTrigger value="products" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          <Package className="w-4 h-4" />
+          <span className="hidden sm:inline">Produtos</span>
+        </TabsTrigger>
+        <TabsTrigger value="sales" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          <Receipt className="w-4 h-4" />
+          <span className="hidden sm:inline">Vendas</span>
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="pdv" className="mt-0"><PDV /></TabsContent>
+      <TabsContent value="orders" className="mt-0"><MemberOrdersView /></TabsContent>
+      <TabsContent value="prep" className="mt-0"><PreparoView /></TabsContent>
+      <TabsContent value="sales" className="mt-0"><SalesHistory /></TabsContent>
+      <TabsContent value="products" className="mt-0"><ProductsManager /></TabsContent>
+    </Tabs>
+  );
+}
