@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../src/generated/prisma-tenant';
 import { generateId } from '@/lib/id';
 import { parseJsonField } from '@/lib/groups';
 

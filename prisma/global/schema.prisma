@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../src/generated/prisma-global"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Church {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  databaseKey  String?  @unique
+  name         String
+  logoUrl      String?
+  themeVariant String?  @default("default")
+  themeMode    String?  @default("light")
+  plan         String   @default("FREE")
+  status       String   @default("ACTIVE")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+}

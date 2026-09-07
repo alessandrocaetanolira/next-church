@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { getGlobalClient, getTenantClient } from '@/lib/prisma-factory';
+import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 
 export async function PATCH(
@@ -16,8 +16,8 @@ export async function PATCH(
 
   const { action } = await request.json();
   const { id } = await params;
-  const tenantSlug = session.user.tenantId;
-  const tenantPrisma = getTenantClient(tenantSlug);
+  const tenantDatabaseKey = session.user.tenantId;
+  const tenantPrisma = getTenantClient(tenantDatabaseKey);
   await ensureTenantSchemaExtensions(tenantPrisma);
 
   const members = await tenantPrisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
@@ -57,33 +57,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'Cadastro sem senha válida para aprovação.' }, { status: 400 });
   }
 
-  const globalPrisma = getGlobalClient();
-  const church = await globalPrisma.church.findUnique({
-    where: { slug: tenantSlug },
-  });
-
-  if (!church) {
-    return NextResponse.json({ error: 'Igreja não encontrada no banco global.' }, { status: 404 });
-  }
-
-  const existingGlobalUser = await globalPrisma.globalUser.findUnique({
-    where: { email: String(member.email) },
-  });
-
-  if (existingGlobalUser && existingGlobalUser.churchId !== church.id) {
-    return NextResponse.json({ error: 'Este email já está vinculado a outra igreja.' }, { status: 409 });
-  }
-
-  if (!existingGlobalUser) {
-    await globalPrisma.globalUser.create({
-      data: {
-        email: String(member.email),
-        password: passwordHash,
-        churchId: church.id,
-      },
-    });
-  }
-
   const existingTenantUser = await tenantPrisma.user.findUnique({
     where: { email: String(member.email) },
   });
@@ -93,6 +66,7 @@ export async function PATCH(
       data: {
         name: String(member.name),
         email: String(member.email),
+        passwordHash,
         role: 'MEMBER',
         permissions: '',
         linkedMemberId: String(member.id),

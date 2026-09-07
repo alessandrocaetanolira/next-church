@@ -5,59 +5,93 @@
  * Gerencia o isolamento de dados por Tenant (Igreja).
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient as GlobalPrismaClient } from '../../src/generated/prisma-global';
+import { PrismaClient as TenantPrismaClient } from '../../src/generated/prisma-tenant';
 import path from 'path';
 import fs from 'fs';
 
 // Cache de clientes Prisma para evitar múltiplas instâncias por tenant
-const clients: Record<string, PrismaClient> = {};
+const globalClients: Record<string, GlobalPrismaClient> = {};
+const tenantClients: Record<string, TenantPrismaClient> = {};
+
+export class TenantDatabaseNotFoundError extends Error {
+  constructor(public readonly tenantId: string, public readonly dbPath: string) {
+    super(`Banco do tenant não encontrado: ${tenantId}`);
+    this.name = 'TenantDatabaseNotFoundError';
+  }
+}
+
+export class TenantDatabaseInvalidError extends Error {
+  constructor(public readonly tenantId: string, public readonly dbPath: string) {
+    super(`Banco do tenant inválido ou vazio: ${tenantId}`);
+    this.name = 'TenantDatabaseInvalidError';
+  }
+}
+
+const TENANT_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+export const getDatabaseDirectory = (directory?: string) =>
+  path.resolve(directory ?? process.env.CHURCH_DATABASE_DIR ?? path.join(process.cwd(), 'prisma/databases'));
+
+const assertSafeTenantId = (tenantId: string) => {
+  if (!TENANT_KEY_PATTERN.test(tenantId)) {
+    throw new Error('Identificador de tenant inválido.');
+  }
+};
+
+const assertSQLiteFile = (tenantId: string, dbPath: string) => {
+  if (!fs.existsSync(dbPath)) {
+    throw new TenantDatabaseNotFoundError(tenantId, dbPath);
+  }
+
+  const header = Buffer.alloc(16);
+  const fd = fs.openSync(dbPath, 'r');
+  try {
+    if (fs.readSync(fd, header, 0, header.length, 0) !== header.length || header.toString() !== 'SQLite format 3\u0000') {
+      throw new TenantDatabaseInvalidError(tenantId, dbPath);
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+};
 
 /**
  * Retorna uma instância do Prisma Client conectada ao banco de dados global.
  * @returns {PrismaClient} Instância do Prisma Client Global.
  */
-export const getGlobalClient = () => {
+export const getGlobalClient = (databaseDirectory?: string): GlobalPrismaClient => {
   const dbName = 'global.db';
-  const dbPath = path.join(process.cwd(), 'prisma/databases', dbName);
+  const dbPath = path.join(getDatabaseDirectory(databaseDirectory), dbName);
 
-  if (!clients[dbName]) {
-    clients[dbName] = new PrismaClient({
+  assertSQLiteFile('global', dbPath);
+
+  const cacheKey = `global:${dbPath}`;
+  if (!globalClients[cacheKey]) {
+    globalClients[cacheKey] = new GlobalPrismaClient({
       datasources: {
         db: { url: `file:${dbPath}` },
       },
     });
   }
-  return clients[dbName];
+  return globalClients[cacheKey];
 };
 
 /**
  * Retorna uma instância do Prisma Client conectada ao banco de dados específico de um tenant.
- * @param {string} tenantId - O identificador único da igreja (slug ou id).
+ * @param {string} databaseKey - O identificador físico estável do banco do tenant.
  * @returns {PrismaClient} Instância do Prisma Client para o Tenant.
  * @throws {Error} Se o banco de dados do tenant não existir.
  */
-export const getTenantClient = (tenantId: string): PrismaClient => {
-  const dbName = `church_${tenantId}.db`;
-  const dbPath = path.join(process.cwd(), 'prisma/databases', dbName);
+export const getTenantClient = (databaseKey: string, databaseDirectory?: string): TenantPrismaClient => {
+  assertSafeTenantId(databaseKey);
 
-  // Verificação de segurança: O banco deve existir fisicamente antes de conectar
-  if (!fs.existsSync(dbPath)) {
-    const templatePath = path.join(process.cwd(), 'prisma/databases', 'church_template.db');
-    
-    // Garantir que o diretório de destino existe
-    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const dbName = `church_${databaseKey}.db`;
+  const dbPath = path.join(getDatabaseDirectory(databaseDirectory), dbName);
+  assertSQLiteFile(databaseKey, dbPath);
 
-    if (fs.existsSync(templatePath)) {
-      fs.copyFileSync(templatePath, dbPath);
-    } else {
-      // Se não houver template, criamos um banco vazio (o Prisma criará as tabelas no primeiro acesso se usarmos db push, 
-      // mas aqui apenas garantimos o arquivo para o Prisma Client não falhar na conexão inicial)
-      fs.writeFileSync(dbPath, '');
-    }
-  }
-
-  if (!clients[tenantId]) {
-    clients[tenantId] = new PrismaClient({
+  const cacheKey = `tenant:${dbPath}`;
+  if (!tenantClients[cacheKey]) {
+    tenantClients[cacheKey] = new TenantPrismaClient({
       datasources: {
         db: { url: `file:${dbPath}` },
       },
@@ -65,14 +99,30 @@ export const getTenantClient = (tenantId: string): PrismaClient => {
     });
   }
 
-  return clients[tenantId];
+  return tenantClients[cacheKey];
+};
+
+export const disconnectTenant = async (tenantId: string, databaseDirectory?: string) => {
+  assertSafeTenantId(tenantId);
+  const dbPath = path.join(getDatabaseDirectory(databaseDirectory), `church_${tenantId}.db`);
+  const cacheKey = `tenant:${dbPath}`;
+  const client = tenantClients[cacheKey];
+  if (client) {
+    await client.$disconnect();
+    delete tenantClients[cacheKey];
+  }
 };
 
 /**
  * Fecha todas as conexões ativas.
  */
 export const closeAllConnections = async () => {
-  for (const client of Object.values(clients)) {
+  for (const [cacheKey, client] of Object.entries(globalClients)) {
     await client.$disconnect();
+    delete globalClients[cacheKey];
+  }
+  for (const [cacheKey, client] of Object.entries(tenantClients)) {
+    await client.$disconnect();
+    delete tenantClients[cacheKey];
   }
 };

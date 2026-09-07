@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../src/generated/prisma-tenant';
 
 export type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
 export type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';

@@ -6,8 +6,7 @@
  * 
  * O fluxo de autenticação consiste em:
  * 1. Validar a existência e status da Igreja (Global DB).
- * 2. Autenticar as credenciais do usuário (Global DB).
- * 3. Recuperar o perfil específico do usuário no banco da Igreja (Tenant DB).
+ * 2. Autenticar as credenciais do usuário no banco da Igreja (Tenant DB).
  */
 
 import NextAuth from "next-auth";
@@ -44,41 +43,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { slug: churchSlug },
           });
 
-          if (!church || !church.active) {
+          if (!church || !church.active || (church.status && church.status !== 'ACTIVE')) {
             console.log("Auth: Igreja não encontrada ou inativa:", churchSlug);
             return null;
           }
 
-          // 2. Validar o Usuário no banco Global (vinculado à igreja)
-          const globalUser = await globalClient.globalUser.findFirst({
-            where: { 
-              email,
-              churchId: church.id 
-            },
-          });
-
-          if (!globalUser) {
-            console.log("Auth: Usuário não vinculado a esta igreja no Global DB:", email);
-            return null;
-          }
-          
-          // Comparação da senha hashada
-          const passwordMatch = await bcrypt.compare(password, globalUser.password);
-          if (!passwordMatch) {
-            console.log("Auth: Senha incorreta.");
-            return null;
-          }
-
-          // 3. Recuperar o perfil específico (roles/permissoes) no banco do Tenant
-          const tenantClient = getTenantClient(churchSlug);
+          // 2. Recuperar o usuario e a credencial no banco do Tenant
+          // O slug e publico e pode mudar; o databaseKey identifica o arquivo fisico.
+          const databaseKey = church.databaseKey ?? church.slug;
+          const tenantClient = getTenantClient(databaseKey);
           const user = await tenantClient.user.findUnique({
             where: { email },
           });
 
-          if (!user || !user.active) {
+          if (!user || !user.active || !user.passwordHash) {
              console.log("Auth: Perfil de usuário não encontrado ou inativo no banco da igreja.");
              return null;
           }
+
+          const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+          if (!passwordMatch) return null;
 
           // Retorna o objeto padronizado para a sessão
           return {
@@ -87,7 +71,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: user.email,
             role: user.role,
             permissions: user.permissions ? user.permissions.split(',') : [],
-            tenantId: churchSlug,
+            tenantId: databaseKey,
+            tenantSlug: church.slug,
             linkedMemberId: user.linkedMemberId,
             version: user.version,
           };
@@ -108,6 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role;
         token.permissions = (user as any).permissions;
         token.tenantId = (user as any).tenantId;
+        token.tenantSlug = (user as any).tenantSlug;
         token.linkedMemberId = (user as any).linkedMemberId;
         token.version = (user as any).version;
       }
@@ -122,6 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).role = token.role as string;
         (session.user as any).permissions = (token.permissions as string[]) || [];
         (session.user as any).tenantId = token.tenantId as string;
+        (session.user as any).tenantSlug = token.tenantSlug as string;
         (session.user as any).linkedMemberId = token.linkedMemberId as string | null | undefined;
         (session.user as any).version = token.version as number;
       }

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient as TenantPrismaClient } from '../../src/generated/prisma-tenant';
 import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
@@ -41,15 +41,8 @@ export class TenantService {
       }
     });
 
-    // 2. Criar Usuário Global (para autenticação)
+    // 2. Preparar a credencial no banco do tenant
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    await globalClient.globalUser.create({
-      data: { 
-        email: adminEmail, 
-        password: hashedPassword, 
-        churchId: church.id 
-      }
-    });
 
     // 3. Provisionar arquivo físico do banco
     const dbPath = path.join(process.cwd(), 'prisma/databases', `church_${normalizedSlug}.db`);
@@ -77,7 +70,7 @@ export class TenantService {
     }
 
     // 5. Conectar e popular banco do Tenant
-    const tenantClient = new PrismaClient({
+    const tenantClient = new TenantPrismaClient({
       datasources: { db: { url: `file:${dbPath}` } }
     });
 
@@ -87,6 +80,7 @@ export class TenantService {
         data: {
           name: 'Administrador',
           email: adminEmail,
+          passwordHash: hashedPassword,
           role: 'ADMIN',
           active: true,
           permissions: 'CANTEEN,TASKS,TEAMS,MATERIALS,PASTOR_AREA',
@@ -110,11 +104,6 @@ export class TenantService {
   static async listTenants() {
     const globalClient = getGlobalClient();
     return globalClient.church.findMany({
-      include: {
-        _count: {
-          select: { users: true }
-        }
-      },
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -160,8 +149,6 @@ export class TenantService {
       console.log(`[TenantService] Banco arquivado em: ${backupPath}`);
     }
 
-    // 3. Remover registros globais (Cascata se houver usuários)
-    await globalClient.globalUser.deleteMany({ where: { churchId: id } });
     return globalClient.church.delete({ where: { id } });
   }
 }

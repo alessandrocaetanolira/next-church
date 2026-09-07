@@ -22,10 +22,11 @@ export async function GET() {
     `
       SELECT slug, name, logoUrl, themeVariant, themeMode
       FROM "Church"
-      WHERE slug = ? AND deletedAt IS NULL
+      WHERE (databaseKey = ? OR slug = ?) AND deletedAt IS NULL
       LIMIT 1
     `,
-    session.user.tenantId
+    session.user.tenantId,
+    session.user.tenantSlug ?? session.user.tenantId
   );
 
   if (!church) {
@@ -58,13 +59,14 @@ export async function PATCH(request: NextRequest) {
     `
       UPDATE "Church"
       SET name = ?, logoUrl = ?, themeVariant = ?, updatedAt = ?
-      WHERE slug = ? AND deletedAt IS NULL
+      WHERE (databaseKey = ? OR slug = ?) AND deletedAt IS NULL
     `,
     name,
     logoUrl || null,
     themeVariant || 'default',
     new Date().toISOString(),
-    session.user.tenantId
+    session.user.tenantId,
+    session.user.tenantSlug ?? session.user.tenantId
   );
 
   const [church] = await prisma.$queryRawUnsafe<Array<{
@@ -77,10 +79,11 @@ export async function PATCH(request: NextRequest) {
     `
       SELECT slug, name, logoUrl, themeVariant, themeMode
       FROM "Church"
-      WHERE slug = ? AND deletedAt IS NULL
+      WHERE (databaseKey = ? OR slug = ?) AND deletedAt IS NULL
       LIMIT 1
     `,
-    session.user.tenantId
+    session.user.tenantId,
+    session.user.tenantSlug ?? session.user.tenantId
   );
 
   return NextResponse.json(church);

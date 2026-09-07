@@ -35,6 +35,8 @@ describe('Sync API Routes', () => {
       (auth as Mock).mockResolvedValue(mockSession);
       
       const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
         sale: { findMany: vi.fn().mockResolvedValue([]) },
         product: { findMany: vi.fn().mockResolvedValue([]) },
         member: { findMany: vi.fn().mockResolvedValue([]) },
@@ -58,6 +60,8 @@ describe('Sync API Routes', () => {
     it('deve processar upsert de tarefas', async () => {
       (auth as Mock).mockResolvedValue(mockSession);
       const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
         task: { upsert: vi.fn().mockResolvedValue({ id: 'task-1' }) },
         sale: { create: vi.fn() },
       };
@@ -83,6 +87,8 @@ describe('Sync API Routes', () => {
     it('deve processar delete de tarefas (soft delete)', async () => {
       (auth as Mock).mockResolvedValue(mockSession);
       const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
         task: { update: vi.fn().mockResolvedValue({ id: 'task-1' }) },
       };
       (getTenantClient as Mock).mockReturnValue(mockPrisma);

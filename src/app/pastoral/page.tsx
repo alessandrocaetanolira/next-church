@@ -100,7 +100,7 @@ export default async function PastoralPage() {
   return (
     <PageShell className="space-y-6">
       <PastoralManagement
-        tenantSlug={session.user.tenantId}
+        tenantSlug={session.user.tenantSlug ?? session.user.tenantId}
         stats={{ members, sales, tasks }}
         announcements={announcements.map((post) => ({
           id: post.id,

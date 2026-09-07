@@ -7,7 +7,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prisma:generate": "prisma generate --schema=prisma/global/schema.prisma && prisma generate --schema=prisma/tenant/schema.prisma",
+    "postinstall": "npm run prisma:generate",
+    "db:global:migrate:dev": "prisma migrate dev --schema=prisma/global/schema.prisma",
+    "db:tenant:migrate:dev": "prisma migrate dev --schema=prisma/tenant/schema.prisma",
+    "db:global:migrate:deploy": "prisma migrate deploy --schema=prisma/global/schema.prisma",
+    "db:tenant:migrate:deploy": "prisma migrate deploy --schema=prisma/tenant/schema.prisma",
+    "db:baseline": "tsx prisma/scripts/baseline-databases.ts",
+    "db:promote-baseline": "tsx prisma/scripts/promote-baseline.ts",
+    "db:seed:tenant-fixtures": "tsx prisma/scripts/seed-tenant-fixtures.ts",
+    "db:inventory": "tsx prisma/scripts/inventory-databases.ts",
+    "db:backup": "tsx prisma/scripts/backup-databases.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

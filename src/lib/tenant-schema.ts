@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../src/generated/prisma-tenant';
 
 /**
  * Garante compatibilidade com bancos de tenant já existentes que ainda não

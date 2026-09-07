@@ -251,7 +251,7 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">
               Compartilhe o link ou o QR Code corretos do cadastro público da sua igreja.
             </p>
-            <RegistrationShareCard tenantSlug={session.user.tenantId} />
+            <RegistrationShareCard tenantSlug={session.user.tenantSlug ?? session.user.tenantId} />
           </div>
         </CollapsibleSection>
       ) : null}

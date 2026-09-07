@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getGlobalClient, getTenantClient, closeAllConnections } from '../lib/prisma-factory';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execSync } from 'child_process';
+import bcrypt from 'bcryptjs';
 
 /**
  * Teste de Integração para a Autenticação Multi-Tenant.
@@ -10,48 +12,38 @@ import { execSync } from 'child_process';
  */
 describe('Multi-Tenant Authentication', () => {
   const tenantSlug = 'test-auth-church';
+  const tenantDatabaseKey = 'test-auth-database';
   const email = 'admin@test.com';
+  let databaseDirectory: string;
 
   beforeAll(async () => {
-    const dbDir = path.join(process.cwd(), 'prisma/databases');
-    if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+    databaseDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'church-auth-'));
 
-    // Injetar schema no Global DB
-    const globalDbUrl = `file:${path.join(dbDir, 'global.db')}`;
-    execSync(`DATABASE_URL="${globalDbUrl}" npx prisma db push --skip-generate`, { stdio: 'inherit' });
+    // Aplicar apenas o schema global separado no banco temporario
+    const globalDbUrl = `file:${path.join(databaseDirectory, 'global.db')}`;
+    execSync(`DATABASE_URL="${globalDbUrl}" npx prisma migrate deploy --schema=prisma/global/schema.prisma`, { stdio: 'inherit' });
 
-    // Injetar schema no Tenant DB
-    const tenantDbUrl = `file:${path.join(dbDir, `church_${tenantSlug}.db`)}`;
-    execSync(`DATABASE_URL="${tenantDbUrl}" npx prisma db push --skip-generate`, { stdio: 'inherit' });
+    // Aplicar apenas o schema tenant separado no banco temporario
+    const tenantDbUrl = `file:${path.join(databaseDirectory, `church_${tenantDatabaseKey}.db`)}`;
+    execSync(`DATABASE_URL="${tenantDbUrl}" npx prisma migrate deploy --schema=prisma/tenant/schema.prisma`, { stdio: 'inherit' });
 
     // 1. Popular Global DB
-    const globalClient = getGlobalClient();
+    const globalClient = getGlobalClient(databaseDirectory);
     const church = await globalClient.church.create({
       data: {
         slug: tenantSlug,
         name: 'Test Church',
-      }
-    });
-    await globalClient.globalUser.create({
-      data: {
-        email,
-        password: '123456',
-        churchId: church.id,
+        databaseKey: tenantDatabaseKey,
       }
     });
 
-    // 2. Criar e Popular Tenant DB
-    const tenantClient = getTenantClient(tenantSlug);
-    // Nota: Como o schema é o mesmo, o Prisma Client gerado tem todos os modelos.
-    // Mas no banco físico, as tabelas precisam existir.
-    // Em um cenário real, o script de sync-tenants cuidaria disso.
-    // Para o teste, usamos o banco já "migrado" ou injetamos o schema.
-    
-    // Simplificando o teste para validar a lógica de roteamento entre bancos:
+    // 2. Criar e popular o usuario no Tenant DB
+    const tenantClient = getTenantClient(tenantDatabaseKey, databaseDirectory);
     await tenantClient.user.create({
       data: {
         name: 'Admin User',
         email,
+        passwordHash: await bcrypt.hash('123456', 10),
         role: 'ADMIN',
         permissions: 'canteen,settings',
       }
@@ -60,28 +52,21 @@ describe('Multi-Tenant Authentication', () => {
 
   afterAll(async () => {
     await closeAllConnections();
-    // Limpar arquivos .db de teste
-    const dir = path.join(process.cwd(), 'prisma/databases');
-    if (fs.existsSync(path.join(dir, 'global.db'))) fs.unlinkSync(path.join(dir, 'global.db'));
-    if (fs.existsSync(path.join(dir, `church_${tenantSlug}.db`))) fs.unlinkSync(path.join(dir, `church_${tenantSlug}.db`));
+    fs.rmSync(databaseDirectory, { recursive: true, force: true });
   });
 
   it('deve permitir acesso de um usuário válido com o tenant correto', async () => {
-    const globalClient = getGlobalClient();
-    const globalUser = await globalClient.globalUser.findUnique({
-      where: { email },
-      include: { church: true }
-    });
+    const globalClient = getGlobalClient(databaseDirectory);
+    const church = await globalClient.church.findUnique({ where: { slug: tenantSlug } });
+    expect(church?.databaseKey).toBe(tenantDatabaseKey);
 
-    expect(globalUser).toBeDefined();
-    expect(globalUser?.church.slug).toBe(tenantSlug);
-
-    const tenantClient = getTenantClient(globalUser!.church.slug);
+    const tenantClient = getTenantClient(tenantDatabaseKey, databaseDirectory);
     const user = await tenantClient.user.findUnique({
       where: { email }
     });
 
     expect(user).toBeDefined();
+    expect(await bcrypt.compare('123456', user!.passwordHash!)).toBe(true);
     expect(user?.role).toBe('ADMIN');
     expect(user?.permissions?.split(',')).toContain('canteen');
   });

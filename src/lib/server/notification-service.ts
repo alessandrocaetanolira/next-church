@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../src/generated/prisma-tenant';
 import { publishTenantEvent } from '@/lib/server/sse-broker';
 import { generateId } from '@/lib/id';
 

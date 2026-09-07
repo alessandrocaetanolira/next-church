@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
-import { getGlobalClient, getTenantClient } from '@/lib/prisma-factory';
+import { getTenantClient } from '@/lib/prisma-factory';
 import bcrypt from 'bcryptjs';
 
 const allowedRoles = ['ADMIN', 'PASTOR', 'LEADER', 'MEMBER'] as const;
@@ -44,26 +44,13 @@ export async function PATCH(
     (await prisma.user.findFirst({ where: { linkedMemberId: id, deletedAt: null } })) ??
     (await prisma.user.findUnique({ where: { email: member.email } }).catch(() => null));
 
-  const globalPrisma = getGlobalClient();
-  const church = await globalPrisma.church.findUnique({
-    where: { slug: session.user.tenantId },
-  });
-
-  if (!church) {
-    return NextResponse.json({ error: 'Igreja não encontrada no banco global.' }, { status: 404 });
-  }
-
-  const existingGlobalUser = await globalPrisma.globalUser.findUnique({
-    where: { email: member.email },
-  });
-
-  if (!existingGlobalUser && normalizedPassword.length < 6) {
+  if (!existingUser && normalizedPassword.length < 6) {
     return NextResponse.json({ error: 'Defina uma senha com pelo menos 6 caracteres para liberar o acesso.' }, { status: 400 });
   }
 
-  if (existingGlobalUser && existingGlobalUser.churchId !== church.id) {
-    return NextResponse.json({ error: 'Este email já está vinculado a outra igreja.' }, { status: 409 });
-  }
+  const hashedPassword = normalizedPassword.length > 0
+    ? await bcrypt.hash(normalizedPassword, 10)
+    : existingUser?.passwordHash ?? null;
 
   const userData = {
     name: member.name,
@@ -71,6 +58,7 @@ export async function PATCH(
     role: normalizedRole,
     permissions: normalizedPermissions.join(','),
     linkedMemberId: member.id,
+    passwordHash: hashedPassword,
     active: true,
     updatedAt: new Date(),
   };
@@ -88,26 +76,6 @@ export async function PATCH(
     if (normalizedPassword.length < 6) {
       return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 });
     }
-
-    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
-
-    if (existingGlobalUser) {
-      await globalPrisma.globalUser.update({
-        where: { email: member.email },
-        data: {
-          password: hashedPassword,
-          churchId: church.id,
-        },
-      });
-    } else {
-      await globalPrisma.globalUser.create({
-        data: {
-          email: member.email,
-          password: hashedPassword,
-          churchId: church.id,
-        },
-      });
-    }
   }
 
   return NextResponse.json({
@@ -115,6 +83,6 @@ export async function PATCH(
     userId: user.id,
     role: user.role,
     permissions: normalizedPermissions,
-    hasPassword: Boolean(existingGlobalUser || normalizedPassword),
+    hasPassword: Boolean(hashedPassword),
   });
 }

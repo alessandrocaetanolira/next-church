@@ -23,12 +23,44 @@ Componentes de interface devem ser reutilizados por padrao:
 
 ## Multi-Tenancy
 
-O app usa um banco global e bancos por igreja:
+O app deve usar um banco global e bancos por igreja, com separacao fisica e conceitual:
 
-- `global.db`: igrejas e usuarios globais.
-- `church_<slug>.db`: dados isolados da igreja.
+- `global.db`: cadastro de igrejas, status, plano, branding e dados administrativos da plataforma.
+- `church_<databaseKey>.db`: usuarios da igreja e todos os dados operacionais da igreja.
 
-O login recebe `churchSlug`, valida a igreja no banco global, autentica o usuario global e busca o perfil no banco do tenant. O `tenantId` entra na sessao e as APIs usam esse valor para escolher o banco correto.
+O login recebe `churchSlug`, valida a igreja ativa e provisionada no banco global, resolve o `databaseKey`, monta o datasource do tenant e autentica o usuario dentro do banco da propria igreja. O `tenantId` entra na sessao e as APIs usam uma referencia validada para escolher o banco correto.
+
+Regra de separacao:
+
+- Modelos globais nao devem existir no schema do tenant.
+- Modelos de tenant nao devem existir no schema global.
+- O `databaseKey` e imutavel; alterar o slug nao pode mover ou recriar o banco fisico.
+- Usuarios comuns, administradores de igreja, pastores, lideres e membros autenticaveis pertencem ao tenant.
+- O email deve ser unico apenas dentro do banco da igreja, nao globalmente.
+- Um super admin da plataforma, se necessario, deve ser modelado separadamente no banco global, sem reutilizar `User` de tenant.
+- Nenhuma requisicao comum cria banco ou executa DDL; migrations sao operacao controlada.
+
+Estrutura Prisma alvo:
+
+```txt
+prisma/
+  global/
+    schema.prisma
+    migrations/
+    seed.ts
+  tenant/
+    schema.prisma
+    migrations/
+    seed.ts
+  databases/
+    global.db
+    church_<databaseKey>.db
+```
+
+Clientes Prisma alvo:
+
+- `src/generated/prisma-global`: client para `global.db`.
+- `src/generated/prisma-tenant`: client para bancos `church_<slug>.db`.
 
 ## Autorizacao
 

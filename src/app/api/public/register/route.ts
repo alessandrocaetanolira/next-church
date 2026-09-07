@@ -29,11 +29,12 @@ export async function POST(request: NextRequest) {
     where: { slug: churchSlug },
   });
 
-  if (!church || !church.active) {
+  if (!church || !church.active || (church.status && church.status !== 'ACTIVE')) {
     return NextResponse.json({ error: 'Igreja não encontrada.' }, { status: 404 });
   }
 
-  const prisma = getTenantClient(churchSlug);
+  const databaseKey = church.databaseKey ?? church.slug;
+  const prisma = getTenantClient(databaseKey);
   await ensureTenantSchemaExtensions(prisma);
 
   const existingMember = await prisma.$queryRawUnsafe<Array<{ id: string }>>(

@@ -6,6 +6,7 @@ declare module "next-auth" {
       role: string;
       permissions: string[];
       tenantId: string;
+      tenantSlug: string;
       linkedMemberId?: string | null;
       version: number;
     } & DefaultSession["user"];
@@ -15,6 +16,7 @@ declare module "next-auth" {
     role: string;
     permissions: string[];
     tenantId: string;
+    tenantSlug: string;
     linkedMemberId?: string | null;
     version: number;
   }
@@ -25,6 +27,7 @@ declare module "next-auth/jwt" {
     role: string;
     permissions: string[];
     tenantId: string;
+    tenantSlug: string;
     linkedMemberId?: string | null;
     version: number;
   }

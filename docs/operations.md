@@ -7,9 +7,12 @@ Os bancos SQLite locais ficam em `prisma/databases/` e sao ignorados pelo Git.
 Fluxo local:
 
 ```bash
-npx prisma db push --skip-generate
-npx tsx prisma/seed-complete.ts
+npm run prisma:generate
+npm run db:global:migrate:deploy
+DATABASE_URL="file:/caminho/absoluto/church_<databaseKey>.db" npm run db:tenant:migrate:deploy
 ```
+
+`migrate dev` fica reservado para criar migrations em bancos de referencia. `db push` nao deve atualizar bancos reais.
 
 Seed local principal:
 
@@ -48,6 +51,14 @@ Para SQLite multi-tenant, definir rotina de backup dos bancos por arquivo:
 - compactacao;
 - armazenamento externo;
 - teste periodico de restore.
+
+Backup manual local, sempre com destino novo e fora do Git:
+
+```bash
+npm run db:backup -- --destination /tmp/church-hub-backup-YYYYMMDD-HHMMSS
+```
+
+O comando usa o mecanismo de backup do SQLite para bancos validos, preserva artefatos invalidos para diagnostico e grava um `manifest.json` com tamanho e SHA-256 de origem e destino.
 
 ## Deploy
 

@@ -1,39 +1,38 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient as GlobalPrismaClient } from '../src/generated/prisma-global';
+import { PrismaClient as TenantPrismaClient } from '../src/generated/prisma-tenant';
 import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
 import { execSync } from 'child_process';
 import { seedBasicTenantData } from '../src/lib/tenant-seed';
 
-const globalClient = new PrismaClient({
+const globalClient = new GlobalPrismaClient({
   datasources: { db: { url: 'file:' + path.join(process.cwd(), 'prisma/databases/global.db') } }
 });
 
 export async function createTenant(slug: string, adminEmail: string, adminPassword: string) {
-  // 1. Criar Igreja e Usuário Global
+  // 1. Criar o registro global da igreja
   const church = await globalClient.church.create({
-    data: { slug, name: slug.toUpperCase(), plan: 'PREMIUM' }
+    data: { slug, databaseKey: slug, name: slug.toUpperCase(), plan: 'PREMIUM' }
   });
 
   const password = await bcrypt.hash(adminPassword, 10);
-  await globalClient.globalUser.create({
-    data: { email: adminEmail, password, churchId: church.id }
-  });
 
   // 2. Provisionar banco do tenant
   const dbPath = path.join(process.cwd(), 'prisma/databases', `church_${slug}.db`);
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-  fs.writeFileSync(dbPath, ''); // Cria arquivo vazio
+  if (fs.existsSync(dbPath)) throw new Error(`Banco do tenant ja existe: ${dbPath}`);
+  fs.writeFileSync(dbPath, '');
 
   // Rodar schema no novo banco
   console.log(`🚀 Provisionando banco para tenant: ${slug}`);
-  execSync(`npx prisma db push --skip-generate`, { 
+  execSync(`npx prisma migrate deploy --schema=prisma/tenant/schema.prisma`, {
     env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
     stdio: 'inherit'
   });
 
   // 3. Criar Admin no Tenant
-  const tenantClient = new PrismaClient({
+  const tenantClient = new TenantPrismaClient({
     datasources: { db: { url: `file:${dbPath}` } }
   });
 
@@ -41,6 +40,7 @@ export async function createTenant(slug: string, adminEmail: string, adminPasswo
     data: {
       name: 'Administrador',
       email: adminEmail,
+      passwordHash: password,
       role: 'ADMIN',
       active: true,
       permissions: 'CANTEEN,TASKS,TEAMS,MATERIALS,PASTOR_AREA',
