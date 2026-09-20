@@ -1,94 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { deleteParking, updateParking } from '@/server/parking/parking.controller';
+import { ParkingRepository } from '@/server/parking/parking.repository';
+import { ParkingService } from '@/server/parking/parking.service';
 
-async function authorize() {
+async function getContext() {
   const session = await auth();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'LEADER'].includes(session.user.role?.toUpperCase() ?? '')) {
-    return null;
-  }
-
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  return { session, prisma };
+  return { user: session.user, service: new ParkingService(new ParkingRepository(prisma), prisma, session.user.tenantId) };
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorized = await authorize();
-  if (!authorized) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(authorized.session.user, 'parking', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  const { id } = await params;
-  const body = await request.json();
-
-  await authorized.prisma.$executeRawUnsafe(
-    `
-      UPDATE "ParkingSpot"
-      SET groupId = ?, label = ?, status = ?, occupiedByMemberId = ?, occupiedByName = ?, notes = ?, occupiedAt = ?, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NULL
-    `,
-    String(body.groupId ?? '').trim(),
-    String(body.label ?? '').trim(),
-    typeof body.status === 'string' ? body.status.trim() || 'free' : 'free',
-    typeof body.occupiedByMemberId === 'string' ? body.occupiedByMemberId.trim() || null : null,
-    typeof body.occupiedByName === 'string' ? body.occupiedByName.trim() || null : null,
-    typeof body.notes === 'string' ? body.notes.trim() || null : null,
-    body.occupiedAt ? new Date(body.occupiedAt).toISOString() : null,
-    new Date().toISOString(),
-    id
-  );
-
-  return NextResponse.json({ success: true });
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await updateParking(context.user, context.service, (await params).id, await request.json())); }
+  catch (error) { return jsonError(error); }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorized = await authorize();
-  if (!authorized) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(authorized.session.user, 'parking', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  const { id } = await params;
-  const body = await request.json();
-
-  await authorized.prisma.$executeRawUnsafe(
-    `
-      UPDATE "ParkingSpot"
-      SET status = ?, occupiedByMemberId = ?, occupiedByName = ?, notes = ?, occupiedAt = ?, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NULL
-    `,
-    typeof body.status === 'string' ? body.status.trim() || 'free' : 'free',
-    typeof body.occupiedByMemberId === 'string' ? body.occupiedByMemberId.trim() || null : null,
-    typeof body.occupiedByName === 'string' ? body.occupiedByName.trim() || null : null,
-    typeof body.notes === 'string' ? body.notes.trim() || null : null,
-    body.occupiedAt ? new Date(body.occupiedAt).toISOString() : null,
-    new Date().toISOString(),
-    id
-  );
-
-  return NextResponse.json({ success: true });
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await updateParking(context.user, context.service, (await params).id, await request.json(), true)); }
+  catch (error) { return jsonError(error); }
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorized = await authorize();
-  if (!authorized) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(authorized.session.user, 'parking', 'delete')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  const { id } = await params;
-  const now = new Date().toISOString();
-
-  await authorized.prisma.$executeRawUnsafe(
-    `UPDATE "ParkingSpot" SET deletedAt = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL`,
-    now,
-    now,
-    id
-  );
-
-  return NextResponse.json({ success: true });
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await deleteParking(context.user, context.service, (await params).id)); }
+  catch (error) { return jsonError(error); }
 }

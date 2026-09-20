@@ -54,7 +54,7 @@ src/app/api/admin/<modulo>/route.ts
 - [x] Identificados 57 route handlers; os maiores candidatos à extração são Cantina, Sync, Feed, Grupos e Membros.
 - [x] Confirmado que o isolamento de tenant já é resolvido por `tenantId/databaseKey` na autenticação e no `prisma-factory`.
 - [x] Definido Membros como primeiro vertical slice, por concentrar cadastro, conta de acesso e permissões.
-- [ ] Não iniciar a migração por `sync`, pois ela depende de vários domínios e ampliaria o raio da mudança.
+- [x] Migrar `sync` somente depois dos services dos domínios envolvidos estarem disponíveis.
 
 ### 1. Membros
 
@@ -73,7 +73,7 @@ src/app/api/admin/<modulo>/route.ts
 - [x] `MaterialsService` para estoque, criação, edição e exclusão.
 - [x] Migrar `/api/materials`.
 - [x] Adicionar testes unitários do service/policy.
-- [ ] Validar escopo por equipe quando aplicável.
+- [x] Validar escopo por equipe quando aplicável, mantendo materiais sem `teamId` como globais.
 
 ### 3. Cantina
 
@@ -90,10 +90,10 @@ src/app/api/admin/<modulo>/route.ts
 - [x] Centralizar notificações de atualização do pedido no service.
 - [x] Adicionar testes de regras transacionais de pedidos, estoque, cantina fechada, fiado e pagamentos.
 - [x] Adicionar testes de integração SQLite para baixa de estoque, fiado e rollback transacional.
-- [ ] `CanteenPolicy` com `view`, `sell`, `operate` e `manage_products`.
-- [ ] `CanteenService` para estoque, venda, pedidos e pagamentos.
-- [ ] Definir estado operacional de cantina aberta/fechada.
-- [ ] Migrar produtos, PDV, pedidos, preparo, vendas e ledger.
+- [x] Policies específicas da Cantina cobrem `view`, `sell`, `operate` e `manage_products` nos subdomínios correspondentes.
+- [x] Services da Cantina cobrem produtos, operação, vendas, preparo, pedidos, estoque, fiado e pagamentos.
+- [x] Estado operacional de cantina aberta/fechada está centralizado em `operation.service`.
+- [x] Produtos, PDV, pedidos, preparo, vendas e ledger foram migrados para camadas próprias.
 
 ### 4. Grupos, equipes e tarefas
 
@@ -130,9 +130,10 @@ src/app/api/admin/<modulo>/route.ts
 
 ### 6. Módulos restantes
 
-- [ ] Pastoral.
+- [x] Pastoral: pendências, aprovação e rejeição de membros migradas para repository/policy/service/controller.
 - [ ] Infantil.
-- [ ] Estacionamento.
+- [x] Estacionamento: CRUD, status e notificações migrados para repository/policy/service/controller.
+- [x] Adicionar testes unitários do service/policy do Estacionamento.
 - [ ] Bíblia e jogos.
 - [ ] Notificações e engajamento.
 - [ ] Branding e configurações.
@@ -140,11 +141,11 @@ src/app/api/admin/<modulo>/route.ts
 
 ## Migração segura
 
-- [ ] Migrar um domínio por vez sem alterar o contrato HTTP.
-- [ ] Manter adapters temporários para chamadas antigas.
+- [x] Migrar um domínio por vez sem alterar o contrato HTTP nos domínios concluídos.
+- [x] Manter adapters temporários para chamadas antigas durante a migração.
 - [ ] Não misturar refatoração arquitetural com alteração de schema sem necessidade.
 - [ ] Remover duplicação apenas depois dos testes do domínio passarem.
-- [ ] Remover Prisma/raw SQL das routes ao final de cada domínio.
+- [x] Remover Prisma/raw SQL das routes dos domínios concluídos.
 - [ ] Registrar decisões incompatíveis com a arquitetura anterior.
 
 ## Testes e aceite

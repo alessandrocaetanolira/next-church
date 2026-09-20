@@ -32,6 +32,12 @@ describe('camadas de materiais', () => {
     expect(() => MaterialsPolicy.assertDelete(viewer)).toThrow('excluir');
   });
 
+  it('restringe materiais vinculados a equipes acessíveis', () => {
+    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: ['team-1'] }, 'team-1')).not.toThrow();
+    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: ['team-1'] }, 'team-2')).toThrow('equipe');
+    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: [] }, null)).not.toThrow();
+  });
+
   it('normaliza e cria um material', async () => {
     const repository = repositoryMock();
     const service = new MaterialsService(repository);

@@ -1,42 +1,22 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { listPendingMembers } from '@/server/pastoral/pastoral.controller';
+import { PastoralRepository } from '@/server/pastoral/pastoral.repository';
+import { PastoralService } from '@/server/pastoral/pastoral.service';
 
-export async function GET() {
+async function getContext() {
   const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
-
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'pastoral', 'view')) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  }
-
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  const members = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `
-      SELECT
-        id,
-        name,
-        email,
-        phone,
-        birthDate,
-        conversionDate,
-        baptismDate,
-        previousChurch,
-        aboutMe,
-        maritalStatus,
-        createdAt
-      FROM "Member"
-      WHERE approved = 0
-        AND deletedAt IS NULL
-      ORDER BY createdAt DESC
-    `
-  );
+  const repository = new PastoralRepository(prisma);
+  return { user: session.user, service: new PastoralService(repository) };
+}
 
-  return NextResponse.json({ members });
+export async function GET() {
+  try { const context = await getContext(); return jsonOk({ members: await listPendingMembers(context.user, context.service) }); }
+  catch (error) { return jsonError(error); }
 }

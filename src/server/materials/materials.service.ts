@@ -2,7 +2,7 @@ import { generateId } from '@/lib/id';
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
 import { MaterialsRepository } from './materials.repository';
 
-type MaterialInput = { name?: unknown; category?: unknown; quantity?: unknown; minQuantity?: unknown; unit?: unknown };
+type MaterialInput = { name?: unknown; category?: unknown; quantity?: unknown; minQuantity?: unknown; unit?: unknown; teamId?: unknown };
 
 function normalizeText(value: unknown, fallback: string) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -14,7 +14,7 @@ function normalizeQuantity(value: unknown) {
   return Math.floor(quantity);
 }
 
-function normalizeMaterial(input: MaterialInput) {
+function normalizeMaterial(input: MaterialInput, includeTeam = false) {
   const name = normalizeText(input.name, '');
   if (!name) throw new ValidationError('Nome é obrigatório.');
   return {
@@ -23,22 +23,25 @@ function normalizeMaterial(input: MaterialInput) {
     quantity: normalizeQuantity(input.quantity),
     minQuantity: normalizeQuantity(input.minQuantity),
     unit: normalizeText(input.unit, 'unidades'),
+    ...(includeTeam ? { teamId: typeof input.teamId === 'string' && input.teamId.trim() ? input.teamId.trim() : null } : {}),
   };
 }
 
 export class MaterialsService {
   constructor(private readonly repository: MaterialsRepository) {}
 
-  list() { return this.repository.list(); }
+  list(teamIds?: string[]) { return this.repository.list(teamIds); }
 
   create(input: unknown) {
-    const data = normalizeMaterial((input ?? {}) as MaterialInput);
+    const data = normalizeMaterial((input ?? {}) as MaterialInput, true);
     return this.repository.create({ id: generateId(), ...data });
   }
 
   async update(id: string, input: unknown) {
     await this.assertExists(id);
-    return this.repository.update(id, normalizeMaterial((input ?? {}) as MaterialInput));
+    const body = (input ?? {}) as MaterialInput;
+    const data = normalizeMaterial(body);
+    return this.repository.update(id, { ...data, ...(typeof body.teamId === 'string' ? { teamId: body.teamId.trim() || null } : {}) });
   }
 
   async updateQuantity(id: string, input: unknown) {

@@ -3,6 +3,8 @@ import { ForbiddenError } from '@/lib/http/errors';
 
 type PolicyUser = Parameters<typeof hasActionPermission>[0];
 
+export type MaterialScope = { allowed: boolean; hasGlobalAccess: boolean; accessibleTeamIds: string[] };
+
 export class MaterialsPolicy {
   static assertView(user: PolicyUser) {
     if (!hasActionPermission(user, 'materials', 'view')) throw new ForbiddenError('Você não tem permissão para ver materiais.');
@@ -18,5 +20,11 @@ export class MaterialsPolicy {
 
   static assertDelete(user: PolicyUser) {
     if (!hasAnyActionPermission(user, 'materials', ['delete', 'manage'])) throw new ForbiddenError('Você não tem permissão para excluir materiais.');
+  }
+
+  static assertScope(scope: MaterialScope, teamId: string | null | undefined) {
+    if (!scope.allowed || (teamId && !scope.hasGlobalAccess && !scope.accessibleTeamIds.includes(teamId))) {
+      throw new ForbiddenError('Sem acesso à equipe deste material.');
+    }
   }
 }
