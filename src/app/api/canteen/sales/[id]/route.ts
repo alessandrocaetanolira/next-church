@@ -4,6 +4,7 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { notifyMemberOrderUpdate } from '@/lib/server/notification-service';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 function parseSale(sale: {
   items: string;
@@ -34,6 +35,9 @@ export async function PATCH(
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'canteen', 'operate')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { id } = await context.params;

@@ -1,11 +1,11 @@
 "use client";
 
-import { LayoutDashboard, Calendar, Package, Settings, ShoppingCart, UserPlus, Wallet, BookOpen, MessageCircle, Gamepad2, Megaphone, ShieldCheck, Bell, Layers, Heart, Baby, Car } from 'lucide-react';
+import { LayoutDashboard, Calendar, Package, Settings, ShoppingCart, UserPlus, Wallet, BookOpen, MessageCircle, Gamepad2, Megaphone, ShieldCheck, Bell, Layers, Heart, Baby, Car, Building2, CreditCard } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { usePathname } from 'next/navigation';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { hasPermission } from '@/lib/access-control';
+import { canAccessCanteen, hasPermission } from '@/lib/access-control';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -18,27 +18,28 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { settings } = useAppSettings();
   const { user } = useAuth();
+  const isPlatformAdmin = user?.isPlatformAdmin === true;
   const canAccessSchedules = hasPermission(user, 'tasks');
   const canAccessMaterials = hasPermission(user, 'materials');
 
   const mainItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard', show: true },
-    { to: '/carteira', icon: Wallet, label: 'Carteira', show: true },
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard', show: !isPlatformAdmin },
+    { to: '/carteira', icon: Wallet, label: 'Carteira', show: !isPlatformAdmin },
     { to: '/schedules', icon: Calendar, label: 'Escalas', show: canAccessSchedules },
-    { to: '/groups', icon: Layers, label: 'Grupos', show: true },
-    { to: '/kids', icon: Baby, label: 'Infantil', show: true },
-    { to: '/social-projects', icon: Heart, label: 'Projetos Sociais', show: true },
-    { to: '/parking', icon: Car, label: 'Estacionamento', show: true },
+    { to: '/groups', icon: Layers, label: 'Grupos', show: !isPlatformAdmin },
+    { to: '/kids', icon: Baby, label: 'Infantil', show: !isPlatformAdmin },
+    { to: '/social-projects', icon: Heart, label: 'Projetos Sociais', show: !isPlatformAdmin },
+    { to: '/parking', icon: Car, label: 'Estacionamento', show: !isPlatformAdmin },
     { to: '/members', icon: UserPlus, label: 'Membros', show: user?.role === 'ADMIN' || user?.role === 'PASTOR' },
     { to: '/materials', icon: Package, label: 'Materiais', show: canAccessMaterials },
-    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: true },
-    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: true },
-    { to: '/feed', icon: MessageCircle, label: 'Comunidade', show: true },
-    { to: '/notifications', icon: Bell, label: 'Notificações', show: true },
+    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: !isPlatformAdmin },
+    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: !isPlatformAdmin },
+    { to: '/feed', icon: MessageCircle, label: 'Comunidade', show: !isPlatformAdmin },
+    { to: '/notifications', icon: Bell, label: 'Notificações', show: !isPlatformAdmin },
   ];
 
   const canteenItems = [
-    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: hasPermission(user, 'canteen') },
+    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: canAccessCanteen(user) },
   ];
 
   const configItems = [
@@ -47,7 +48,9 @@ export function AppSidebar() {
   ];
 
   const adminItems = [
-    { to: '/admin/tenants', icon: ShieldCheck, label: 'Gerenciar Tenants', show: user?.email === 'admin@teste.com' },
+    { to: '/admin', icon: Building2, label: 'Visão geral', show: isPlatformAdmin },
+    { to: '/admin/tenants', icon: ShieldCheck, label: 'Gerenciar Tenants', show: isPlatformAdmin },
+    { to: '/admin/plans', icon: CreditCard, label: 'Planos', show: isPlatformAdmin },
   ];
 
   const renderNavItems = (items: typeof mainItems) => (
@@ -91,10 +94,12 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60">Principal</SidebarGroupLabel>
-          <SidebarGroupContent>{renderNavItems(mainItems)}</SidebarGroupContent>
-        </SidebarGroup>
+        {!isPlatformAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/60">Principal</SidebarGroupLabel>
+            <SidebarGroupContent>{renderNavItems(mainItems)}</SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {visibleCanteenItems.length > 0 && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sidebar-foreground/60">Cantina</SidebarGroupLabel>
@@ -107,12 +112,12 @@ export function AppSidebar() {
             <SidebarGroupContent>{renderNavItems(configItems)}</SidebarGroupContent>
           </SidebarGroup>
         )}
-        {user?.email === 'admin@teste.com' && (
+        {isPlatformAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-red-500 font-bold uppercase tracking-wider text-[10px]">Global Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               {renderNavItems([
-                { to: '/admin/tenants', icon: ShieldCheck, label: 'Gerenciar Tenants', show: true }
+                ...adminItems
               ])}
             </SidebarGroupContent>
           </SidebarGroup>

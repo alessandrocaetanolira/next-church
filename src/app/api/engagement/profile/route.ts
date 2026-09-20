@@ -4,6 +4,7 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
 import { getChallengePointsForIds } from '@/lib/devotional';
+import { hasPlanFeature } from '@/lib/access-control';
 
 function dayKey(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {
@@ -99,6 +100,7 @@ export async function GET() {
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasPlanFeature(session.user, 'engagement')) return NextResponse.json({ error: 'Recurso não disponível no plano' }, { status: 403 });
 
   const { prisma, profile } = await getOrCreateProfile(session.user.tenantId, session.user.email);
   const completedChallengeIds = parseCompletedIds(profile.completedChallengeIds);
@@ -132,6 +134,7 @@ export async function PATCH(request: NextRequest) {
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasPlanFeature(session.user, 'engagement')) return NextResponse.json({ error: 'Recurso não disponível no plano' }, { status: 403 });
 
   const { action, devotionalId } = await request.json();
   const { prisma, profile } = await getOrCreateProfile(session.user.tenantId, session.user.email);

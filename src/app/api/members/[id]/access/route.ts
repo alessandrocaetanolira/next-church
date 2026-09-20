@@ -2,18 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import bcrypt from 'bcryptjs';
+import { hasActionPermission } from '@/lib/access-control';
 
 const allowedRoles = ['ADMIN', 'PASTOR', 'LEADER', 'MEMBER'] as const;
-const allowedPermissions = ['canteen', 'settings', 'tasks', 'teams', 'materials', 'pastor'] as const;
+const allowedPermissions = [
+  'canteen', 'settings', 'tasks', 'teams', 'materials', 'pastor',
+  'members:view', 'members:create', 'members:update', 'members:delete',
+  'members:approve', 'members:manage_access', 'members:export',
+  'groups:view', 'groups:create', 'groups:update', 'groups:delete', 'groups:manage_access',
+  'tasks:view', 'tasks:create', 'tasks:update', 'tasks:delete', 'tasks:export',
+  'materials:view', 'materials:create', 'materials:update', 'materials:delete', 'materials:manage', 'materials:request', 'materials:export',
+  'canteen:view', 'canteen:catalog', 'canteen:order', 'canteen:create', 'canteen:update', 'canteen:delete', 'canteen:manage', 'canteen:operate', 'canteen:sell', 'canteen:manage_products', 'canteen:export',
+  'pastoral:view', 'pastoral:create', 'pastoral:update', 'pastoral:delete', 'pastoral:export',
+  'kids:view', 'kids:create', 'kids:update', 'kids:delete',
+  'parking:view', 'parking:create', 'parking:update', 'parking:delete',
+  'feed:view', 'feed:create', 'feed:publish', 'feed:share', 'feed:comment', 'feed:moderate', 'feed:update', 'feed:delete',
+  'settings:view', 'settings:update',
+] as const;
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  const sessionRole = session?.user?.role?.toUpperCase();
 
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(sessionRole ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'members', 'manage_access')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

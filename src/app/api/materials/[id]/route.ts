@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasPermission } from '@/lib/access-control';
+import { hasAnyActionPermission, hasActionPermission } from '@/lib/access-control';
 
-async function authorize() {
+async function authorize(action: 'update' | 'delete') {
   const session = await auth();
-  if (!session?.user?.tenantId || !hasPermission(session.user, 'materials')) {
+  if (!session?.user?.tenantId || !hasAnyActionPermission(session.user, 'materials', [action, 'manage'])) {
     return null;
   }
   return session;
@@ -16,7 +16,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await authorize();
+  const session = await authorize('update');
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { id } = await params;
   const { name, category, quantity, minQuantity, unit } = await request.json();
@@ -45,7 +45,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await authorize();
+  const session = await authorize('update');
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { id } = await params;
   const { quantity } = await request.json();
@@ -66,7 +66,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await authorize();
+  const session = await authorize('delete');
   if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   const { id } = await params;
   const prisma = getTenantClient(session.user.tenantId);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantClient } from "@/lib/prisma-factory";
 import { auth } from "@/auth";
+import { hasActionPermission } from "@/lib/access-control";
 
 export async function GET(
   req: NextRequest, 
@@ -10,6 +11,7 @@ export async function GET(
   const session = await auth();
   console.log("DEBUG: Sessão encontrada:", !!session);
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  if (!hasActionPermission(session.user, 'bible', 'view')) return new NextResponse("Forbidden", { status: 403 });
 
   const params = await context.params;
   const { book, chapter } = params;

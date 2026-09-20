@@ -14,6 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { MemberForm } from '@/components/forms/MemberForm';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission } from '@/lib/access-control';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -38,12 +40,27 @@ interface ManagedMember {
 }
 
 const permissionOptions = [
-  { id: 'canteen', label: 'Cantina' },
-  { id: 'settings', label: 'Configurações' },
-  { id: 'tasks', label: 'Escalas' },
-  { id: 'teams', label: 'Grupos' },
-  { id: 'materials', label: 'Materiais' },
-  { id: 'pastor', label: 'Área Pastoral' },
+  { id: 'members:view', label: 'Membros: ver' },
+  { id: 'members:create', label: 'Membros: criar' },
+  { id: 'members:update', label: 'Membros: editar' },
+  { id: 'members:delete', label: 'Membros: excluir' },
+  { id: 'members:approve', label: 'Membros: aprovar' },
+  { id: 'members:manage_access', label: 'Membros: acessos' },
+  { id: 'groups:update', label: 'Grupos: editar' },
+  { id: 'tasks:create', label: 'Tarefas: criar' },
+  { id: 'tasks:update', label: 'Tarefas: editar' },
+  { id: 'materials:view', label: 'Materiais: ver' },
+  { id: 'materials:create', label: 'Materiais: criar' },
+  { id: 'materials:update', label: 'Materiais: editar' },
+  { id: 'materials:manage', label: 'Materiais: administrar' },
+  { id: 'canteen:view', label: 'Cantina: ver' },
+  { id: 'canteen:manage', label: 'Cantina: administrar' },
+  { id: 'canteen:create', label: 'Cantina: criar' },
+  { id: 'canteen:operate', label: 'Cantina: operar' },
+  { id: 'canteen:sell', label: 'Cantina: vender' },
+  { id: 'canteen:manage_products', label: 'Cantina: produtos' },
+  { id: 'pastoral:view', label: 'Pastoral: ver' },
+  { id: 'settings:update', label: 'Configurações: editar' },
 ] as const;
 
 const roleLabels: Record<MemberRole, string> = {
@@ -68,6 +85,7 @@ const formatDate = (value?: string | null) => {
 export default function MemberDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuth();
   const memberId = typeof params?.id === 'string' ? params.id : '';
 
   const [member, setMember] = useState<ManagedMember | null>(null);
@@ -80,6 +98,9 @@ export default function MemberDetailsPage() {
   const [accessPassword, setAccessPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
+  const canUpdate = hasActionPermission(user, 'members', 'update');
+  const canManageAccess = hasActionPermission(user, 'members', 'manage_access');
+  const canDelete = hasActionPermission(user, 'members', 'delete');
 
   useEffect(() => {
     if (memberId) {
@@ -189,18 +210,18 @@ export default function MemberDetailsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setEditOpen(true)}>
+          {canUpdate ? <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Editar
-          </Button>
-          <Button variant="outline" onClick={() => setAccessOpen(true)}>
+          </Button> : null}
+          {canManageAccess ? <Button variant="outline" onClick={() => setAccessOpen(true)}>
             <Shield className="mr-2 h-4 w-4" />
             Acesso
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+          </Button> : null}
+          {canDelete ? <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 className="mr-2 h-4 w-4" />
             Excluir
-          </Button>
+          </Button> : null}
         </div>
       </div>
 

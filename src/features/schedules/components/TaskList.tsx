@@ -8,8 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission } from '@/lib/access-control';
 
 export function TaskList() {
+  const { user } = useAuth();
+  const canDelete = hasActionPermission(user, 'tasks', 'delete');
   const { tasks, isLoading: isLoadingTasks, deleteTask } = useTasks();
   const { teams, isLoading: isLoadingTeams } = useTeams();
 
@@ -63,14 +67,14 @@ export function TaskList() {
                       </p>
                     </div>
                     
-                    <Button 
+                    {canDelete ? <Button 
                       variant="ghost" 
                       size="icon" 
                       className="text-muted-foreground hover:text-destructive h-8 w-8"
                       onClick={() => deleteTask(task.id)}
                     >
                       <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </Button> : null}
                   </CardContent>
                 </Card>
               );

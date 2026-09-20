@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
+import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 
@@ -73,7 +75,9 @@ const themeModes: { value: ThemeMode; label: string }[] = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { data: session } = useSession();
+  const canUpdateSettings = hasActionPermission(session?.user, 'settings', 'update');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { settings, updateSettings } = useAppSettings();
   const [branding, setBranding] = useState({
@@ -177,11 +181,11 @@ export default function SettingsPage() {
                 label={theme.label}
                 color={theme.color}
                 selected={branding.themeVariant === theme.variant}
-                onClick={() => setBranding((current) => ({ ...current, themeVariant: theme.variant }))}
+                onClick={() => canUpdateSettings && setBranding((current) => ({ ...current, themeVariant: theme.variant }))}
               />
             ))}
           </div>
-          {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && (
+          {canUpdateSettings && (
             <Button className="w-full" onClick={() => void handleSaveBranding()} disabled={savingBranding}>
               {savingBranding ? 'Aplicando...' : 'Aplicar cor da igreja'}
             </Button>
@@ -199,7 +203,8 @@ export default function SettingsPage() {
                   key={mode.value}
                   type="button"
                   variant={settings.themeMode === mode.value ? 'default' : 'outline'}
-                  onClick={() => updateSettings({ themeMode: mode.value })}
+                  onClick={() => canUpdateSettings && updateSettings({ themeMode: mode.value })}
+                  disabled={!canUpdateSettings}
                 >
                   {mode.label}
                 </Button>
@@ -209,7 +214,7 @@ export default function SettingsPage() {
         </div>
       </CollapsibleSection>
 
-      {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && (
+      {canUpdateSettings && (
         <CollapsibleSection icon={ImageIcon} title="Nome e Logo da Igreja">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -269,7 +274,9 @@ export default function SettingsPage() {
           <CollapsibleSection icon={Lock} title="Gerenciar Usuários">
              <div className="space-y-4">
                <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
-               <Button variant="outline" className="w-full">Listar Usuários</Button>
+               <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
+                 Listar Usuários
+               </Button>
              </div>
           </CollapsibleSection>
         </>

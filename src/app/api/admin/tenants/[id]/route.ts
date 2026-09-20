@@ -7,7 +7,7 @@ import { TenantService } from "@/lib/tenant-service";
  */
 async function validateSuperAdmin() {
   const session = await auth();
-  if (session?.user?.email !== 'admin@teste.com') return null;
+  if (!(session?.user as { isPlatformAdmin?: boolean } | undefined)?.isPlatformAdmin) return null;
   return session;
 }
 

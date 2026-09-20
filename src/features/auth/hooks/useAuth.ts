@@ -29,6 +29,9 @@ export interface User {
   linkedMemberId?: string | null;
   /** Permissões granulares do usuário */
   permissions: string[];
+  isPlatformAdmin?: boolean;
+  planCode?: string;
+  planFeatures?: string[];
 }
 
 /**
@@ -49,6 +52,9 @@ export function useAuth() {
     tenantId: (session.user as any).tenantId || '',
     linkedMemberId: (session.user as any).linkedMemberId || null,
     permissions: (session.user as any).permissions || [],
+    isPlatformAdmin: Boolean((session.user as any).isPlatformAdmin),
+    planCode: (session.user as any).planCode,
+    planFeatures: (session.user as any).planFeatures,
   } as User : null;
 
   return {

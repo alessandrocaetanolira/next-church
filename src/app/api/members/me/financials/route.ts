@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { hasActionPermission } from '@/lib/access-control';
 
 function parseSale(sale: {
   items: string;
@@ -30,6 +31,7 @@ export async function GET() {
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'members', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);

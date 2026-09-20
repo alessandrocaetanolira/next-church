@@ -5,11 +5,15 @@ import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { notifyTeamJoinRequest } from '@/lib/server/notification-service';
 import { generateId } from '@/lib/id';
 import { ensureGroupTeamCompatibility } from '@/lib/group-team-compat';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'groups', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const prisma = getTenantClient(session.user.tenantId);
@@ -81,6 +85,9 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.tenantId || !session.user.linkedMemberId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'groups', 'request')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const prisma = getTenantClient(session.user.tenantId);

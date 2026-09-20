@@ -73,8 +73,8 @@ Objetivo: tratar os bancos atuais como estado heterogeneo antes de qualquer limp
 - [x] Criar backup consistente de SQLite, incluindo WAL/SHM quando aplicavel.
 - [x] Testar restore antes da primeira alteracao destrutiva.
 - [x] Adicionar `databaseKey` imutavel a `Church`.
-- [ ] Definir estados `PROVISIONING`, `ACTIVE`, `FAILED` e `ARCHIVED`.
-- [ ] Registrar versao esperada, ultima migration, erro e data da tentativa.
+- [x] Definir estados `PROVISIONING`, `ACTIVE`, `FAILED` e `ARCHIVED`.
+- [x] Registrar erro, inicio da tentativa e data de conclusao do provisionamento.
 - [ ] Definir politica de alteracao de slug sem renomear o banco.
 - [x] Criar fixtures temporarias com `igreja-teste`, `ig2` e `ig3`.
 
@@ -137,27 +137,27 @@ Aceite:
 
 Objetivo: nunca publicar igreja ativa antes de o banco estar pronto.
 
-- [ ] Criar registro global como `PROVISIONING` e inativo.
-- [ ] Reservar e persistir `databaseKey`.
-- [ ] Criar SQLite temporario dentro do diretorio autorizado.
-- [ ] Aplicar `migrate deploy` tenant.
-- [ ] Criar admin com `User.passwordHash`.
-- [ ] Executar seed idempotente.
-- [ ] Validar tabelas, admin e integridade.
-- [ ] Renomear atomicamente para o arquivo definitivo.
-- [ ] Marcar `ACTIVE` somente apos validacao completa.
-- [ ] Em falha, marcar `FAILED`, registrar erro e limpar temporarios.
-- [ ] Permitir retry sem duplicar igreja, admin ou seed.
-- [ ] Atualizar `TenantService`, `provision.ts`, seeds e scripts.
-- [ ] Fechar client antes de arquivar/mover SQLite.
-- [ ] Manter `ARCHIVED` para auditoria, sem hard delete imediato.
+- [x] Criar registro global como `PROVISIONING` e inativo.
+- [x] Reservar e persistir `databaseKey`.
+- [x] Criar SQLite temporario dentro do diretorio autorizado.
+- [x] Aplicar `migrate deploy` tenant.
+- [x] Criar admin com `User.passwordHash`.
+- [x] Executar seed idempotente.
+- [x] Validar tabelas, admin e integridade.
+- [x] Renomear atomicamente para o arquivo definitivo.
+- [x] Marcar `ACTIVE` somente apos validacao completa.
+- [x] Em falha, marcar `FAILED`, registrar o erro e limpar temporarios.
+- [x] Permitir retry sem duplicar igreja, admin ou seed.
+- [x] Atualizar `TenantService`, `provision.ts`, seeds e scripts.
+- [x] Fechar client antes de arquivar/mover SQLite.
+- [x] Manter `ARCHIVED` para auditoria, sem hard delete imediato.
 
 Aceite:
 
 - [ ] Falha intermediaria nunca deixa igreja ativa.
 - [ ] Retry e idempotente.
 - [ ] Todo tenant ativo possui arquivo, schema atual e admin.
-- [ ] Arquivamento nao deixa client em cache apontando para o arquivo movido.
+- [x] Arquivamento fecha o client antes de mover o arquivo.
 
 ## Fase 5: Factory E Ciclo De Conexoes
 

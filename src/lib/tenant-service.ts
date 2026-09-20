@@ -2,8 +2,8 @@ import { PrismaClient as TenantPrismaClient } from '../../src/generated/prisma-t
 import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
-import { execSync } from 'child_process';
-import { getGlobalClient } from './prisma-factory';
+import { execFileSync } from 'child_process';
+import { disconnectTenant, getDatabaseDirectory, getGlobalClient } from './prisma-factory';
 import { seedBasicTenantData } from './tenant-seed';
 
 /**
@@ -27,82 +27,130 @@ export class TenantService {
    * 4. População de dados básicos (Seed)
    * 5. Criação do usuário administrador inicial no tenant
    */
-  static async createTenant(slug: string, name: string, adminEmail: string, adminPassword: string) {
+  static async createTenant(
+    slug: string,
+    name: string,
+    adminEmail: string,
+    adminPassword: string,
+    options: { databaseDirectory?: string } = {}
+  ) {
     const normalizedSlug = TenantService.normalizeSlug(slug);
-    const globalClient = getGlobalClient();
-
-    // 1. Criar Igreja no Global
-    const church = await globalClient.church.create({
-      data: { 
-        slug: normalizedSlug,
-        name, 
-        plan: 'FREE',
-        active: true
-      }
-    });
-
-    // 2. Preparar a credencial no banco do tenant
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-
-    // 3. Provisionar arquivo físico do banco
-    const dbPath = path.join(process.cwd(), 'prisma/databases', `church_${normalizedSlug}.db`);
-    
-    // Garantir diretório
-    if (!fs.existsSync(path.dirname(dbPath))) {
-      fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    if (!normalizedSlug || !name.trim() || !adminEmail.trim() || adminPassword.length < 6) {
+      throw new Error('Dados invalidos para provisionamento da igreja.');
     }
 
-    // Criar arquivo vazio se não existir
-    if (!fs.existsSync(dbPath)) {
-      fs.writeFileSync(dbPath, '');
-    }
+    const globalClient = getGlobalClient(options.databaseDirectory);
+    const databaseDirectory = getDatabaseDirectory(options.databaseDirectory);
+    const databaseKey = normalizedSlug;
+    const provisioningStartedAt = new Date();
+    const dbPath = path.join(databaseDirectory, `church_${databaseKey}.db`);
+    const temporaryDbPath = path.join(
+      databaseDirectory,
+      `.church_${databaseKey}.${process.pid}.${Date.now()}.tmp.db`
+    );
 
-    // 4. Aplicar o Schema Prisma (push)
-    try {
-      console.log(`[TenantService] Provisionando schema para: ${normalizedSlug}`);
-      execSync(`npx prisma db push --skip-generate`, { 
-        env: { ...process.env, DATABASE_URL: `file:${dbPath}` },
-        stdio: 'pipe' 
-      });
-    } catch (error) {
-      console.error(`[TenantService] Erro ao rodar db push para ${normalizedSlug}:`, error);
-      throw new Error("Falha ao provisionar estrutura do banco de dados.");
-    }
+    if (fs.existsSync(dbPath)) throw new Error(`Banco do tenant ja existe: ${dbPath}`);
 
-    // 5. Conectar e popular banco do Tenant
-    const tenantClient = new TenantPrismaClient({
-      datasources: { db: { url: `file:${dbPath}` } }
-    });
-
-    try {
-      // 5.1 Criar Perfil de Admin
-      await tenantClient.user.create({
+    const existingChurch = await globalClient.church.findUnique({ where: { slug: normalizedSlug } });
+    let church;
+    if (existingChurch?.status === 'FAILED' && !fs.existsSync(dbPath)) {
+      church = await globalClient.church.update({
+        where: { id: existingChurch.id },
         data: {
+          name: name.trim(),
+          active: false,
+          status: 'PROVISIONING',
+          deletedAt: null,
+          provisioningStartedAt,
+          provisioningError: null,
+        },
+      });
+    } else if (existingChurch) {
+      throw new Error(`Igreja ja cadastrada: ${normalizedSlug}`);
+    } else {
+      church = await globalClient.church.create({
+        data: {
+          slug: normalizedSlug,
+          databaseKey,
+          name: name.trim(),
+          plan: 'FREE',
+          active: false,
+          status: 'PROVISIONING',
+          provisioningStartedAt,
+        }
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    let tenantClient: TenantPrismaClient | null = null;
+    try {
+      fs.mkdirSync(databaseDirectory, { recursive: true });
+      console.log(`[TenantService] Provisionando schema para: ${databaseKey}`);
+      execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema=prisma/tenant/schema.prisma'], {
+        cwd: process.cwd(),
+        env: { ...process.env, DATABASE_URL: `file:${temporaryDbPath}` },
+        stdio: 'pipe',
+      });
+
+      tenantClient = new TenantPrismaClient({
+        datasources: { db: { url: `file:${temporaryDbPath}` } }
+      });
+
+      await tenantClient.user.upsert({
+        where: { email: adminEmail.trim().toLowerCase() },
+        update: {
           name: 'Administrador',
-          email: adminEmail,
           passwordHash: hashedPassword,
           role: 'ADMIN',
           active: true,
           permissions: 'CANTEEN,TASKS,TEAMS,MATERIALS,PASTOR_AREA',
-          version: 1
-        }
+          version: { increment: 1 },
+        },
+        create: {
+          name: 'Administrador',
+          email: adminEmail.trim().toLowerCase(),
+          passwordHash: hashedPassword,
+          role: 'ADMIN',
+          active: true,
+          permissions: 'CANTEEN,TASKS,TEAMS,MATERIALS,PASTOR_AREA',
+          version: 1,
+        },
       });
-
-      // 5.2 Popular Dados Básicos (Seed)
       await seedBasicTenantData(tenantClient);
-
-    } finally {
       await tenantClient.$disconnect();
-    }
+      tenantClient = null;
 
-    return church;
+      fs.renameSync(temporaryDbPath, dbPath);
+      return await globalClient.church.update({
+        where: { id: church.id },
+        data: {
+          active: true,
+          status: 'ACTIVE',
+          provisionedAt: new Date(),
+          provisioningError: null,
+        },
+      });
+    } catch (error) {
+      if (tenantClient) await tenantClient.$disconnect();
+      if (fs.existsSync(temporaryDbPath)) fs.rmSync(temporaryDbPath, { force: true });
+      await globalClient.church.update({
+        where: { id: church.id },
+        data: {
+          active: false,
+          status: 'FAILED',
+          provisioningError: error instanceof Error ? error.message : String(error),
+        },
+      });
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Falha ao provisionar tenant ${normalizedSlug}: ${message}`);
+    }
   }
 
   /**
    * Lista todos os tenants cadastrados.
    */
-  static async listTenants() {
-    const globalClient = getGlobalClient();
+  static async listTenants(options: { databaseDirectory?: string } = {}) {
+    const globalClient = getGlobalClient(options.databaseDirectory);
     return globalClient.church.findMany({
       orderBy: { createdAt: 'desc' }
     });
@@ -111,8 +159,12 @@ export class TenantService {
   /**
    * Atualiza dados de um tenant (ex: nome, plano, status).
    */
-  static async updateTenant(id: string, data: { name?: string, active?: boolean, plan?: string }) {
-    const globalClient = getGlobalClient();
+  static async updateTenant(
+    id: string,
+    data: { name?: string, active?: boolean, plan?: string },
+    options: { databaseDirectory?: string } = {}
+  ) {
+    const globalClient = getGlobalClient(options.databaseDirectory);
     return globalClient.church.update({
       where: { id },
       data
@@ -123,10 +175,10 @@ export class TenantService {
    * Fluxo de Deleção:
    * 1. Soft Delete (Inativa o acesso via Global DB)
    * 2. Backup do Banco SQLite (Mover para pasta de arquivos)
-   * 3. Remoção do registro no Global DB
+   * 3. Manutenção do registro no Global DB para auditoria
    */
-  static async deleteTenant(id: string) {
-    const globalClient = getGlobalClient();
+  static async deleteTenant(id: string, options: { databaseDirectory?: string } = {}) {
+    const globalClient = getGlobalClient(options.databaseDirectory);
     
     // Buscar o slug antes de deletar
     const church = await globalClient.church.findUnique({ where: { id } });
@@ -135,20 +187,23 @@ export class TenantService {
     // 1. Inativar acesso
     await globalClient.church.update({
       where: { id },
-      data: { active: false, deletedAt: new Date() }
+      data: { active: false, status: 'ARCHIVED', deletedAt: new Date() }
     });
 
     // 2. Mover banco para pasta de backup (Arquivamento)
-    const dbPath = path.join(process.cwd(), 'prisma/databases', `church_${church.slug}.db`);
-    const backupDir = path.join(process.cwd(), 'prisma/databases/archived');
-    const backupPath = path.join(backupDir, `church_${church.slug}_${Date.now()}.db.bak`);
+    const databaseKey = church.databaseKey ?? church.slug;
+    const databaseDirectory = getDatabaseDirectory(options.databaseDirectory);
+    const dbPath = path.join(databaseDirectory, `church_${databaseKey}.db`);
+    const backupDir = path.join(databaseDirectory, 'archived');
+    const backupPath = path.join(backupDir, `church_${databaseKey}_${Date.now()}.db.bak`);
 
     if (fs.existsSync(dbPath)) {
+      await disconnectTenant(databaseKey, options.databaseDirectory);
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
       fs.renameSync(dbPath, backupPath);
       console.log(`[TenantService] Banco arquivado em: ${backupPath}`);
     }
 
-    return globalClient.church.delete({ where: { id } });
+    return globalClient.church.findUniqueOrThrow({ where: { id } });
   }
 }

@@ -10,7 +10,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuth();
 
-  const isAuthPage = pathname.startsWith("/auth");
+  const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/admin/login");
   const isFullscreenGameRoute = pathname === "/games/caca-palavras";
 
   if (isLoading) {

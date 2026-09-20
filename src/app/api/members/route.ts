@@ -4,10 +4,12 @@ import { auth } from "@/auth";
 import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  if (!hasActionPermission(session.user, 'members', 'view')) return new NextResponse("Forbidden", { status: 403 });
   const tenantId = (session.user as any).tenantId;
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
@@ -66,7 +68,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session || !['ADMIN', 'PASTOR'].includes((session.user as any).role)) 
+  if (!session || !hasActionPermission(session.user, 'members', 'create'))
     return new NextResponse("Forbidden", { status: 403 });
 
   const tenantId = (session.user as any).tenantId;

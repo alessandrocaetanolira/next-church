@@ -50,12 +50,15 @@ import { toast } from 'sonner';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 export function MemberDashboard() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
-  const products = useProducts();
+  const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
+  const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
+  const products = useProducts(canCatalog);
   const { notifications } = useNotificationCenter();
 
   // Devotional State - Inicialização direta
@@ -458,10 +461,10 @@ export function MemberDashboard() {
 
       {/* Quick Actions Grid */}
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/carteira?view=order')}>
+        {canOrder ? <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/carteira?view=order')}>
           <ShoppingBag className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Fazer Pedido</span>
-        </Button>
+        </Button> : null}
         <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/quiz')}>
           <Trophy className="w-6 h-6 text-yellow-500" />
           <span className="text-xs font-medium">Quiz Bíblico</span>
@@ -484,7 +487,7 @@ export function MemberDashboard() {
         </Button>
       </div>
 
-      <Drawer open={orderOpen} onOpenChange={(open) => {
+      {canOrder ? <Drawer open={orderOpen} onOpenChange={(open) => {
         setOrderOpen(open);
         if (!open) setCartOpen(false);
       }}>
@@ -662,7 +665,7 @@ export function MemberDashboard() {
             </>
           ) : null}
         </DrawerContent>
-      </Drawer>
+      </Drawer> : null}
     </div>
   );
 }

@@ -5,14 +5,11 @@ import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
 import { GroupCapability, GroupType, normalizeStringArray, parseJsonField } from '@/lib/groups';
 import { ensureGroupTeamCompatibility, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
-
-function canManageGroups(role?: string | null) {
-  return ['ADMIN', 'PASTOR', 'LEADER'].includes(role?.toUpperCase() ?? '');
-}
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.tenantId) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'view')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -65,7 +62,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.tenantId || !canManageGroups(session.user.role)) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'create')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

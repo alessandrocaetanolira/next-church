@@ -5,6 +5,7 @@ import { notifyFeedComment, notifyFeedLike } from '@/lib/server/notification-ser
 import { generateId } from '@/lib/id';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { parseJsonField } from '@/lib/groups';
+import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 
 export async function PATCH(
   request: NextRequest,
@@ -14,9 +15,10 @@ export async function PATCH(
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
-
   const { id } = await context.params;
   const body = await request.json();
+  const actionPermission = body.action === 'add-comment' || body.action === 'toggle-like' ? 'comment' : 'update';
+  if (!hasAnyActionPermission(session.user, 'feed', [actionPermission, 'update'])) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   const tenantId = session.user.tenantId;
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
@@ -109,6 +111,7 @@ export async function DELETE(
   if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'feed', 'delete')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const { id } = await context.params;
   const prisma = getTenantClient(session.user.tenantId);

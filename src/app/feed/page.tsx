@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { hasActionPermission } from '@/lib/access-control';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -62,6 +63,8 @@ export default function FeedPage() {
   const role = user?.role?.toUpperCase() ?? 'MEMBER';
   const canPostAnnouncement = ['ADMIN', 'PASTOR'].includes(role);
   const canTargetFeed = ['ADMIN', 'PASTOR'].includes(role);
+  const canCreatePost = hasActionPermission(user, 'feed', 'publish') || hasActionPermission(user, 'feed', 'create');
+  const canUpdateFeed = hasActionPermission(user, 'feed', 'comment') || hasActionPermission(user, 'feed', 'update');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
 
   const [newPostContent, setNewPostContent] = useState('');
@@ -253,7 +256,7 @@ export default function FeedPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
-      {!composing ? (
+      {canCreatePost && !composing ? (
         <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setComposing(true)}>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-3">
@@ -264,7 +267,7 @@ export default function FeedPage() {
             </div>
           </CardContent>
         </Card>
-      ) : (
+      ) : canCreatePost ? (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-primary/30">
             <CardContent className="pt-4 space-y-3">
@@ -410,7 +413,7 @@ export default function FeedPage() {
             </CardContent>
           </Card>
         </motion.div>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -510,7 +513,7 @@ export default function FeedPage() {
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-1 pt-1 border-t border-border mt-2">
+                    {canUpdateFeed ? <div className="flex items-center gap-1 pt-1 border-t border-border mt-2">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -529,7 +532,7 @@ export default function FeedPage() {
                         <MessageCircle className="w-3.5 h-3.5" />
                         {post.comments.length > 0 && post.comments.length}
                       </Button>
-                    </div>
+                    </div> : null}
 
                     {post.comments.length > 0 && (
                       <div className="space-y-2 pl-4 border-l-2 border-border mt-2">
@@ -542,7 +545,7 @@ export default function FeedPage() {
                       </div>
                     )}
 
-                    {commentingOn === post.id && (
+                    {canUpdateFeed && commentingOn === post.id && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-2 mt-2">
                         <Textarea
                           value={commentText}

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Car, CarFront, Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission } from '@/lib/access-control';
 
 type GroupOption = {
   id: string;
@@ -66,7 +66,10 @@ export default function ParkingPage() {
     content: '',
     pinDays: '0',
   });
-  const canPublishToFeed = ['ADMIN', 'PASTOR'].includes(user?.role?.toUpperCase() ?? '') || hasPermission(user, 'pastor');
+  const canCreate = hasActionPermission(user, 'parking', 'create');
+  const canUpdate = hasActionPermission(user, 'parking', 'update');
+  const canDelete = hasActionPermission(user, 'parking', 'delete');
+  const canPublishToFeed = hasActionPermission(user, 'feed', 'share');
 
   useEffect(() => {
     setPageTitle('Estacionamento');
@@ -244,6 +247,7 @@ export default function ParkingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'event',
+          share: true,
           title: postForm.title.trim() || undefined,
           content: postForm.content.trim(),
           visibility: 'group',
@@ -291,10 +295,10 @@ export default function ParkingPage() {
               Publicar no Feed
             </Button>
           ) : null}
-          <Button onClick={() => openDrawer()}>
+          {canCreate ? <Button onClick={() => openDrawer()}>
             <Plus className="mr-2 h-4 w-4" />
             Nova vaga
-          </Button>
+          </Button> : null}
         </div>
       </div>
 
@@ -326,10 +330,10 @@ export default function ParkingPage() {
                 {spot.occupiedByName ? `Uso atual: ${spot.occupiedByName}` : 'Sem ocupação atual.'}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => openDrawer(spot)}>Editar</Button>
-                <Button variant={spot.status === 'free' ? 'default' : 'secondary'} onClick={() => void updateStatus(spot, spot.status === 'free' ? 'occupied' : 'free')}>
+                {canUpdate ? <Button variant="outline" onClick={() => openDrawer(spot)}>Editar</Button> : null}
+                {canUpdate ? <Button variant={spot.status === 'free' ? 'default' : 'secondary'} onClick={() => void updateStatus(spot, spot.status === 'free' ? 'occupied' : 'free')}>
                   {spot.status === 'free' ? 'Ocupar' : 'Liberar'}
-                </Button>
+                </Button> : null}
               </div>
               {spot.occupiedByMemberId ? (
                 <Button
@@ -347,9 +351,9 @@ export default function ParkingPage() {
                   Avisar responsável
                 </Button>
               ) : null}
-              <Button variant="destructive" className="w-full" onClick={() => void deleteSpot(spot.id, spot.groupId)}>
+              {canDelete ? <Button variant="destructive" className="w-full" onClick={() => void deleteSpot(spot.id, spot.groupId)}>
                 Remover vaga
-              </Button>
+              </Button> : null}
             </CardContent>
           </Card>
         ))}

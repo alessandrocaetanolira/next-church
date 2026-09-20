@@ -4,6 +4,7 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup, parseJsonField } from '@/lib/groups';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(
   _request: NextRequest,
@@ -12,6 +13,9 @@ export async function GET(
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'groups', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -43,6 +47,9 @@ export async function POST(
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'groups', 'create')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { id } = await params;

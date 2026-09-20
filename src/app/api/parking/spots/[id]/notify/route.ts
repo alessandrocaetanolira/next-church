@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { notifyParkingOwner } from '@/lib/server/notification-service';
+import { hasActionPermission } from '@/lib/access-control';
 
 function canManage(role?: string | null) {
   return ['ADMIN', 'PASTOR', 'LEADER'].includes(role?.toUpperCase() ?? '');
@@ -16,6 +17,7 @@ export async function POST(
   if (!session?.user?.tenantId || !canManage(session.user.role)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'parking', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const { id } = await params;
   const body = await request.json();

@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 import { generateId } from '@/lib/id';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.tenantId || !hasPermission(session.user, 'materials')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'materials', 'view')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -28,7 +28,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const session = await auth();
-  if (!session?.user?.tenantId || !hasPermission(session.user, 'materials')) {
+  if (!session?.user?.tenantId || !hasAnyActionPermission(session.user, 'materials', ['create', 'manage'])) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

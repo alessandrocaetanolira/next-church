@@ -6,7 +6,7 @@ import { NavLink } from '@/components/NavLink';
 import { LayoutDashboard, Calendar, ShoppingCart, Wallet, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { hasPermission } from '@/lib/access-control';
+import { canAccessCanteen, hasPermission } from '@/lib/access-control';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 
@@ -35,7 +35,7 @@ export function BottomNav() {
     { to: '/materials', icon: Package, label: 'Materiais', show: canAccessMaterials },
     { to: '/notifications', icon: Bell, label: 'Notificações', show: true },
     { to: '/pastoral', icon: Megaphone, label: 'Área do Pastor', show: hasPermission(user, 'pastor') },
-    { to: '/canteen', icon: ShoppingCart, label: 'Cantina', show: hasPermission(user, 'canteen') },
+    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: canAccessCanteen(user) },
     { to: '/settings', icon: Settings, label: 'Configurações', show: hasPermission(user, 'settings') },
   ].filter(item => item.show);
 

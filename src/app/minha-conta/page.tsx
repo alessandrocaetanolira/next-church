@@ -31,6 +31,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 type FinancialMember = {
   id: string;
@@ -51,10 +52,12 @@ export default function MyAccountPage() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const user = session?.user;
+  const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
+  const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
   const { notifications } = useNotificationCenter();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   
-  const requestedView = searchParams.get('view') === 'order' ? 'order' : 'profile';
+  const requestedView = searchParams.get('view') === 'order' && canOrder ? 'order' : 'profile';
   const [view, setView] = useState<'profile' | 'order'>(requestedView);
   const [cart, setCart] = useState<any[]>([]); // Using any for cart items structure flexibility
   const [cartOpen, setCartOpen] = useState(false);
@@ -142,7 +145,7 @@ export default function MyAccountPage() {
   }, [notifications]);
 
   // Data Queries
-  const products = useProducts();
+  const products = useProducts(canCatalog);
   
   // Mock finding member by email
   const linkedMember = useLiveQuery(
@@ -643,12 +646,12 @@ export default function MyAccountPage() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-3">
-        <Button variant="outline" className="h-24 flex-col gap-3 bg-card hover:bg-primary/5 hover:border-primary/30 transition-all shadow-sm border-border" onClick={() => router.replace('/carteira?view=order')}>
+        {canOrder ? <Button variant="outline" className="h-24 flex-col gap-3 bg-card hover:bg-primary/5 hover:border-primary/30 transition-all shadow-sm border-border" onClick={() => router.replace('/carteira?view=order')}>
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
             <ShoppingBag className="w-5 h-5 text-primary" />
           </div>
           <span className="font-medium text-sm">Fazer Pedido</span>
-        </Button>
+        </Button> : null}
       </div>
 
       {/* Transaction History */}

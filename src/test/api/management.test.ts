@@ -20,12 +20,11 @@ describe('API Gestão - Membros e Produtos', () => {
     process.env.DATABASE_URL = 'file:' + path.resolve(__dirname, '../../prisma/databases/church_test-tenant.db');
   });
 
-  it('deve permitir GET de produtos para qualquer autenticado', async () => {
+  it('deve bloquear GET de produtos sem canteen:view', async () => {
     (auth as any).mockResolvedValue(mockSession('MEMBER'));
     const req = new NextRequest('http://localhost:3000/api/canteen/products');
     const response = await getProducts(req);
-    // Deve retornar 200 (mesmo que vazio)
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(403);
   });
 
   it('deve bloquear POST de produto para usuários MEMBER', async () => {

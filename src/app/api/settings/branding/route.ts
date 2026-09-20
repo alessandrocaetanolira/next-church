@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getGlobalClient } from '@/lib/prisma-factory';
 import { ensureGlobalSchemaExtensions } from '@/lib/global-schema';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'settings', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const prisma = getGlobalClient();
   await ensureGlobalSchemaExtensions();
@@ -42,6 +44,7 @@ export async function PATCH(request: NextRequest) {
   if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'settings', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = await request.json();
   const name = typeof body.name === 'string' ? body.name.trim() : '';

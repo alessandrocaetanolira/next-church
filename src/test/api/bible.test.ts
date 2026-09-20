@@ -18,7 +18,7 @@ vi.mock('@/lib/prisma-factory', () => ({
 }));
 
 vi.mock('@/auth', () => ({
-  auth: () => Promise.resolve({ user: { tenantId: 'test' } }),
+  auth: () => Promise.resolve({ user: { tenantId: 'test', role: 'MEMBER', permissions: ['bible:view'] } }),
 }));
 
 describe('API Bíblia', () => {

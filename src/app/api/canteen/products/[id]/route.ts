@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { hasActionPermission } from '@/lib/access-control';
+import { saveTenantDataUrl } from '@/lib/server/tenant-file-storage';
 
 export async function PUT(
   request: NextRequest,
@@ -17,8 +19,16 @@ export async function PUT(
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'canteen', 'manage_products')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+  }
 
   const data = await request.json();
+  const tenantSlug = (session.user as any).tenantSlug ?? session.user.tenantId;
+  let imageUrl = typeof data.imageUrl === 'string' ? data.imageUrl : data.imageUrl === null ? null : undefined;
+  if (imageUrl?.startsWith('data:image/')) {
+    imageUrl = await saveTenantDataUrl(tenantSlug, 'products', imageUrl);
+  }
   const tenantId = session.user.tenantId;
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
@@ -49,16 +59,16 @@ export async function PUT(
       );
     }
 
-    if (typeof data.imageUrl === 'string' || data.imageUrl === null) {
+    if (typeof imageUrl === 'string' || imageUrl === null) {
       await prisma.$executeRawUnsafe(
         `UPDATE "Product" SET "imageUrl" = ?, "updatedAt" = ? WHERE id = ?`,
-        data.imageUrl,
+        imageUrl,
         new Date().toISOString(),
         id
       );
     }
 
-    return NextResponse.json(product);
+    return NextResponse.json(typeof imageUrl !== 'undefined' ? { ...product, imageUrl } : product);
   } catch {
     return NextResponse.json({ error: 'Erro ao atualizar produto' }, { status: 500 });
   }
@@ -71,6 +81,9 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'canteen', 'manage_products')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const tenantId = session.user.tenantId;

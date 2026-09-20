@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission } from '@/lib/access-control';
 import { Heart, Send, Target } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,7 +54,7 @@ export default function SocialProjectsPage() {
     content: '',
     pinDays: '0',
   });
-  const canPublishToFeed = ['ADMIN', 'PASTOR'].includes(user?.role?.toUpperCase() ?? '') || hasPermission(user, 'pastor');
+  const canPublishToFeed = hasActionPermission(user, 'feed', 'share');
 
   useEffect(() => {
     setPageTitle('Projetos Sociais');
@@ -101,6 +101,7 @@ export default function SocialProjectsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'social_project',
+          share: true,
           title: postForm.title.trim() || undefined,
           content: postForm.content.trim(),
           visibility: 'group',

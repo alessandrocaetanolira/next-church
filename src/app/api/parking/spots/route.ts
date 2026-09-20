@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 function canManage(role?: string | null) {
   return ['ADMIN', 'PASTOR', 'LEADER'].includes(role?.toUpperCase() ?? '');
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'parking', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const groupId = request.nextUrl.searchParams.get('groupId');
   const prisma = getTenantClient(session.user.tenantId);
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.tenantId || !canManage(session.user.role)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'parking', 'create')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const body = await request.json();
   const prisma = getTenantClient(session.user.tenantId);

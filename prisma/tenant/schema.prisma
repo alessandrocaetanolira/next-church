@@ -312,3 +312,13 @@ model Verse {
   chapterId String
   chapter   Chapter @relation(fields: [chapterId], references: [id])
 }
+
+model CanteenSettings {
+  id        String   @id
+  isOpen    Boolean  @default(false)
+  openedAt  DateTime?
+  closedAt  DateTime?
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -16,10 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { hasActionPermission } from '@/lib/access-control';
 
 export default function BiblePage() {
   const { data: session } = useSession();
   const user = session?.user;
+  const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
 
   const [books, setBooks] = useState<any[]>([]);
@@ -135,6 +137,7 @@ export default function BiblePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'verse',
+        share: true,
         content: verseText,
         reference: `${selectedBook.name} ${selectedChapter}:${selectedVerses.map(v => v + 1).join(',')}`,
       }),
@@ -258,10 +261,10 @@ export default function BiblePage() {
             <Button size="sm" variant="ghost" onClick={() => setSelectedVerses([])} className="h-8 w-8 p-0">
               <X className="w-4 h-4" />
             </Button>
-            <Button size="sm" onClick={shareToFeed} className="h-8 px-3 text-xs gap-1.5 shadow-sm">
+            {canShareToFeed ? <Button size="sm" onClick={shareToFeed} className="h-8 px-3 text-xs gap-1.5 shadow-sm">
               <Share2 className="w-3.5 h-3.5" /> 
               <span className="hidden sm:inline">Compartilhar ({selectedVerses.length})</span>
-            </Button>
+            </Button> : null}
           </div>
         </motion.div>
       )}

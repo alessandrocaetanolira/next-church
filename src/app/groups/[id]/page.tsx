@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Package, Pin, Plus, Send, Target, Users, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission, hasPermission } from '@/lib/access-control';
 import { cn } from '@/lib/utils';
 
 type GroupMember = {
@@ -129,7 +129,10 @@ export default function GroupDetailPage() {
   const canAccessSchedules = hasPermission(user, 'tasks');
   const canAccessMaterials = hasPermission(user, 'materials');
   const isLeader = Boolean(group?.members.some((member) => member.memberId === user?.linkedMemberId && ['leader', 'responsible'].includes(member.role)));
-  const canManage = ['ADMIN', 'PASTOR'].includes(user?.role?.toUpperCase() ?? '') || isLeader;
+  const canManage = hasActionPermission(user, 'groups', 'update') && (['ADMIN', 'PASTOR'].includes(user?.role?.toUpperCase() ?? '') || isLeader);
+  const canManageAccess = hasActionPermission(user, 'groups', 'manage_access');
+  const canCreateGroupContent = hasActionPermission(user, 'groups', 'create');
+  const canPublishFeed = hasActionPermission(user, 'feed', 'share');
 
   useEffect(() => {
     if (!groupId) return;
@@ -360,6 +363,7 @@ export default function GroupDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: group.type === 'social_project' ? 'social_project' : 'event',
+          share: true,
           title: postForm.title.trim() || undefined,
           content: postForm.content.trim(),
           visibility: 'group',
@@ -425,7 +429,7 @@ export default function GroupDetailPage() {
                     Gerenciar grupo
                   </Button>
                 ) : null}
-                {canManage ? (
+                {canPublishFeed ? (
                   <Button size="sm" variant="outline" className="max-w-full" onClick={() => setPostDrawerOpen(true)}>
                     <Send className="mr-2 h-4 w-4" />
                     Publicar no feed
@@ -504,7 +508,7 @@ export default function GroupDetailPage() {
                     </CardContent>
                   </Card>
 
-                  {canManage ? (
+                  {canManageAccess ? (
                     <Card>
                       <CardContent className="space-y-3 pt-4">
                         <div className="flex items-center justify-between">
@@ -604,7 +608,7 @@ export default function GroupDetailPage() {
                 <CardContent className="space-y-3 pt-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Arrecadação</h3>
-                    {canManage ? (
+                    {canCreateGroupContent ? (
                       <Button size="sm" onClick={() => setGoalDrawerOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Nova meta

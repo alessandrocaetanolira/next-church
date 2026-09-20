@@ -11,7 +11,7 @@ async function validateSuperAdmin() {
   if (!session?.user) return null;
   
   // Por enquanto, apenas o admin@teste.com pode gerenciar tenants
-  if (session.user.email !== 'admin@teste.com') return null;
+  if (!(session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin) return null;
   
   return session;
 }

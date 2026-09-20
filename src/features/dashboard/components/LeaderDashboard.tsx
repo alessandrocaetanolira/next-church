@@ -14,11 +14,13 @@ import {
   Users 
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { hasActionPermission } from '@/lib/access-control';
 
 export function LeaderDashboard() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
+  const canOpenCanteen = hasActionPermission(user, 'canteen', 'operate') || hasActionPermission(user, 'canteen', 'sell');
 
   // Mock data for leader view
   // In a real implementation, this would come from `db` or API
@@ -39,10 +41,10 @@ export function LeaderDashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3">
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/cantina')}>
+        {canOpenCanteen ? <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/cantina')}>
           <ShoppingCart className="w-6 h-6 text-primary" />
           <span className="text-sm font-medium">Abrir Cantina</span>
-        </Button>
+        </Button> : null}
         <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/schedules/new')}>
           <Plus className="w-6 h-6 text-green-500" />
           <span className="text-sm font-medium">Nova Tarefa</span>

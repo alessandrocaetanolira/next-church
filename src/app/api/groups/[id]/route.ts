@@ -5,13 +5,14 @@ import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup, normalizeStringArray, parseJsonField } from '@/lib/groups';
 import { generateId } from '@/lib/id';
 import { ensureGroupTeamCompatibility, softDeleteCanonicalTeamGroup, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  if (!session?.user?.tenantId) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'view')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -72,7 +73,7 @@ export async function PATCH(
   await ensureTenantSchemaExtensions(prisma);
   await ensureGroupTeamCompatibility(prisma);
 
-  const allowed = await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, id);
+  const allowed = hasActionPermission(session.user, 'groups', 'update') && await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, id);
   if (!allowed) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
   }
@@ -175,7 +176,7 @@ export async function DELETE(
   await ensureTenantSchemaExtensions(prisma);
   await ensureGroupTeamCompatibility(prisma);
 
-  const allowed = await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, id);
+  const allowed = hasActionPermission(session.user, 'groups', 'delete') && await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, id);
   if (!allowed) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
   }

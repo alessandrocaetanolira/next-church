@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Baby, Car, Heart, Layers, Plus, Search, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { hasActionPermission } from '@/lib/access-control';
 
 type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';
 type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
@@ -96,7 +97,7 @@ export default function GroupsPage() {
     members: [] as Array<{ memberId: string; role: string }>,
   });
 
-  const canManage = ['ADMIN', 'PASTOR', 'LEADER'].includes(user?.role?.toUpperCase() ?? '');
+  const canManage = hasActionPermission(user, 'groups', 'create');
 
   useEffect(() => {
     setPageTitle('Grupos');
@@ -334,7 +335,7 @@ export default function GroupsPage() {
                   </div>
                 </CardContent>
               </Link>
-              {isTeam && !canManage && !isMember ? (
+              {isTeam && !canManage && !isMember && hasActionPermission(user, 'groups', 'request') ? (
                 <div className="px-4 pb-4">
                   <Button
                     className="w-full"

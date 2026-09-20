@@ -13,6 +13,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { getGlobalClient, getTenantClient } from "@/lib/prisma-factory";
 import bcrypt from "bcryptjs";
+import { normalizePlanFeatures } from '@/lib/plan-features';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -21,6 +22,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         churchSlug: { label: "Igreja (Slug)", type: "text" },
+        platformAdmin: { label: "Platform admin", type: "text" },
       },
       /**
        * Função de autorização que valida as credenciais contra os bancos Global e Tenant.
@@ -29,15 +31,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        * @returns {Promise<Object|null>} Objeto do usuário autenticado ou null se falhar.
        */
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password || !credentials?.churchSlug) return null;
+        if (!credentials?.email || !credentials?.password) return null;
 
-        const email = credentials.email as string;
+        const email = String(credentials.email).trim().toLowerCase();
         const password = credentials.password as string;
+        const globalClient = getGlobalClient();
+
+        if (String(credentials.platformAdmin) === 'true') {
+          const platformAdmin = await globalClient.platformAdmin.findUnique({ where: { email } });
+          if (!platformAdmin || !platformAdmin.active || !(await bcrypt.compare(password, platformAdmin.passwordHash))) {
+            return null;
+          }
+
+          return {
+            id: platformAdmin.id,
+            name: platformAdmin.name,
+            email: platformAdmin.email,
+            role: platformAdmin.role,
+            permissions: platformAdmin.permissions?.split(',').map((permission) => permission.trim()).filter(Boolean) ?? [],
+            tenantId: '',
+            tenantSlug: '',
+            linkedMemberId: null,
+            version: platformAdmin.version,
+            isPlatformAdmin: true,
+          };
+        }
+
+        if (!credentials?.churchSlug) return null;
         const churchSlug = String(credentials.churchSlug).trim().toLowerCase();
 
         try {
-          const globalClient = getGlobalClient();
-          
           // 1. Validar se a Igreja existe e está ativa no banco Global
           const church = await globalClient.church.findUnique({
             where: { slug: churchSlug },
@@ -51,6 +74,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           // 2. Recuperar o usuario e a credencial no banco do Tenant
           // O slug e publico e pode mudar; o databaseKey identifica o arquivo fisico.
           const databaseKey = church.databaseKey ?? church.slug;
+          const plan = await globalClient.plan.findUnique({ where: { code: church.plan } });
+          let planFeatures: string[] | undefined;
+          if (plan) {
+            try {
+              planFeatures = normalizePlanFeatures(plan.features ? JSON.parse(plan.features) : []);
+            } catch {
+              planFeatures = [];
+            }
+          }
           const tenantClient = getTenantClient(databaseKey);
           const user = await tenantClient.user.findUnique({
             where: { email },
@@ -75,6 +107,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             tenantSlug: church.slug,
             linkedMemberId: user.linkedMemberId,
             version: user.version,
+            isPlatformAdmin: false,
+            planCode: church.plan,
+            planFeatures,
           };
         } catch (e) {
           console.error("Auth Exception:", e);
@@ -96,6 +131,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.tenantSlug = (user as any).tenantSlug;
         token.linkedMemberId = (user as any).linkedMemberId;
         token.version = (user as any).version;
+        token.isPlatformAdmin = Boolean((user as any).isPlatformAdmin);
+        token.planCode = (user as any).planCode as string | undefined;
+        token.planFeatures = (user as any).planFeatures as string[] | undefined;
       }
       return token;
     },
@@ -111,6 +149,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).tenantSlug = token.tenantSlug as string;
         (session.user as any).linkedMemberId = token.linkedMemberId as string | null | undefined;
         (session.user as any).version = token.version as number;
+        (session.user as any).isPlatformAdmin = Boolean(token.isPlatformAdmin);
+        (session.user as any).planCode = token.planCode as string | undefined;
+        (session.user as any).planFeatures = (token.planFeatures as string[]) || undefined;
       }
       return session;
     },

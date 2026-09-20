@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { ensureGroupTeamCompatibility, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function PATCH(
   request: NextRequest,
@@ -11,8 +12,11 @@ export async function PATCH(
   const session = await auth();
   const sessionRole = session?.user?.role?.toUpperCase();
 
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(sessionRole ?? '')) {
+  if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'groups', 'update') || !['ADMIN', 'PASTOR'].includes(sessionRole ?? '')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { leaderIds } = await request.json();

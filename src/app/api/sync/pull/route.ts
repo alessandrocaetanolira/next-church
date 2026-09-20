@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { getTenantClient } from "@/lib/prisma-factory";
 import { auth } from "@/auth";
 import { ensureTenantSchemaExtensions } from "@/lib/tenant-schema";
+import { hasPlanFeature } from "@/lib/access-control";
 
 function parseSale(sale: {
   items: string;
@@ -60,6 +61,9 @@ export async function GET(request: Request) {
   const session = await auth();
   if (!session || !session.user || !session.user.tenantId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!hasPlanFeature(session.user, 'offline_sync')) {
+    return NextResponse.json({ error: "Recurso não disponível no plano" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

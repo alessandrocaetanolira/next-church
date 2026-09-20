@@ -4,10 +4,11 @@ import { auth } from "@/auth";
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
 import { ensureGroupTeamCompatibility, parseCapabilities, parseLeaderIds, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  if (!session || !hasActionPermission(session.user, 'groups', 'view')) return new NextResponse("Unauthorized", { status: 401 });
   const tenantId = (session.user as any).tenantId;
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await auth();
   const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'LEADER'].includes(role ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'create')) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 

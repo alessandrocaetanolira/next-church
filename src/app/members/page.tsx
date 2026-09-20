@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Eye, Plus, QrCode } from 'lucide-react';
 import { MemberForm } from '@/components/forms/MemberForm';
 import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
+import { hasActionPermission } from '@/lib/access-control';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -53,6 +54,7 @@ export default function MembersPage() {
   const router = useRouter();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { user } = useAuth();
+  const canCreate = hasActionPermission(user, 'members', 'create');
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -124,14 +126,14 @@ export default function MembersPage() {
         description="A tela principal fica focada na busca. Edição, permissões e exclusão ficam no detalhe do membro."
         actions={
           <>
-          <Button variant="outline" onClick={() => setInviteDrawerOpen(true)}>
+          {canCreate ? <Button variant="outline" onClick={() => setInviteDrawerOpen(true)}>
             <QrCode className="mr-2 h-4 w-4" />
             Convidar
-          </Button>
-          <Button onClick={() => setMemberDrawerOpen(true)}>
+          </Button> : null}
+          {canCreate ? <Button onClick={() => setMemberDrawerOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Membro
-          </Button>
+          </Button> : null}
           </>
         }
       />

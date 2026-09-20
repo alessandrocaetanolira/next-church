@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { hasActionPermission } from '@/lib/access-control';
 
 type LedgerRow = {
   id: string;
@@ -25,6 +26,9 @@ export async function GET(
   const role = session?.user?.role?.toUpperCase();
   if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'CANTEEN'].includes(role ?? '')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'canteen', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { id } = await context.params;

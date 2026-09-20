@@ -17,6 +17,8 @@ import { MemberForm } from "@/components/forms/MemberForm";
 import { Pencil, Plus, Search, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission } from '@/lib/access-control';
 
 interface RemoteMember {
   id: string;
@@ -28,6 +30,10 @@ interface RemoteMember {
 }
 
 export function MembersList() {
+  const { user } = useAuth();
+  const canCreate = hasActionPermission(user, 'members', 'create');
+  const canUpdate = hasActionPermission(user, 'members', 'update');
+  const canDelete = hasActionPermission(user, 'members', 'delete');
   const [members, setMembers] = useState<RemoteMember[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,11 +99,11 @@ export function MembersList() {
               if (!open) setSelectedMember(null);
             }}
           >
-            <DialogTrigger asChild>
-              <Button onClick={() => setSelectedMember(null)}>
+            {canCreate ? <DialogTrigger asChild>
+              {canCreate ? <Button onClick={() => setSelectedMember(null)}>
                 <Plus className="w-4 h-4 mr-2" /> Novo
-              </Button>
-            </DialogTrigger>
+              </Button> : null}
+            </DialogTrigger> : null}
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{selectedMember ? "Editar Membro" : "Novo Membro"}</DialogTitle>
@@ -138,12 +144,12 @@ export function MembersList() {
                     <Badge variant="outline" className="border-green-600 text-green-600">Em dia</Badge>
                   )}
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => { setSelectedMember(member); setDialogOpen(true); }}>
+                    {canUpdate ? <Button size="sm" variant="outline" onClick={() => { setSelectedMember(member); setDialogOpen(true); }}>
                       <Pencil className="w-4 h-4 mr-2" /> Editar
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setDeleteId(member.id)}>
+                    </Button> : null}
+                    {canDelete ? <Button size="sm" variant="outline" onClick={() => setDeleteId(member.id)}>
                       <Trash2 className="w-4 h-4 mr-2 text-destructive" /> Excluir
-                    </Button>
+                    </Button> : null}
                   </div>
                 </div>
               </div>

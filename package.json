@@ -18,6 +18,9 @@
     "db:baseline": "tsx prisma/scripts/baseline-databases.ts",
     "db:promote-baseline": "tsx prisma/scripts/promote-baseline.ts",
     "db:seed:tenant-fixtures": "tsx prisma/scripts/seed-tenant-fixtures.ts",
+    "db:seed:permission-fixtures": "tsx prisma/scripts/seed-permission-fixtures.ts",
+    "db:seed:platform-admin": "tsx prisma/seed-platform-admin.ts",
+    "db:seed:plans": "tsx prisma/seed-plans.ts",
     "db:inventory": "tsx prisma/scripts/inventory-databases.ts",
     "db:backup": "tsx prisma/scripts/backup-databases.ts"
   },

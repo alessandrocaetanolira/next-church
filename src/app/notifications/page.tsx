@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission } from '@/lib/access-control';
 import {
   Bell,
   BellRing,
@@ -123,6 +125,8 @@ function groupByDate(notifs: NotificationRecord[]) {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
+  const canUpdate = hasActionPermission(user, 'notifications', 'update');
   const router = useRouter();
   const { notifications, unreadCount } = useNotificationCenter();
   const [selectedNotif, setSelectedNotif] = useState<NotificationRecord | null>(null);
@@ -166,7 +170,7 @@ export default function NotificationsPage() {
             </Button>
             <BellRing className="w-5 h-5 text-primary" />
             <h2 className="font-bold text-lg">Notificações</h2>
-            {unreadCount > 0 ? (
+            {canUpdate && unreadCount > 0 ? (
               <Badge variant="destructive" className="text-[10px]">
                 {unreadCount} não lidas
               </Badge>
@@ -178,7 +182,7 @@ export default function NotificationsPage() {
                 <CheckCheck className="w-3.5 h-3.5" /> Ler todas
               </Button>
             ) : null}
-            {notifications.length > 0 ? (
+            {canUpdate && notifications.length > 0 ? (
               <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive" onClick={handleClear}>
                 <Trash2 className="w-3.5 h-3.5" /> Limpar
               </Button>

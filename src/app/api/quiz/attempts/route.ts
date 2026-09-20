@@ -3,11 +3,13 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.tenantId) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (!session?.user?.tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  if (!hasActionPermission(session.user, 'games', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const prisma = getTenantClient(session.user.tenantId);
@@ -33,6 +35,9 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'games', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const { score, totalQuestions, correctAnswers, completedAt, userId, userName } = await request.json();

@@ -40,6 +40,10 @@ prisma/databases/*.db-*
 # generated Prisma clients
 /src/generated/
 
+# tenant-uploaded files
+/files/*
+!/files/.gitkeep
+
 # vercel
 .vercel
 

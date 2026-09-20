@@ -10,6 +10,8 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { notifyCanteenNewOrder } from '@/lib/server/notification-service';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
+import { getCanteenStatus } from '@/lib/server/canteen-operation';
 
 function parseSale(sale: {
   items: string;
@@ -37,6 +39,9 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+  if (!hasActionPermission(session.user, 'canteen', 'view')) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
   }
 
   const tenantId = session.user.tenantId;
@@ -77,8 +82,18 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  const canSell = hasActionPermission(session.user, 'canteen', 'sell');
+  const canOrder = hasActionPermission(session.user, 'canteen', 'order');
+  if (!canSell && !canOrder) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+  }
 
   const { id, items, total, paymentMethod, orderStatus, memberId, memberName, createdBy, createdAt } = await request.json();
+  const status = await getCanteenStatus(getTenantClient(session.user.tenantId));
+  if (!status.isOpen) return NextResponse.json({ error: 'A cantina está fechada no momento.' }, { status: 409 });
+  if (!canSell && (paymentMethod !== 'pending' || orderStatus !== 'pending')) {
+    return NextResponse.json({ error: 'Membros devem enviar pedidos para aprovação da cantina.' }, { status: 403 });
+  }
   const tenantId = session.user.tenantId;
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);

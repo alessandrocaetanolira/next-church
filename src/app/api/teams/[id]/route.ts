@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { ensureGroupTeamCompatibility, parseLeaderIds, softDeleteCanonicalTeamGroup, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function PATCH(
   request: NextRequest,
@@ -10,7 +11,7 @@ export async function PATCH(
 ) {
   const session = await auth();
   const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'LEADER'].includes(role ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'update')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -49,7 +50,7 @@ export async function DELETE(
 ) {
   const session = await auth();
   const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'delete')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

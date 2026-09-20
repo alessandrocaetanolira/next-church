@@ -3,10 +3,12 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup } from '@/lib/groups';
+import { hasActionPermission } from '@/lib/access-control';
 
-async function authorize(groupId: string) {
+async function authorize(groupId: string, action: 'update' | 'delete') {
   const session = await auth();
   if (!session?.user?.tenantId) return null;
+  if (!hasActionPermission(session.user, 'groups', action)) return null;
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
   const allowed = await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, groupId);
@@ -19,7 +21,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; goalId: string }> }
 ) {
   const { id, goalId } = await params;
-  const authorized = await authorize(id);
+  const authorized = await authorize(id, 'update');
   if (!authorized) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
@@ -53,7 +55,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; goalId: string }> }
 ) {
   const { id, goalId } = await params;
-  const authorized = await authorize(id);
+  const authorized = await authorize(id, 'delete');
   if (!authorized) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }

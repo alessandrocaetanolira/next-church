@@ -9,6 +9,9 @@ declare module "next-auth" {
       tenantSlug: string;
       linkedMemberId?: string | null;
       version: number;
+      isPlatformAdmin: boolean;
+      planCode?: string;
+      planFeatures?: string[];
     } & DefaultSession["user"];
   }
 
@@ -19,6 +22,9 @@ declare module "next-auth" {
     tenantSlug: string;
     linkedMemberId?: string | null;
     version: number;
+    isPlatformAdmin: boolean;
+    planCode?: string;
+    planFeatures?: string[];
   }
 }
 
@@ -30,5 +36,8 @@ declare module "next-auth/jwt" {
     tenantSlug: string;
     linkedMemberId?: string | null;
     version: number;
+    isPlatformAdmin: boolean;
+    planCode?: string;
+    planFeatures?: string[];
   }
 }

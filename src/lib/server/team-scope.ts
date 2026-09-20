@@ -35,7 +35,12 @@ export async function getTeamScopedAccess(session: SessionLike, permission: 'tas
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
 
-  const hasGlobalAccess = hasPermission(session.user ?? null, permission);
+  // Líderes continuam restritos às equipes vinculadas, mesmo quando possuem
+  // a permissão legada do módulo. Acesso global fica reservado a admin/pastor.
+  const role = session.user?.role?.toUpperCase();
+  const hasGlobalAccess =
+    (role === 'ADMIN' || role === 'PASTOR') &&
+    hasPermission(session.user ?? null, permission);
   if (hasGlobalAccess) {
     const teams = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
       `SELECT id FROM "Team" WHERE deletedAt IS NULL ORDER BY name ASC`

@@ -13,6 +13,8 @@ import { Plus, Minus, AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ConfirmDeleteDialog, Notice, PageHeader, PageShell, SearchField } from '@/components/common';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 
 type MaterialItem = {
   id: string;
@@ -28,6 +30,11 @@ const units = ['unidades', 'litros', 'kg', 'metros', 'caixas', 'pacotes', 'rolos
 
 export default function MaterialsPage() {
   const setPageTitle = useUIStore((state) => state.setPageTitle);
+  const { user } = useAuth();
+  const canManage = hasActionPermission(user, 'materials', 'manage');
+  const canCreate = canManage || hasActionPermission(user, 'materials', 'create');
+  const canUpdate = canManage || hasActionPermission(user, 'materials', 'update');
+  const canDelete = canManage || hasActionPermission(user, 'materials', 'delete');
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [search, setSearch] = useState('');
   const [editingMaterial, setEditingMaterial] = useState<MaterialItem | null>(null);
@@ -139,9 +146,9 @@ export default function MaterialsPage() {
       header: 'Quantidade',
       render: (material) => (
         <div className="flex items-center gap-2">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, -1)}><Minus className="w-3 h-3" /></Button>
+          {canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, -1)}><Minus className="w-3 h-3" /></Button>}
           <span className="font-medium w-16 text-center">{material.quantity} {material.unit}</span>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, 1)}><Plus className="w-3 h-3" /></Button>
+          {canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, 1)}><Plus className="w-3 h-3" /></Button>}
         </div>
       ),
     },
@@ -172,10 +179,10 @@ export default function MaterialsPage() {
       />
 
       <div className="flex justify-end">
-        <Button onClick={() => openDialog()}>
+        {canCreate && <Button onClick={() => openDialog()}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Material
-        </Button>
+        </Button>}
       </div>
 
       {materials.some((material) => material.quantity <= material.minQuantity) ? (
@@ -193,12 +200,12 @@ export default function MaterialsPage() {
         pageSize={10}
         actions={(material) => (
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openDialog(material)}>
+            {canUpdate && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openDialog(material)}>
               <Edit className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(material.id)}>
+            </Button>}
+            {canDelete && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(material.id)}>
               <Trash2 className="w-4 h-4 text-destructive" />
-            </Button>
+            </Button>}
           </div>
         )}
       />

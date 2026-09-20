@@ -4,6 +4,7 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { ensureGroupTeamCompatibility } from '@/lib/group-team-compat';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 function parseTeamIds(value: string | null | undefined) {
   if (!value) return [] as string[];
@@ -17,7 +18,7 @@ export async function PATCH(
   const session = await auth();
   const role = session?.user?.role?.toUpperCase();
 
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'manage_access')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Baby, HeartPulse, Plus, Search, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission } from '@/lib/access-control';
 
 type ChildItem = {
   id: string;
@@ -73,7 +73,10 @@ export default function KidsPage() {
     content: '',
     pinDays: '0',
   });
-  const canPublishToFeed = ['ADMIN', 'PASTOR'].includes(user?.role?.toUpperCase() ?? '') || hasPermission(user, 'pastor');
+  const canCreate = hasActionPermission(user, 'kids', 'create');
+  const canUpdate = hasActionPermission(user, 'kids', 'update');
+  const canDelete = hasActionPermission(user, 'kids', 'delete');
+  const canPublishToFeed = hasActionPermission(user, 'feed', 'share');
 
   useEffect(() => {
     setPageTitle('Infantil');
@@ -224,6 +227,7 @@ export default function KidsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'event',
+          share: true,
           title: postForm.title.trim() || undefined,
           content: postForm.content.trim(),
           visibility: 'group',
@@ -265,10 +269,10 @@ export default function KidsPage() {
               Publicar no Feed
             </Button>
           ) : null}
-          <Button onClick={() => openDrawer()}>
+          {canCreate ? <Button onClick={() => openDrawer()}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Criança
-          </Button>
+          </Button> : null}
         </div>
       </div>
 
@@ -303,8 +307,8 @@ export default function KidsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => openDrawer(child)}>Editar</Button>
-                <Button
+                {canUpdate ? <Button variant="outline" className="flex-1" onClick={() => openDrawer(child)}>Editar</Button> : null}
+                {canUpdate ? <Button
                   variant="outline"
                   className="flex-1"
                   onClick={() => {
@@ -317,8 +321,8 @@ export default function KidsPage() {
                 >
                   <Send className="mr-2 h-4 w-4" />
                   Avisar
-                </Button>
-                <Button variant="destructive" className="flex-1" onClick={() => void deleteChild(child.id)}>Excluir</Button>
+                </Button> : null}
+                {canDelete ? <Button variant="destructive" className="flex-1" onClick={() => void deleteChild(child.id)}>Excluir</Button> : null}
               </div>
             </CardContent>
           </Card>

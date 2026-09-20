@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
 
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR'].includes(role ?? '')) {
+  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'members', 'approve')) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -37,6 +37,9 @@ export async function PATCH(
   }
 
   if (action === 'reject') {
+    if (!hasActionPermission(session.user, 'members', 'delete')) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
     await tenantPrisma.member.update({
       where: { id },
       data: {

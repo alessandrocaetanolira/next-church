@@ -5,12 +5,14 @@ import { notifyAnnouncementPublished, notifyGroupFeedPublished } from '@/lib/ser
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup, FeedVisibility, getAccessibleGroupIds, normalizeStringArray, parseJsonField } from '@/lib/groups';
 import { generateId } from '@/lib/id';
+import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.tenantId) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'feed', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const page = Math.max(1, Number(request.nextUrl.searchParams.get('page') ?? '1'));
   const limit = Math.min(20, Math.max(1, Number(request.nextUrl.searchParams.get('limit') ?? '10')));
@@ -83,8 +85,17 @@ export async function POST(request: NextRequest) {
   if (!session?.user?.tenantId || !session.user.email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
-
   const body = await request.json();
+  const requestedAction = body.share === true || body.postAsGroup === true
+    ? 'share'
+    : body.type === 'announcement' || body.visibility !== 'public' || Number(body.pinDays ?? 0) > 0
+      ? 'moderate'
+      : 'publish';
+  const hasPublicationPermission = requestedAction === 'publish'
+    ? hasAnyActionPermission(session.user, 'feed', ['publish', 'create'])
+    : hasActionPermission(session.user, 'feed', requestedAction);
+  if (!hasPublicationPermission) return NextResponse.json({ error: 'Sem permissão para esta publicação' }, { status: 403 });
+
   const title = typeof body.title === 'string' ? body.title.trim() : null;
   const content = String(body.content ?? '').trim();
   const type = String(body.type ?? 'testimony');
@@ -104,11 +115,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Conteúdo obrigatório' }, { status: 400 });
   }
 
-  if (type === 'announcement' && !['ADMIN', 'PASTOR'].includes(role)) {
+  if (type === 'announcement' && !hasAnyActionPermission(session.user, 'feed', ['moderate'])) {
     return NextResponse.json({ error: 'Sem permissão para publicar avisos' }, { status: 403 });
   }
 
-  if (!canTargetFeed && visibility !== 'public') {
+  if (!hasAnyActionPermission(session.user, 'feed', ['moderate']) && visibility !== 'public') {
     return NextResponse.json({ error: 'Sem permissão para publicar avisos direcionados' }, { status: 403 });
   }
 

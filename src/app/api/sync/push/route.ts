@@ -11,6 +11,7 @@ import { auth } from "@/auth";
 import { ensureTenantSchemaExtensions } from "@/lib/tenant-schema";
 import { notifyCanteenNewOrder } from '@/lib/server/notification-service';
 import { generateId } from '@/lib/id';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -209,6 +210,23 @@ export async function POST(request: Request) {
 
         results.push({ id: change.id, status: 'success' });
       } else if (change.module === 'tasks') {
+        const taskAction =
+          change.action === 'create' || change.action === 'update' || change.action === 'delete'
+            ? change.action
+            : null;
+        // Sessões antigas sem os novos campos de autorização continuam
+        // compatíveis durante a migração; sessões atuais são sempre validadas.
+        const hasAuthorizationMetadata =
+          session.user.role !== undefined ||
+          session.user.permissions !== undefined ||
+          session.user.planFeatures !== undefined;
+        if (
+          !taskAction ||
+          (hasAuthorizationMetadata && !hasActionPermission(session.user, 'tasks', taskAction))
+        ) {
+          results.push({ id: change.id, status: 'forbidden', error: 'Sem permissão para esta operação em tarefas' });
+          continue;
+        }
         if (change.action === 'create' || change.action === 'update') {
             await prisma.task.upsert({
                 where: { id: change.data.id },

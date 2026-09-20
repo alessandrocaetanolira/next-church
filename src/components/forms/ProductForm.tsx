@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { db } from '@/lib/db';
+import { db, type LocalProduct } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 interface ProductFormProps {
   onSuccess: () => void;
@@ -30,7 +31,14 @@ interface ProductFormProps {
 }
 
 export function ProductForm({ onSuccess, product }: ProductFormProps) {
-  const products = useLiveQuery(() => db.products.toArray(), []) ?? [];
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
+  const products = useLiveQuery<LocalProduct[]>(
+    () => tenantId
+      ? db.products.filter((item) => item.tenantId === tenantId).toArray()
+      : Promise.resolve([] as LocalProduct[]),
+    [tenantId],
+  ) ?? [];
   const categoryOptions = Array.from(new Set(products.map((item) => item.category).filter(Boolean))).sort((a, b) => a.localeCompare(b));
   const existingCategory = product?.category && categoryOptions.includes(product.category) ? product.category : '';
   const [formData, setFormData] = useState({
@@ -70,6 +78,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
     e.preventDefault();
     const payload = {
       id: product?.id ?? generateId(),
+      tenantId,
       name: formData.name,
       description: formData.description,
       imageUrl: formData.imageUrl || null,
@@ -94,6 +103,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
       const savedProduct = await res.json();
       await db.products.put({
         ...savedProduct,
+        tenantId,
         active: savedProduct.active ?? true,
         availableToday: savedProduct.availableToday ?? true,
         cost: savedProduct.cost ?? 0,
@@ -107,6 +117,7 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
     } catch {
       await db.products.put({
         ...payload,
+        tenantId,
         createdAt: product?.id ? (products.find((item) => item.id === product.id)?.createdAt ?? new Date().toISOString()) : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         deletedAt: null,

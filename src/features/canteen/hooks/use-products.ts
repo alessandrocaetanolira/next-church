@@ -12,12 +12,16 @@
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
-export function useProducts() {
+export function useProducts(enabled = true) {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
   useEffect(() => {
     let active = true;
 
     const loadProducts = async () => {
+      if (!enabled) return;
       try {
         const response = await fetch('/api/canteen/products');
         if (!response.ok) return;
@@ -28,6 +32,7 @@ export function useProducts() {
         await db.products.bulkPut(
           products.map((product) => ({
             ...product,
+            tenantId,
             active: product.active ?? true,
             availableToday: product.availableToday ?? true,
             deletedAt: product.deletedAt ?? null,
@@ -44,14 +49,17 @@ export function useProducts() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [enabled, tenantId]);
 
   const products = useLiveQuery(
     async () => {
       // Busca todos os produtos ativos do banco local (Dexie)
-      return await db.products.filter(p => p.deletedAt === null).toArray();
+      if (!enabled || !tenantId) return [];
+      return await db.products
+        .filter((product) => product.tenantId === tenantId && product.deletedAt === null)
+        .toArray();
     },
-    []
+    [enabled, tenantId]
   );
 
   return products || [];

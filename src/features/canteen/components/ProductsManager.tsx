@@ -14,8 +14,15 @@ import { db, type LocalProduct } from '@/lib/db';
 import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { hasActionPermission } from '@/lib/access-control';
 
 export function ProductsManager() {
+  const { user } = useAuth();
+  const canManageProducts = hasActionPermission(user, 'canteen', 'manage_products');
+  const canCreate = canManageProducts;
+  const canUpdate = canManageProducts;
+  const canDelete = canManageProducts;
   const products = useProducts();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -113,18 +120,18 @@ export function ProductsManager() {
             />
           </div>
 
-          <Drawer
+          {canCreate || canUpdate ? <Drawer
             open={dialogOpen}
             onOpenChange={(open) => {
               setDialogOpen(open);
               if (!open) setSelectedProduct(null);
             }}
           >
-            <DrawerTrigger asChild>
+            {canCreate ? <DrawerTrigger asChild>
               <Button onClick={() => setSelectedProduct(null)}>
                 <Plus className="mr-2 h-4 w-4" /> Novo
               </Button>
-            </DrawerTrigger>
+            </DrawerTrigger> : null}
             <DrawerContent className="max-h-[90vh]">
               <DrawerHeader>
                 <DrawerTitle>{selectedProduct ? 'Editar Produto' : 'Cadastrar Produto'}</DrawerTitle>
@@ -139,7 +146,7 @@ export function ProductsManager() {
               />
               </div>
             </DrawerContent>
-          </Drawer>
+          </Drawer> : null}
         </div>
 
         <div className="space-y-3">
@@ -176,12 +183,12 @@ export function ProductsManager() {
                 </div>
                 <div className="ml-2 flex items-center gap-1">
                   <Label className="mr-1 text-[10px] text-muted-foreground">Hoje</Label>
-                  <Switch
+                  {canUpdate ? <Switch
                     checked={product.availableToday !== false}
                     onCheckedChange={(checked) => toggleAvailableToday(product.id, checked)}
                     disabled={savingId === product.id}
-                  />
-                  <Button
+                  /> : null}
+                  {canUpdate ? <Button
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
@@ -191,10 +198,10 @@ export function ProductsManager() {
                     }}
                   >
                     <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(product.id)}>
+                  </Button> : null}
+                  {canDelete ? <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(product.id)}>
                     <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  </Button> : null}
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { subscribeToTenantEvents } from '@/lib/server/sse-broker';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -11,6 +12,7 @@ export async function GET(request: NextRequest) {
   if (!tenantId || !email) {
     return new Response('Não autorizado', { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'notifications', 'view')) return new Response('Sem permissão', { status: 403 });
 
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);

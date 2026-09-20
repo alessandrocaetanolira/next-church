@@ -53,6 +53,15 @@ Email: admin@teste.com
 Senha: 123456
 ```
 
+O acesso administrativo da plataforma usa uma tela separada em `/admin/login`.
+O administrador global local padrão também usa `admin@teste.com` e `123456`, mas é
+armazenado na tabela `PlatformAdmin` do banco global, separado do usuário da igreja.
+Para recriá-lo:
+
+```bash
+DATABASE_URL="file:$(pwd)/prisma/databases/global.db" npm run db:seed:platform-admin
+```
+
 ## Organizacao
 
 - `src/app`: rotas App Router e APIs.

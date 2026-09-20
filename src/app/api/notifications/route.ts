@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
   const session = await auth();
@@ -11,6 +12,7 @@ export async function GET() {
   if (!tenantId || !email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'notifications', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const prisma = getTenantClient(tenantId);
   await ensureTenantSchemaExtensions(prisma);
@@ -54,6 +56,7 @@ export async function PATCH(request: NextRequest) {
   if (!tenantId || !email) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
+  if (!hasActionPermission(session.user, 'notifications', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const { action } = await request.json();
   if (action !== 'markAllRead') {

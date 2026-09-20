@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTenantClient } from "@/lib/prisma-factory";
 import { auth } from "@/auth";
+import { hasActionPermission } from "@/lib/access-control";
 
 /**
  * Endpoint de Sincronização Unificada (Push/Pull)
@@ -14,6 +15,9 @@ export async function GET(req: NextRequest) {
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   const tenantId = (session.user as any).tenantId;
+  if (!hasActionPermission(session.user, 'tasks', 'view')) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
   const prisma = getTenantClient(tenantId);
 
   const since = req.nextUrl.searchParams.get("since");
@@ -39,6 +43,9 @@ export async function POST(req: NextRequest) {
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   const tenantId = (session.user as any).tenantId;
+  if (!hasActionPermission(session.user, 'tasks', 'create') && !hasActionPermission(session.user, 'tasks', 'update')) {
+    return new NextResponse("Forbidden", { status: 403 });
+  }
   const prisma = getTenantClient(tenantId);
 
   const body = await req.json();

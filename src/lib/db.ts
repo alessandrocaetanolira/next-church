@@ -50,6 +50,7 @@ export interface LocalSale {
 /** Representa um produto da cantina armazenado localmente. */
 export interface LocalProduct {
   id: string;
+  tenantId?: string;
   name: string;
   price: number;
   cost?: number;

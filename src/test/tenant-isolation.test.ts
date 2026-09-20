@@ -5,6 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { getGlobalClient, getTenantClient, closeAllConnections } from '../lib/prisma-factory';
+import { TenantService } from '../lib/tenant-service';
 
 describe('Tenant isolation with three churches', () => {
   const tenants = [
@@ -78,5 +79,52 @@ describe('Tenant isolation with three churches', () => {
       expect(await client.member.count()).toBe(0);
       expect(await client.product.count()).toBe(0);
     }
+  });
+
+  it('nao cria banco para tenant ausente e rejeita arquivo vazio', async () => {
+    const missingPath = path.join(databaseDirectory, 'church-ausente.db');
+    expect(() => getTenantClient('ausente', databaseDirectory)).toThrow('Banco do tenant não encontrado');
+    expect(fs.existsSync(missingPath)).toBe(false);
+
+    const emptyPath = path.join(databaseDirectory, 'church_vazio.db');
+    fs.writeFileSync(emptyPath, '');
+    expect(() => getTenantClient('vazio', databaseDirectory)).toThrow('Banco do tenant inválido ou vazio');
+  });
+
+  it('bloqueia tenant inativo sem afetar os demais', async () => {
+    const global = getGlobalClient(databaseDirectory);
+    const church = await global.church.findUniqueOrThrow({ where: { slug: 'ig2' } });
+
+    await TenantService.updateTenant(
+      church.id,
+      { active: false },
+      { databaseDirectory }
+    );
+
+    const inactive = await global.church.findUniqueOrThrow({ where: { slug: 'ig2' } });
+    expect(inactive.active).toBe(false);
+    expect((await getTenantClient('igreja-teste', databaseDirectory).member.count())).toBe(1);
+
+    await TenantService.updateTenant(
+      church.id,
+      { active: true },
+      { databaseDirectory }
+    );
+  });
+
+  it('arquiva um tenant sem deixar o banco acessível', async () => {
+    const global = getGlobalClient(databaseDirectory);
+    const church = await global.church.findUniqueOrThrow({ where: { slug: 'ig3' } });
+    const databasePath = path.join(databaseDirectory, 'church_ig3.db');
+
+    const archived = await TenantService.deleteTenant(church.id, { databaseDirectory });
+
+    expect(archived.status).toBe('ARCHIVED');
+    expect(archived.active).toBe(false);
+    expect(fs.existsSync(databasePath)).toBe(false);
+    expect(fs.readdirSync(path.join(databaseDirectory, 'archived'))).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^church_ig3_\d+\.db\.bak$/)])
+    );
+    expect(() => getTenantClient('ig3', databaseDirectory)).toThrow('Banco do tenant não encontrado');
   });
 });

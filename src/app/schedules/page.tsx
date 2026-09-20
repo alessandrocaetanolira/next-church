@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { hasPermission } from '@/lib/access-control';
+import { hasActionPermission, hasPermission } from '@/lib/access-control';
 
 export const metadata: Metadata = {
   title: 'Escalas | Church App',
@@ -28,10 +28,10 @@ export default async function SchedulesPage() {
     <div className="container mx-auto p-4 space-y-4">
       <PageTitle title="Escalas" />
       <div className="flex justify-end">
-        <Button>
+        {hasActionPermission(session.user, 'tasks', 'create') ? <Button>
           <Plus className="mr-2 h-4 w-4" />
           Nova Escala
-        </Button>
+        </Button> : null}
       </div>
       <main>
         <TaskList />
