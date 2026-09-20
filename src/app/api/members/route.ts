@@ -1,129 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getTenantClient } from "@/lib/prisma-factory";
-import { auth } from "@/auth";
-import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
+import { auth } from '@/auth';
+import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { generateId } from '@/lib/id';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { createMember, listMembers } from '@/server/members/members.controller';
+import { MembersRepository } from '@/server/members/members.repository';
+import { MembersService } from '@/server/members/members.service';
 
-export async function GET(req: NextRequest) {
+async function getController() {
   const session = await auth();
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
-  if (!hasActionPermission(session.user, 'members', 'view')) return new NextResponse("Forbidden", { status: 403 });
-  const tenantId = (session.user as any).tenantId;
-  const prisma = getTenantClient(tenantId);
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
+  const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  const [members, users] = await Promise.all([
-    prisma.$queryRawUnsafe<Array<{
-      id: string;
-      name: string;
-      email: string;
-      phone: string;
-      creditBalance: number | null;
-      teamIds: string | null;
-      parentPhone: string | null;
-      birthDate: Date | null;
-      conversionDate: Date | null;
-      baptismDate: Date | null;
-      previousChurch: string | null;
-      aboutMe: string | null;
-      maritalStatus: string | null;
-      approved: boolean;
-      createdAt: Date;
-      updatedAt: Date;
-      deletedAt: Date | null;
-    }>>(
-      `
-        SELECT id, name, email, phone, creditBalance, teamIds, parentPhone, birthDate, conversionDate, baptismDate, previousChurch, aboutMe, maritalStatus, approved, createdAt, updatedAt, deletedAt
-        FROM "Member"
-        WHERE deletedAt IS NULL
-        ORDER BY name ASC
-      `
-    ),
-    prisma.user.findMany({ where: { deletedAt: null } }),
-  ]);
-
-  const payload = members.map((member) => {
-    const linkedUser =
-      users.find((user) => user.linkedMemberId === member.id) ??
-      users.find((user) => user.email === member.email);
-
-    return {
-      ...member,
-      creditBalance: member.creditBalance ?? 0,
-      teamIds: member.teamIds
-        ? member.teamIds.split(',').map((teamId: string) => teamId.trim()).filter(Boolean)
-        : [],
-      userId: linkedUser?.id ?? null,
-      role: linkedUser?.role ?? null,
-      permissions: linkedUser?.permissions
-        ? linkedUser.permissions.split(',').map((permission) => permission.trim()).filter(Boolean)
-        : [],
-      hasAccess: Boolean(linkedUser),
-    };
-  });
-
-  return NextResponse.json(payload);
+  return { user: session.user, service: new MembersService(new MembersRepository(prisma)) };
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session || !hasActionPermission(session.user, 'members', 'create'))
-    return new NextResponse("Forbidden", { status: 403 });
+export async function GET(_request: Request) {
+  try { return jsonOk(await listMembers(await getController())); } catch (error) { return jsonError(error); }
+}
 
-  const tenantId = (session.user as any).tenantId;
-  const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-  const data = normalizeMemberInput(await req.json());
-  const validationError = validateMemberInput(data);
-
-  if (validationError) {
-    return NextResponse.json({ error: validationError }, { status: 400 });
-  }
-
-  const existingMember = await prisma.member.findFirst({
-    where: {
-      email: data.email,
-      deletedAt: null,
-    },
-  });
-
-  if (existingMember) {
-    return NextResponse.json({ error: 'Este email já está cadastrado.' }, { status: 409 });
-  }
-
-  const memberId = generateId();
-  const now = new Date().toISOString();
-
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO "Member" (
-        id, name, email, phone, parentPhone, creditBalance, active, approved,
-        birthDate, conversionDate, baptismDate, previousChurch, aboutMe, teamIds,
-        maritalStatus, passwordHash, createdAt, updatedAt, deletedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    memberId,
-    data.name,
-    data.email,
-    data.phone,
-    data.parentPhone ?? null,
-    0,
-    true,
-    data.approved ?? true,
-    data.birthDate?.toISOString() ?? null,
-    data.conversionDate?.toISOString() ?? null,
-    data.baptismDate?.toISOString() ?? null,
-    data.previousChurch ?? null,
-    data.aboutMe ?? null,
-    null,
-    data.maritalStatus ?? null,
-    null,
-    now,
-    now,
-    null
-  );
-
-  const member = await prisma.member.findUnique({ where: { id: memberId } });
-  return NextResponse.json(member, { status: 201 });
+export async function POST(request: Request) {
+  try { return jsonOk(await createMember(await getController(), await request.json()), 201); } catch (error) { return jsonError(error); }
 }

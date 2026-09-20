@@ -1,59 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
-import { generateId } from '@/lib/id';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { createMaterial, listMaterials } from '@/server/materials/materials.controller';
+import { MaterialsRepository } from '@/server/materials/materials.repository';
+import { MaterialsService } from '@/server/materials/materials.service';
 
-export async function GET() {
+async function getContext() {
   const session = await auth();
-  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'materials', 'view')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-
-  const materials = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `
-      SELECT id, name, category, quantity, minQuantity, unit, createdAt, updatedAt, deletedAt
-      FROM "Material"
-      WHERE deletedAt IS NULL
-      ORDER BY category ASC, name ASC
-    `
-  );
-
-  return NextResponse.json(materials);
+  return { user: session.user, service: new MaterialsService(new MaterialsRepository(prisma)) };
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.tenantId || !hasAnyActionPermission(session.user, 'materials', ['create', 'manage'])) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
+export async function GET(_request: Request) {
+  try { return jsonOk(await listMaterials(await getContext())); } catch (error) { return jsonError(error); }
+}
 
-  const { name, category, quantity, minQuantity, unit } = await request.json();
-  const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-
-  const now = new Date().toISOString();
-  const id = generateId();
-
-  await prisma.$executeRawUnsafe(
-    `
-      INSERT INTO "Material" (id, name, category, quantity, minQuantity, unit, createdAt, updatedAt, deletedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    id,
-    name,
-    category,
-    quantity ?? 0,
-    minQuantity ?? 0,
-    unit ?? 'unidades',
-    now,
-    now,
-    null
-  );
-
-  return NextResponse.json({ success: true, id }, { status: 201 });
+export async function POST(request: Request) {
+  try { return jsonOk(await createMaterial(await getContext(), await request.json()), 201); } catch (error) { return jsonError(error); }
 }

@@ -58,18 +58,22 @@ src/app/api/admin/<modulo>/route.ts
 
 ### 1. Membros
 
-- [ ] `MembersRepository` para leitura, criação, edição e soft delete.
-- [ ] `MembersPolicy` para view/create/update/delete/approve/manage_access.
-- [ ] `MembersService` para cadastro, aprovação e acesso do usuário.
-- [ ] `MembersController` para rotas collection e detail.
+- [x] `MembersRepository` para leitura, criação, edição e soft delete (collection/detail migrados; acesso ainda pendente).
+- [x] `MembersPolicy` para view/create/update/delete (approve/manage_access ainda pendentes).
+- [x] `MembersService` para cadastro, edição e soft delete (aprovação e acesso ainda pendentes).
+- [x] `MembersController` para rotas collection e detail.
+- [x] Migrar `/api/members/[id]/access` para controller/service/repository.
+- [x] Validar perfil, permissões e senha no service antes de persistir o acesso.
 - [ ] Migrar testes atuais para controller/service.
 
 ### 2. Materiais
 
-- [ ] `MaterialsRepository`.
-- [ ] `MaterialsPolicy`, incluindo `materials:manage`.
-- [ ] `MaterialsService` para estoque, criação, edição e exclusão.
-- [ ] Migrar `/api/materials`.
+- [x] `MaterialsRepository`.
+- [x] `MaterialsPolicy`, incluindo `materials:manage`.
+- [x] `MaterialsService` para estoque, criação, edição e exclusão.
+- [x] Migrar `/api/materials`.
+- [x] Adicionar testes unitários do service/policy.
+- [ ] Validar escopo por equipe quando aplicável.
 
 ### 3. Cantina
 
