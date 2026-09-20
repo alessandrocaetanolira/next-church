@@ -1,77 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getTenantClient } from "@/lib/prisma-factory";
-import { auth } from "@/auth";
+import { auth } from '@/auth';
+import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
-import { saveTenantDataUrl } from '@/lib/server/tenant-file-storage';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { createProduct, listProducts } from '@/server/canteen/products.controller';
+import { CanteenProductsRepository } from '@/server/canteen/products.repository';
+import { CanteenProductsService } from '@/server/canteen/products.service';
 
-export async function GET(req: NextRequest) {
+async function getContext() {
   const session = await auth();
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
-  if (!hasAnyActionPermission(session.user, 'canteen', ['catalog', 'view'])) return new NextResponse("Forbidden", { status: 403 });
-  
-  const tenantId = (session.user as any).tenantId;
-  const prisma = getTenantClient(tenantId);
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
+  const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  const products = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `
-      SELECT
-        id, name, description, imageUrl, price, cost, stock, minStock, category,
-        active, availableToday, createdAt, updatedAt, deletedAt
-      FROM "Product"
-      WHERE deletedAt IS NULL
-      ORDER BY name ASC
-    `
-  );
-  return NextResponse.json(products);
+  return {
+    user: session.user,
+    service: new CanteenProductsService(
+      new CanteenProductsRepository(prisma),
+      session.user.tenantSlug ?? session.user.tenantId,
+    ),
+  };
 }
 
-export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session || !hasActionPermission(session.user, 'canteen', 'manage_products') || !['ADMIN', 'PASTOR', 'CANTEEN'].includes((session.user as any).role))
-    return new NextResponse("Forbidden", { status: 403 });
+export async function GET(request: Request) {
+  try { return jsonOk(await listProducts(await getContext())); } catch (error) { return jsonError(error); }
+}
 
-  const tenantId = (session.user as any).tenantId;
-  const tenantSlug = (session.user as any).tenantSlug ?? tenantId;
-  const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-  const data = await req.json();
-  let imageUrl = typeof data.imageUrl === 'string' ? data.imageUrl : null;
-  if (imageUrl?.startsWith('data:image/')) {
-    imageUrl = await saveTenantDataUrl(tenantSlug, 'products', imageUrl);
-  }
-
-  const product = await prisma.product.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      cost: data.cost,
-      stock: data.stock,
-      minStock: data.minStock,
-      category: data.category,
-      active: data.active ?? true,
-    },
-  });
-
-  await prisma.$executeRawUnsafe(
-    `UPDATE "Product" SET "availableToday" = ?, "imageUrl" = ?, "updatedAt" = ? WHERE id = ?`,
-    data.availableToday !== false,
-    imageUrl,
-    new Date().toISOString(),
-    product.id
-  );
-
-  const createdProduct = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `
-      SELECT
-        id, name, description, imageUrl, price, cost, stock, minStock, category,
-        active, availableToday, createdAt, updatedAt, deletedAt
-      FROM "Product"
-      WHERE id = ?
-      LIMIT 1
-    `,
-    product.id
-  );
-  return NextResponse.json(createdProduct[0], { status: 201 });
+export async function POST(request: Request) {
+  try { return jsonOk(await createProduct(await getContext(), await request.json()), 201); } catch (error) { return jsonError(error); }
 }

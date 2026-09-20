@@ -1,65 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { ensureGroupTeamCompatibility, parseLeaderIds, softDeleteCanonicalTeamGroup, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { deleteTeam, updateTeam } from '@/server/teams/teams.controller';
+import { TeamsRepository } from '@/server/teams/teams.repository';
+import { TeamsService } from '@/server/teams/teams.service';
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+async function getContext() {
   const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'update')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const { name, description, color, icon, memberIds, leaderIds } = await request.json();
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  await ensureGroupTeamCompatibility(prisma);
-
-  const [team] = await prisma.$queryRawUnsafe<Array<{ leaderIds: string | null }>>(
-    `SELECT leaderIds FROM "Team" WHERE id = ? AND deletedAt IS NULL LIMIT 1`,
-    id
-  );
-
-  const currentLeaders = parseLeaderIds(team?.leaderIds);
-  if (role === 'LEADER' && !currentLeaders.includes(session.user.linkedMemberId ?? '')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
-  }
-
-  await upsertCanonicalTeamGroup(prisma, {
-    id,
-    name,
-    description,
-    color,
-    icon,
-    memberIds: Array.isArray(memberIds) ? memberIds : [],
-    leaderIds: Array.isArray(leaderIds) ? leaderIds : [],
-  });
-
-  return NextResponse.json({ success: true });
+  const repository = new TeamsRepository(prisma);
+  return { session, repository, service: new TeamsService(repository) };
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'delete')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await updateTeam({ user: context.session.user, service: context.service, repository: context.repository }, (await params).id, await request.json())); }
+  catch (error) { return jsonError(error); }
+}
 
-  const { id } = await params;
-  const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-  await ensureGroupTeamCompatibility(prisma);
-
-  await softDeleteCanonicalTeamGroup(prisma, id);
-
-  return NextResponse.json({ success: true });
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await deleteTeam({ user: context.session.user, service: context.service, repository: context.repository }, (await params).id)); }
+  catch (error) { return jsonError(error); }
 }

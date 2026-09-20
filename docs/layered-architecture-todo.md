@@ -77,8 +77,19 @@ src/app/api/admin/<modulo>/route.ts
 
 ### 3. Cantina
 
-- [ ] `CanteenProductsRepository`.
-- [ ] `CanteenSalesRepository`.
+- [x] `CanteenProductsRepository`.
+- [x] `CanteenProductsPolicy` para catálogo e gerenciamento de produtos.
+- [x] `CanteenProductsService` para validação, upload local, criação, edição e exclusão.
+- [x] `CanteenProductsController` e migração das rotas de produtos.
+- [x] Extrair operação abrir/fechar cantina para repository/policy/service/controller.
+- [x] `CanteenSalesRepository` para consulta e criação transacional de vendas.
+- [x] `CanteenSalesPolicy` e `CanteenSalesService` para catálogo de vendas, pedidos, estoque e fiado.
+- [x] Migrar `GET/POST /api/canteen/sales`.
+- [x] Migrar consulta de ledger e registro de pagamentos do fiado.
+- [x] Migrar aprovação, preparo e cancelamento em `/api/canteen/sales/:id`.
+- [x] Centralizar notificações de atualização do pedido no service.
+- [x] Adicionar testes de regras transacionais de pedidos, estoque, cantina fechada, fiado e pagamentos.
+- [x] Adicionar testes de integração SQLite para baixa de estoque, fiado e rollback transacional.
 - [ ] `CanteenPolicy` com `view`, `sell`, `operate` e `manage_products`.
 - [ ] `CanteenService` para estoque, venda, pedidos e pagamentos.
 - [ ] Definir estado operacional de cantina aberta/fechada.
@@ -86,18 +97,36 @@ src/app/api/admin/<modulo>/route.ts
 
 ### 4. Grupos, equipes e tarefas
 
-- [ ] `GroupsRepository` e `TeamsRepository`.
-- [ ] `GroupsPolicy` com escopo de líder.
-- [ ] `TasksRepository` e `TasksService`.
-- [ ] Centralizar aprovação de solicitações de ingresso.
-- [ ] Migrar sincronização offline para services transacionais.
+- [x] `GroupsRepository` para listagem e criação.
+- [x] `GroupsPolicy` para consulta e criação.
+- [x] `GroupsService` e `GroupsController` para `GET/POST /api/groups`.
+- [x] Adicionar testes unitários de Policy/Service para listagem e criação.
+- [x] Migrar detalhe, edição, exclusão e escopo de líder de grupos.
+- [x] `TeamsRepository` para listagem e criação.
+- [x] `TeamsPolicy`, `TeamsService` e `TeamsController` para `GET/POST /api/teams`.
+- [x] Migrar edição e exclusão de equipes com escopo de líder.
+- [ ] `GroupsPolicy` com escopo de líder completo.
+- [x] `TasksRepository`, `TasksPolicy`, `TasksService` e `TasksController` para `GET/POST /api/schedules/tasks`.
+- [x] Eliminar a route duplicada `/schedules/tasks`, reutilizando o mesmo controller de leitura.
+- [x] Migrar criação, atualização e exclusão offline das tarefas pelo `sync/push`.
+- [x] Adicionar testes unitários de Policy/Service para sincronização de tarefas.
+- [x] Aplicar escopo de equipe na leitura e nas mutações de tarefas, inclusive no `sync/push`.
+- [x] Centralizar solicitações, listagem e aprovação de ingresso em repository/policy/service/controller.
+- [x] Adicionar teste de escopo para impedir aprovação de solicitação fora da equipe do líder.
+- [x] Migrar os domínios atualmente suportados pela sincronização offline (`sales`, `memberCredits`, `products` e `tasks`) para services transacionais.
+- [x] Migrar o branch offline de `products` para `CanteenProductsService` e `CanteenProductsController`.
+- [x] Migrar o branch offline de `memberCredits` para repository/policy/service/controller transacionais.
+- [x] Adicionar testes unitários do fluxo de créditos sincronizados.
+- [x] Migrar o branch offline de `sales` para `CanteenSalesService`, preservando estoque, fiado e notificações.
 
 ### 5. Feed e comunicação
 
-- [ ] `FeedRepository`.
-- [ ] `FeedPolicy` com `publish`, `share`, `comment`, `moderate` e `delete`.
-- [ ] `FeedService` para avisos, compartilhamentos, comentários, curtidas e notificações.
-- [ ] Garantir que publicação em nome de grupo valide escopo do usuário.
+- [x] `FeedRepository` para leitura e publicação.
+- [x] `FeedPolicy` com `publish`, `share` e `moderate` na criação.
+- [x] `FeedService` para listagem, publicação e notificações.
+- [x] Garantir que publicação em nome de grupo valide escopo do usuário.
+- [x] Extrair comentários, curtidas e exclusão da rota de detalhe.
+- [x] Centralizar as permissões de `comment` e `delete` do Feed.
 
 ### 6. Módulos restantes
 

@@ -1,85 +1,23 @@
-import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { getLedger } from '@/server/canteen/ledger.controller';
+import { CanteenLedgerRepository } from '@/server/canteen/ledger.repository';
+import { CanteenLedgerService } from '@/server/canteen/ledger.service';
 
-type LedgerRow = {
-  id: string;
-  memberId: string;
-  memberName: string | null;
-  type: string;
-  amount: number;
-  saleId: string | null;
-  notes: string | null;
-  createdBy: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-};
-
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ id: string }> }
-) {
+async function getContext() {
   const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'CANTEEN'].includes(role ?? '')) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'canteen', 'view')) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  }
-
-  const { id } = await context.params;
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
+  return { session, service: new CanteenLedgerService(new CanteenLedgerRepository(prisma)) };
+}
 
-  const member = await prisma.member.findFirst({
-    where: { id, deletedAt: null },
-  });
-
-  if (!member) {
-    return NextResponse.json({ error: 'Membro não encontrado' }, { status: 404 });
-  }
-
-  const ledger = await prisma.$queryRawUnsafe<LedgerRow[]>(
-    `
-      SELECT
-        id, memberId, memberName, type, amount, saleId, notes, createdBy, createdAt, updatedAt, deletedAt
-      FROM "CreditTransaction"
-      WHERE memberId = ? AND deletedAt IS NULL
-      ORDER BY createdAt DESC
-    `,
-    id
-  );
-
-  const totals = ledger.reduce(
-    (acc, entry) => {
-      if (entry.type === 'debit') acc.debits += entry.amount;
-      if (entry.type === 'payment') acc.payments += entry.amount;
-      return acc;
-    },
-    { debits: 0, payments: 0 }
-  );
-
-  return NextResponse.json({
-    member: {
-      ...member,
-      createdAt: member.createdAt.toISOString(),
-      updatedAt: member.updatedAt.toISOString(),
-      deletedAt: member.deletedAt?.toISOString() ?? null,
-    },
-    summary: {
-      debits: totals.debits,
-      payments: totals.payments,
-      balance: member.creditBalance ?? 0,
-    },
-    entries: ledger.map((entry) => ({
-      ...entry,
-      createdAt: entry.createdAt.toISOString(),
-      updatedAt: entry.updatedAt.toISOString(),
-      deletedAt: entry.deletedAt?.toISOString() ?? null,
-    })),
-  });
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const context = await getContext();
+    return jsonOk(await getLedger(context.session.user, context.service, (await params).id));
+  } catch (error) { return jsonError(error); }
 }

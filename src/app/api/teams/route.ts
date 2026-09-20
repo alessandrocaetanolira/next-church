@@ -1,58 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getTenantClient } from "@/lib/prisma-factory";
-import { auth } from "@/auth";
+import { auth } from '@/auth';
+import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { generateId } from '@/lib/id';
-import { ensureGroupTeamCompatibility, parseCapabilities, parseLeaderIds, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { createTeam, listTeams } from '@/server/teams/teams.controller';
+import { TeamsRepository } from '@/server/teams/teams.repository';
+import { TeamsService } from '@/server/teams/teams.service';
 
-export async function GET(req: NextRequest) {
+async function getContext() {
   const session = await auth();
-  if (!session || !hasActionPermission(session.user, 'groups', 'view')) return new NextResponse("Unauthorized", { status: 401 });
-  const tenantId = (session.user as any).tenantId;
-  const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-  await ensureGroupTeamCompatibility(prisma);
-  const teams = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
-    `
-      SELECT g.id, g.name, g.description, g.color, g.icon, g.capabilities, t.leaderIds, g.createdAt, g.updatedAt, g.deletedAt
-      FROM "Group" g
-      LEFT JOIN "Team" t ON t.id = g.id AND t.deletedAt IS NULL
-      WHERE g.deletedAt IS NULL AND g.type = 'team'
-      ORDER BY name ASC
-    `
-  );
-
-  const payload = teams.map((team) => ({
-    ...team,
-    leaderIds: parseLeaderIds(typeof team.leaderIds === 'string' ? team.leaderIds : null),
-    capabilities: parseCapabilities(typeof team.capabilities === 'string' ? team.capabilities : null),
-  }));
-  return NextResponse.json(payload);
-}
-
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  const role = session?.user?.role?.toUpperCase();
-  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'create')) {
-    return new NextResponse('Unauthorized', { status: 401 });
-  }
-
-  const { name, description, color, icon, memberIds, leaderIds } = await request.json();
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  await ensureGroupTeamCompatibility(prisma);
+  const repository = new TeamsRepository(prisma);
+  return { session, repository, service: new TeamsService(repository) };
+}
 
-  const teamId = generateId();
-  await upsertCanonicalTeamGroup(prisma, {
-    id: teamId,
-    name,
-    description,
-    color,
-    icon,
-    memberIds: Array.isArray(memberIds) ? memberIds : [],
-    leaderIds: Array.isArray(leaderIds) ? leaderIds : [],
-  });
+export async function GET(_request: Request) {
+  try { const context = await getContext(); return jsonOk(await listTeams({ user: context.session.user, service: context.service, repository: context.repository })); }
+  catch (error) { return jsonError(error); }
+}
 
-  return NextResponse.json({ success: true, id: teamId }, { status: 201 });
+export async function POST(request: Request) {
+  try { const context = await getContext(); return jsonOk(await createTeam({ user: context.session.user, service: context.service, repository: context.repository }, await request.json()), 201); }
+  catch (error) { return jsonError(error); }
 }
