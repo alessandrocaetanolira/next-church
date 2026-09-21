@@ -1,0 +1,197 @@
+RESUMO DE RETOMADA — CHURCH HUB NEXT
+====================================
+
+Data do resumo: 20/09/2026
+Projeto: church-hub-next
+Objetivo: aplicação Next.js para gestão de igrejas, com isolamento multi-tenant,
+administração global, módulos administrativos, cantina, membros, grupos, feed,
+materiais, notificações, Bíblia, Quiz, engajamento e suporte offline/PWA.
+
+1. COMO RETOMAR
+---------------
+
+Trabalhar na pasta do projeto:
+
+  church-hub-next/
+
+Instalar e gerar os clients Prisma:
+
+  npm install
+  npm run prisma:generate
+
+Criar .env.local na raiz do projeto. Exemplo mínimo:
+
+  DATABASE_URL="file:./prisma/databases/global.db"
+  CHURCH_DATABASE_DIR="./prisma/databases"
+  AUTH_SECRET="uma-chave-local-forte"
+  AUTH_URL="http://localhost:3000"
+  NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
+  AUTH_TRUST_HOST="true"
+
+Não colocar .env.local em src/app. Não versionar segredos nem bancos SQLite.
+
+Preparar uma instalação limpa:
+
+  npm run db:global:migrate:deploy
+  npx tsx prisma/provision.ts
+  npm run db:seed:platform-admin
+
+O provisionamento cria a igreja de teste, o banco do tenant e seu usuário inicial.
+Executar a aplicação com:
+
+  npm run dev
+
+URLs:
+
+  Usuário da igreja: http://localhost:3000/auth/login
+  Admin global:      http://localhost:3000/admin/login
+
+2. CREDENCIAIS LOCAIS PADRÃO
+----------------------------
+
+Igreja teste:
+  slug:     igreja-teste
+  e-mail:   admin@teste.com
+  senha:    123456
+
+Admin global:
+  e-mail:   admin@teste.com
+  senha:    123456
+
+São contas distintas. O admin da igreja fica no banco do tenant; o admin global
+fica na tabela PlatformAdmin do banco global e acessa somente /admin/*.
+
+Para alterar/recriar o admin global:
+
+  PLATFORM_ADMIN_EMAIL="admin@teste.com" \
+  PLATFORM_ADMIN_PASSWORD="123456" \
+  npm run db:seed:platform-admin
+
+Fixtures opcionais de perfis e permissões:
+
+  npm run db:seed:permission-fixtures
+
+As contas adicionais estão documentadas no próprio arquivo
+prisma/scripts/seed-permission-fixtures.ts.
+
+3. ARQUITETURA DE DADOS
+-----------------------
+
+O banco global guarda metadados da plataforma:
+
+  prisma/databases/global.db
+  Church, PlatformAdmin e Plan
+
+Cada igreja possui seu próprio SQLite:
+
+  prisma/databases/church_<databaseKey>.db
+
+Os dados de usuários, membros e módulos ficam no tenant. O slug é público; o
+databaseKey é o identificador físico estável do arquivo. Nunca escolher o arquivo
+do tenant diretamente a partir de caminho vindo da requisição.
+
+Clients gerados:
+
+  src/generated/prisma-global
+  src/generated/prisma-tenant
+
+Factories principais:
+
+  src/lib/prisma-factory.ts
+  src/lib/tenant-service.ts
+
+Use migrations separadas:
+
+  npm run db:global:migrate:deploy
+  DATABASE_URL="file:/caminho/church_<databaseKey>.db" npm run db:tenant:migrate:deploy
+  npm run db:tenant:migrate:all -- --dry-run
+
+Não usar db push para atualizar bancos reais. Não executar DDL durante login ou
+requisições comuns. O seed-complete.ts é legado e não é o fluxo atual.
+
+4. ARQUITETURA DE CÓDIGO
+------------------------
+
+Intenção da refatoração: manter routes finas e separar HTTP, regras de negócio,
+autorização e persistência.
+
+Fluxo esperado:
+
+  src/app/api/<modulo>/route.ts
+    -> controller
+      -> service
+        -> policy
+        -> repository
+          -> Prisma tenant ou global
+
+Responsabilidades:
+
+  Route       sessão, entrada HTTP e delegação
+  Controller  traduz comando HTTP e erros para resposta HTTP
+  Service     caso de uso, transação e orquestração
+  Policy      perfil, permissão, plano e escopo
+  Repository  consultas e persistência
+
+O contrato HTTP deve ser preservado durante a migração. Sync/offline deve apenas
+traduzir operações para os services transacionais do domínio.
+
+Domínios já migrados total ou parcialmente:
+
+  membros, materiais, cantina, grupos, equipes, tarefas, feed, sync,
+  pastoral, infantil, estacionamento, Bíblia, Quiz, notificações e engajamento.
+
+Arquivos de referência:
+
+  docs/layered-architecture-todo.md
+  docs/tenant-separation-todo.md
+  docs/architecture.md
+  docs/operations.md
+  docs/roadmap.md
+
+5. ESTADO ATUAL E PENDÊNCIAS
+----------------------------
+
+Validações recentes:
+
+  npx tsc --noEmit   passou
+  npm run lint       passou
+  npm test           87 passaram, 1 falhou, 8 ignorados
+
+Falhas conhecidas da última suíte:
+
+  - teste da API Bíblia retorna HTTP 500;
+  - três suítes de integração recebem spawnSync /bin/sh EPERM ao executar
+    migrations neste ambiente.
+  - npm run build ainda precisa ser executado e confirmado nesta rodada.
+
+Próximos passos definidos no TODO:
+
+  1. Corrigir o teste da API Bíblia e tornar integrações executáveis.
+  2. Padronizar requireSession, requireTenant e requirePlatformAdmin.
+  3. Criar/usar camada de validação compartilhada.
+  4. Completar escopo de líder em grupos, materiais e tarefas.
+  5. Migrar Branding/configurações e rotas globais de tenants/planos.
+  6. Remover DDL em runtime e concluir auditoria de isolamento.
+  7. Executar aceite com três tenants e validar build.
+
+6. GIT E CUIDADOS
+-----------------
+
+O branch principal é main e o remoto é origin. Antes de começar:
+
+  git status
+  git log --oneline -5
+
+Não incluir no commit arquivos locais como image.png, prisma/global/databases/,
+bancos SQLite, .env.local ou artefatos de execução, salvo se houver uma decisão
+explícita para isso. O resumo deste arquivo deve permanecer versionado.
+
+Antes de entregar uma alteração:
+
+  npx tsc --noEmit
+  npm run lint
+  npm test
+  npm run build
+
+Atualizar docs/layered-architecture-todo.md ao concluir cada domínio ou descobrir
+uma nova pendência. Registrar no commit o escopo real da alteração.

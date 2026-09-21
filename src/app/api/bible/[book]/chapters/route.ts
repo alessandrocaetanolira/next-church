@@ -1,30 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getTenantClient } from "@/lib/prisma-factory";
-import { auth } from "@/auth";
-import { hasActionPermission } from "@/lib/access-control";
+import { auth } from '@/auth';
+import { getTenantClient } from '@/lib/prisma-factory';
+import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { listBibleChapters } from '@/server/bible/bible.controller';
+import { BibleRepository } from '@/server/bible/bible.repository';
+import { BibleService } from '@/server/bible/bible.service';
 
-export async function GET(
-  req: NextRequest, 
-  context: { params: Promise<{ book: string }> }
-) {
-  const session = await auth();
-  if (!session) return new NextResponse("Unauthorized", { status: 401 });
-  if (!hasActionPermission(session.user, 'bible', 'view')) return new NextResponse("Forbidden", { status: 403 });
-
-  const { book } = await context.params;
-  const tenantId = (session.user as any).tenantId;
-  const prisma = getTenantClient(tenantId);
-
+export async function GET(_request: Request, { params }: { params: Promise<{ book: string }> }) {
   try {
-    const bookData = await prisma.book.findUnique({
-      where: { abbrev: book },
-      include: { chapters: { select: { number: true }, orderBy: { number: 'asc' } } }
-    });
-
-    if (!bookData) return new NextResponse("Not Found", { status: 404 });
-
-    return NextResponse.json(bookData.chapters.map(c => c.number));
-  } catch (error) {
-    return new NextResponse("Error fetching chapters", { status: 500 });
-  }
+    const session = await auth();
+    if (!session?.user?.tenantId) throw new UnauthenticatedError();
+    const prisma = getTenantClient(session.user.tenantId);
+    await ensureTenantSchemaExtensions(prisma);
+    const service = new BibleService(new BibleRepository(prisma));
+    return jsonOk(await listBibleChapters(session.user, service, (await params).book));
+  } catch (error) { return jsonError(error); }
 }

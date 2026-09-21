@@ -1,6 +1,69 @@
 # TODO — Separação Route/Controller/Service/Repository
 
-Objetivo: retirar regras de negócio e acesso direto ao Prisma das route handlers, mantendo isolamento entre banco global e bancos de tenant.
+## Intenção e resultado esperado
+
+Este documento é o plano vivo da refatoração. A intenção não é apenas mover arquivos:
+é estabelecer fronteiras previsíveis para que cada módulo possa evoluir, ser testado
+e aplicar autorização sem duplicar regras nas rotas.
+
+O resultado esperado é:
+
+- rotas finas, responsáveis somente por HTTP, sessão, validação de entrada e delegação;
+- controllers responsáveis por traduzir HTTP para comandos do domínio e erros para status;
+- services responsáveis por casos de uso, transações e orquestração;
+- policies responsáveis por perfil, permissão, plano e escopo de tenant/equipe;
+- repositories responsáveis exclusivamente por persistência e consultas;
+- banco global isolado para plataforma/tenants e banco de tenant isolado para os dados da igreja;
+- testes de regra independentes de Next.js e de um banco compartilhado.
+
+O contrato HTTP existente deve ser preservado durante a migração. Alterações de
+comportamento, schema ou permissões só entram junto com testes e uma decisão registrada.
+
+## Estado geral em 20/09/2026
+
+### Concluído
+
+- Infraestrutura de erros, respostas e contextos de tenant/plataforma criada.
+- Membros, materiais, cantina, grupos, equipes, tarefas, feed e sincronização offline
+  migrados parcial ou integralmente para camadas de domínio.
+- Pastoral, infantil, estacionamento, Bíblia, Quiz, notificações e engajamento
+  migrados para repository/policy/service/controller.
+- Fluxos de cantina, estoque, fiado, pedidos, pagamentos e operação abrir/fechar
+  estão centralizados em services e policies próprias.
+- O isolamento global/tenant e o acesso do administrador global possuem rotas e
+  clients separados.
+
+### Em andamento
+
+- Completar escopos de líder e permissões que ainda dependem de regras antigas.
+- Fechar a cobertura de testes por camada e por resposta HTTP.
+- Substituir extensões de schema executadas em runtime por migrations definitivas.
+- Extrair Branding/configurações e rotas administrativas globais de tenants/planos.
+
+### Validação atual
+
+- TypeScript e lint passam.
+- A última suíte registrou 87 testes aprovados, 1 falho e 8 ignorados; o falho é
+  da API Bíblia e três suítes de integração não conseguiram executar subprocessos
+  por `spawnSync /bin/sh EPERM` neste ambiente.
+- O build ainda deve ser executado e confirmado após esta rodada.
+
+## Estratégia de evolução
+
+Cada domínio segue este ciclo, sem tentar refatorar toda a aplicação de uma vez:
+
+1. mapear a rota atual, seu contrato e suas regras;
+2. criar repository, policy, service e controller mantendo o contrato HTTP;
+3. mover a rota para o controller e manter adapter temporário quando necessário;
+4. adicionar testes unitários de policy/service e testes de repository/controller;
+5. comparar respostas e permissões antes/depois;
+6. remover código legado somente depois da validação do domínio;
+7. registrar pendências e escolher o próximo domínio.
+
+Ordem escolhida: primeiro infraestrutura e módulos com regras mais reutilizáveis;
+depois módulos de negócio e, por último, os fluxos com maior estado/offline. Sync
+não deve voltar a concentrar regra: ele apenas traduz operações offline para os
+services transacionais dos domínios.
 
 ## Arquitetura alvo
 
@@ -131,11 +194,18 @@ src/app/api/admin/<modulo>/route.ts
 ### 6. Módulos restantes
 
 - [x] Pastoral: pendências, aprovação e rejeição de membros migradas para repository/policy/service/controller.
-- [ ] Infantil.
+- [x] Infantil: cadastro, edição, exclusão e notificações migrados para repository/policy/service/controller.
+- [x] Adicionar testes unitários do service/policy do Infantil.
 - [x] Estacionamento: CRUD, status e notificações migrados para repository/policy/service/controller.
 - [x] Adicionar testes unitários do service/policy do Estacionamento.
-- [ ] Bíblia e jogos.
-- [ ] Notificações e engajamento.
+- [x] Bíblia: livros, capítulos e versículos migrados para repository/policy/service/controller.
+- [x] Jogos/Quiz: perguntas e tentativas migrados para repository/policy/service/controller.
+- [x] Adicionar testes unitários dos services/policies de Bíblia e Quiz.
+- [x] Adicionar testes unitários do service/policy do Quiz.
+- [x] Notificações: leitura e marcação como lida migradas para repository/policy/service/controller.
+- [x] Adicionar testes unitários do service/policy de Notificações.
+- [x] Engajamento: perfil, streak, desafios, pontuação e ranking migrados para repository/policy/service/controller.
+- [x] Adicionar testes unitários dos services/policies de Notificações e Engajamento.
 - [ ] Branding e configurações.
 - [ ] Rotas administrativas globais de tenants e planos.
 
@@ -161,9 +231,17 @@ src/app/api/admin/<modulo>/route.ts
 - [ ] Testes de sincronização offline usando services.
 - [ ] Critério final: nenhuma regra de negócio nova deve ser implementada diretamente em uma route.
 
-## Primeiro incremento recomendado
+## Próximos incrementos recomendados
 
-1. Criar erros, contexto tenant e contrato de resposta.
-2. Migrar `members` como primeiro vertical slice.
-3. Comparar respostas antes/depois.
-4. Repetir o padrão em `materials` e `canteen`.
+1. Corrigir o teste da API Bíblia e tornar as suítes de integração executáveis no
+   ambiente de testes sem depender de `spawnSync` bloqueado.
+2. Padronizar `requireSession`, `requireTenant` e `requirePlatformAdmin`.
+3. Criar a camada de validação compartilhada e uniformizar erros 401, 403, 404,
+   409 e 422 nos controllers.
+4. Completar `GroupsPolicy` e os escopos de líder em grupos, materiais e tarefas.
+5. Migrar Branding/configurações e as rotas globais de tenants e planos.
+6. Substituir DDL em runtime por migrations e concluir a auditoria de isolamento.
+7. Executar os testes de aceite com três tenants e validar o build para deploy.
+
+Não iniciar uma nova migração de domínio antes de resolver a validação do item
+anterior, salvo correção urgente de segurança ou isolamento.

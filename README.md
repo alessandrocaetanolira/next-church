@@ -15,6 +15,12 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 - Dexie/IndexedDB
 - Vitest
 
+## Requisitos
+
+- Node.js 20 ou superior
+- npm
+- SQLite (o Prisma usa os arquivos SQLite locais; não é necessário instalar um servidor de banco)
+
 ## Scripts
 
 ```bash
@@ -22,30 +28,64 @@ npm run dev
 npm run build
 npm run lint
 npm test
+npm run prisma:generate
+npm run db:global:migrate:deploy
+npm run db:tenant:migrate:all
+npm run db:seed:platform-admin
+npm run db:backup
 ```
 
-## Ambiente Local
+## Ambiente local
 
-Crie um `.env` local com:
+Crie `.env.local` na raiz deste projeto (`church-hub-next/.env.local`). Não coloque o
+arquivo dentro de `src/app`, pois o Next.js carrega as variáveis a partir da raiz.
+
+Configuração mínima:
 
 ```bash
-DATABASE_URL="file:./databases/global.db"
-AUTH_SECRET="troque-esta-chave-localmente"
+DATABASE_URL="file:./prisma/databases/global.db"
+CHURCH_DATABASE_DIR="./prisma/databases"
+AUTH_SECRET="gere-uma-chave-local-forte"
 AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
 ```
 
-Os bancos SQLite locais ficam em `prisma/databases/` e sao ignorados pelo Git.
+`DATABASE_URL` aponta para o banco global. `CHURCH_DATABASE_DIR` define onde ficam os
+bancos físicos dos tenants; os caminhos relativos são resolvidos a partir da raiz do
+projeto. Em produção, prefira caminhos absolutos em volume persistente.
 
-Para preparar o banco global e popular dados locais:
+Os arquivos SQLite locais ficam em `prisma/databases/` e são ignorados pelo Git.
+
+### Instalação limpa
+
+Na raiz do projeto:
 
 ```bash
-npx prisma db push --skip-generate
-npx tsx prisma/seed-complete.ts
+npm install
+npm run prisma:generate
+npm run db:global:migrate:deploy
+npx tsx prisma/provision.ts
+npm run db:seed:platform-admin
 ```
 
-Credenciais locais criadas pelo seed:
+O `provision.ts` cria a igreja `igreja-teste`, aplica o schema do tenant e cria o
+usuário inicial da igreja. O seed de administrador global é executado separadamente
+porque esse usuário pertence ao banco global.
+
+Se os bancos dos tenants já existirem e apenas as migrations precisarem ser aplicadas:
+
+```bash
+npm run db:tenant:migrate:all
+```
+
+`prisma/seed-complete.ts` é um seed legado e não deve ser usado como fluxo principal
+de instalação do app atual. Para criar usuários de teste adicionais, use os fixtures
+documentados em [Operações](docs/operations.md).
+
+### Acessos locais
+
+Login da igreja em `/auth/login`:
 
 ```text
 Igreja: igreja-teste
@@ -53,14 +93,47 @@ Email: admin@teste.com
 Senha: 123456
 ```
 
-O acesso administrativo da plataforma usa uma tela separada em `/admin/login`.
-O administrador global local padrão também usa `admin@teste.com` e `123456`, mas é
-armazenado na tabela `PlatformAdmin` do banco global, separado do usuário da igreja.
-Para recriá-lo:
+Login do administrador global em `/admin/login`:
+
+```text
+Email: admin@teste.com
+Senha: 123456
+```
+
+São contas distintas, mesmo usando o mesmo e-mail e senha por padrão: a primeira
+fica no banco do tenant e a segunda na tabela `PlatformAdmin` do banco global.
+O administrador global acessa as rotas `/admin/*`; ele não entra automaticamente
+no contexto de dados da igreja.
+
+Para recriar ou alterar o administrador global por variáveis de ambiente:
 
 ```bash
-DATABASE_URL="file:$(pwd)/prisma/databases/global.db" npm run db:seed:platform-admin
+PLATFORM_ADMIN_EMAIL="admin@teste.com" \
+PLATFORM_ADMIN_PASSWORD="123456" \
+npm run db:seed:platform-admin
 ```
+
+### Fixtures de permissões
+
+Depois de provisionar os bancos `igreja-teste`, `ig2` e `ig3`, é possível criar os
+usuários de teste por perfil:
+
+```bash
+npm run db:seed:permission-fixtures
+```
+
+As contas e senhas estão no arquivo `prisma/scripts/seed-permission-fixtures.ts`.
+Esse seed é opcional e serve para validar permissões; não é necessário para iniciar
+o app com o administrador padrão.
+
+### Executar
+
+```bash
+npm run dev
+```
+
+Abra `http://localhost:3000/auth/login` para usuários da igreja ou
+`http://localhost:3000/admin/login` para o administrador global.
 
 ## Organizacao
 
@@ -81,16 +154,25 @@ DATABASE_URL="file:$(pwd)/prisma/databases/global.db" npm run db:seed:platform-a
 - [Design system](docs/design-system.md)
 - [Roadmap](docs/roadmap.md)
 - [Operacoes](docs/operations.md)
+- [TODO de arquitetura em camadas](docs/layered-architecture-todo.md)
+- [TODO de separação de tenants](docs/tenant-separation-todo.md)
 - [Ranking dos jogos](docs/game-ranking-plan.md)
 
-## Estado Conhecido
+## Estado atual da validação
 
-Antes da proxima rodada de organizacao/refatoracao:
+As validações devem ser executadas na raiz do projeto:
 
 - `npx tsc --noEmit` passa.
-- `npm run lint` passa com warnings.
-- `npm test` falha nos testes de sync por mocks incompletos para chamadas raw do Prisma.
-- `npm run build` ainda falha em webpack sem diagnostico detalhado no output atual.
+- `npm run lint` passa.
+- `npm test` ainda não está totalmente verde: na última execução houve 26 arquivos
+  aprovados e 4 com falha, totalizando 87 testes aprovados, 1 teste falho e 8
+  ignorados. O teste da API Bíblia retornou 500 e três arquivos de integração
+  falharam ao iniciar processos com `spawnSync /bin/sh EPERM` neste ambiente.
+- `npm run build` deve ser executado antes de deploy e ainda precisa ser revalidado
+  quando houver mudanças em módulos, Prisma ou configuração do Next.
+
+O projeto está em refatoração incremental. O estado detalhado do trabalho pendente
+fica em [docs/layered-architecture-todo.md](docs/layered-architecture-todo.md).
 
 ## Referencia Legada
 

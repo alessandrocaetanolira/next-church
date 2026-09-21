@@ -1,72 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { normalizeStringArray } from '@/lib/groups';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { deleteKid, updateKid } from '@/server/kids/kids.controller';
+import { KidsRepository } from '@/server/kids/kids.repository';
+import { KidsService } from '@/server/kids/kids.service';
 
-async function authorize() {
+async function getContext() {
   const session = await auth();
-  if (!session?.user?.tenantId || !['ADMIN', 'PASTOR', 'LEADER'].includes(session.user.role?.toUpperCase() ?? '')) {
-    return null;
-  }
-
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-  return { session, prisma };
+  return { user: session.user, service: new KidsService(new KidsRepository(prisma), prisma, session.user.tenantId) };
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorized = await authorize();
-  if (!authorized) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(authorized.session.user, 'kids', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-
-  const { id } = await params;
-  const body = await request.json();
-
-  await authorized.prisma.$executeRawUnsafe(
-    `
-      UPDATE "ChildProfile"
-      SET name = ?, birthDate = ?, parentMemberIds = ?, allergies = ?, medications = ?, healthHistory = ?,
-          dietaryRestrictions = ?, canDoPhysicalActivities = ?, notes = ?, groupIds = ?, updatedAt = ?
-      WHERE id = ? AND deletedAt IS NULL
-    `,
-    String(body.name ?? '').trim(),
-    body.birthDate ? new Date(body.birthDate).toISOString() : null,
-    JSON.stringify(normalizeStringArray(body.parentMemberIds)),
-    typeof body.allergies === 'string' ? body.allergies.trim() || null : null,
-    typeof body.medications === 'string' ? body.medications.trim() || null : null,
-    typeof body.healthHistory === 'string' ? body.healthHistory.trim() || null : null,
-    typeof body.dietaryRestrictions === 'string' ? body.dietaryRestrictions.trim() || null : null,
-    body.canDoPhysicalActivities === false ? 0 : 1,
-    typeof body.notes === 'string' ? body.notes.trim() || null : null,
-    JSON.stringify(normalizeStringArray(body.groupIds)),
-    new Date().toISOString(),
-    id
-  );
-
-  return NextResponse.json({ success: true });
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await updateKid(context.user, context.service, (await params).id, await request.json())); }
+  catch (error) { return jsonError(error); }
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const authorized = await authorize();
-  if (!authorized) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(authorized.session.user, 'kids', 'delete')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-
-  const { id } = await params;
-  const now = new Date().toISOString();
-  await authorized.prisma.$executeRawUnsafe(
-    `UPDATE "ChildProfile" SET deletedAt = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL`,
-    now,
-    now,
-    id
-  );
-
-  return NextResponse.json({ success: true });
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try { const context = await getContext(); return jsonOk(await deleteKid(context.user, context.service, (await params).id)); }
+  catch (error) { return jsonError(error); }
 }

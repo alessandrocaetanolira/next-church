@@ -17,16 +17,23 @@ O projeto atual substitui a referencia antiga em Vite (`../old/church-hub`) e de
 - NextAuth v5 beta
 - SSE e PWA
 
-## Estado Validado
+## Estado da validação
 
 - `npx tsc --noEmit` passa.
-- `npm run lint` passa com warnings.
-- `npm test` falha nos testes de sync por mocks incompletos de chamadas raw do Prisma.
-- `npm run build` ainda falha na etapa webpack sem diagnostico detalhado no output atual.
+- `npm run lint` passa.
+- A última execução de `npm test` teve 26 arquivos aprovados e 4 com falha: o teste
+  da API Bíblia retornou 500 e três suítes de integração receberam `spawnSync
+  /bin/sh EPERM` ao tentar executar migrations neste ambiente.
+- `npm run build` é obrigatório antes de deploy e deve ser revalidado após mudanças
+  em módulos, Prisma ou configuração do Next.
+
+Para iniciar localmente, consulte o fluxo completo no README e em
+`docs/operations.md`. O app possui dois contextos de autenticação: usuários da
+igreja em `/auth/login` e administradores globais em `/admin/login`.
 
 ## Direcao
 
-O foco atual e organizacao, estabilidade e reutilizacao de UI. Antes de grandes refatoracoes, priorizar:
+O foco atual é organização, estabilidade e reutilização de UI. Antes de grandes refatorações, priorizar:
 
 1. Corrigir build.
 2. Corrigir testes de sync.

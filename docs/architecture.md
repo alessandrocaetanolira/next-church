@@ -28,7 +28,9 @@ O app deve usar um banco global e bancos por igreja, com separacao fisica e conc
 - `global.db`: cadastro de igrejas, status, plano, branding e dados administrativos da plataforma.
 - `church_<databaseKey>.db`: usuarios da igreja e todos os dados operacionais da igreja.
 
-O login recebe `churchSlug`, valida a igreja ativa e provisionada no banco global, resolve o `databaseKey`, monta o datasource do tenant e autentica o usuario dentro do banco da propria igreja. O `tenantId` entra na sessao e as APIs usam uma referencia validada para escolher o banco correto.
+O login da igreja recebe `churchSlug`, valida a igreja ativa e provisionada no banco global, resolve o `databaseKey`, monta o datasource do tenant e autentica o usuario dentro do banco da propria igreja. O `tenantId` entra na sessao e as APIs usam uma referencia validada para escolher o banco correto. Esse fluxo fica em `/auth/login`.
+
+O administrador global usa um fluxo separado em `/admin/login`. Ele é autenticado pela tabela `PlatformAdmin` do banco global e acessa somente as rotas `/admin/*`; não deve ser tratado como um `User` de tenant.
 
 Regra de separacao:
 
@@ -37,7 +39,7 @@ Regra de separacao:
 - O `databaseKey` e imutavel; alterar o slug nao pode mover ou recriar o banco fisico.
 - Usuarios comuns, administradores de igreja, pastores, lideres e membros autenticaveis pertencem ao tenant.
 - O email deve ser unico apenas dentro do banco da igreja, nao globalmente.
-- Um super admin da plataforma, se necessario, deve ser modelado separadamente no banco global, sem reutilizar `User` de tenant.
+- Um super admin da plataforma é modelado separadamente no banco global, na tabela `PlatformAdmin`, sem reutilizar `User` de tenant.
 - Nenhuma requisicao comum cria banco ou executa DDL; migrations sao operacao controlada.
 
 Estrutura Prisma alvo:

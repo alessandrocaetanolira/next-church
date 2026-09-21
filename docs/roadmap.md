@@ -2,8 +2,8 @@
 
 ## Prioridade 1: Estabilizacao
 
-- [x] Confirmar `npm run build`.
-- [ ] Corrigir testes de sync com mocks para `$queryRawUnsafe`, `$executeRawUnsafe` e transacoes Prisma.
+- [ ] Confirmar `npm run build` após a rodada atual de módulos.
+- [ ] Deixar a suíte completa verde: corrigir o 500 da API Bíblia e tornar as suítes de integração compatíveis com execução de migrations no ambiente de testes.
 - [ ] Unificar configuracao PostCSS, mantendo apenas uma fonte efetiva.
 - [ ] Alinhar versoes de `next`, `react` e `eslint-config-next`.
 - [ ] Revisar o `AGENTS.md`, pois `node_modules/next/dist/docs/` nao existe nesta instalacao.

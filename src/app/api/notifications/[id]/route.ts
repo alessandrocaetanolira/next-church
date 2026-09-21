@@ -1,42 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError, ValidationError } from '@/lib/http/errors';
+import { markNotificationRead } from '@/server/notifications/notifications.controller';
+import { NotificationsRepository } from '@/server/notifications/notifications.repository';
+import { NotificationsService } from '@/server/notifications/notifications.service';
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const session = await auth();
-  const email = session?.user?.email?.trim().toLowerCase();
-  const tenantId = session?.user?.tenantId;
-
-  if (!tenantId || !email) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'notifications', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-
-  const { id } = await context.params;
-  const { action } = await request.json();
-  if (action !== 'markRead') {
-    return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
-  }
-
-  const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-
-  await prisma.$executeRawUnsafe(
-    `
-      UPDATE "Notification"
-      SET readAt = ?, updatedAt = ?
-      WHERE id = ? AND userEmail = ? AND deletedAt IS NULL
-    `,
-    new Date().toISOString(),
-    new Date().toISOString(),
-    id,
-    email
-  );
-
-  return NextResponse.json({ success: true });
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth();
+    if (!session?.user?.tenantId || !session.user.email) throw new UnauthenticatedError();
+    const body = await request.json();
+    if (body?.action !== 'markRead') throw new ValidationError('Ação inválida.');
+    const prisma = getTenantClient(session.user.tenantId);
+    await ensureTenantSchemaExtensions(prisma);
+    const service = new NotificationsService(new NotificationsRepository(prisma));
+    return jsonOk(await markNotificationRead(session.user, service, (await params).id));
+  } catch (error) { return jsonError(error); }
 }

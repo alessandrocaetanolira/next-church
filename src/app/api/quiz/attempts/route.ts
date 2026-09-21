@@ -1,66 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { generateId } from '@/lib/id';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError } from '@/lib/http/errors';
+import { createQuizAttempt, listQuizAttempts } from '@/server/quiz/quiz.controller';
+import { QuizRepository } from '@/server/quiz/quiz.repository';
+import { QuizService } from '@/server/quiz/quiz.service';
 
-export async function GET() {
+async function getContext() {
   const session = await auth();
-  if (!session?.user?.tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  if (!hasActionPermission(session.user, 'games', 'view')) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  }
-
+  if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-
-  const attempts = await prisma.quizAttempt.findMany({
-    where: { deletedAt: null },
-    orderBy: { completedAt: 'desc' },
-  });
-
-  return NextResponse.json(
-    attempts.map((attempt) => ({
-      ...attempt,
-      completedAt: attempt.completedAt.toISOString(),
-      createdAt: attempt.createdAt.toISOString(),
-      updatedAt: attempt.updatedAt.toISOString(),
-      deletedAt: attempt.deletedAt?.toISOString() ?? null,
-    }))
-  );
+  return { user: session.user, service: new QuizService(new QuizRepository(prisma)) };
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.tenantId || !session.user.email) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'games', 'view')) {
-    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-  }
+export async function GET() {
+  try { const context = await getContext(); return jsonOk(await listQuizAttempts(context.user, context.service)); }
+  catch (error) { return jsonError(error); }
+}
 
-  const { score, totalQuestions, correctAnswers, completedAt, userId, userName } = await request.json();
-  const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-
-  const attempt = await prisma.quizAttempt.create({
-    data: {
-      id: generateId(),
-      userId: typeof userId === 'string' && userId ? userId : session.user.email,
-      userName: typeof userName === 'string' && userName ? userName : session.user.name || 'Jogador',
-      score: Number(score) || 0,
-      totalQuestions: Number(totalQuestions) || 0,
-      correctAnswers: Number(correctAnswers) || 0,
-      completedAt: completedAt ? new Date(completedAt) : new Date(),
-    },
-  });
-
-  return NextResponse.json({
-    ...attempt,
-    completedAt: attempt.completedAt.toISOString(),
-    createdAt: attempt.createdAt.toISOString(),
-    updatedAt: attempt.updatedAt.toISOString(),
-    deletedAt: attempt.deletedAt?.toISOString() ?? null,
-  }, { status: 201 });
+export async function POST(request: Request) {
+  try { const context = await getContext(); return jsonOk(await createQuizAttempt(context.user, context.service, await request.json()), 201); }
+  catch (error) { return jsonError(error); }
 }

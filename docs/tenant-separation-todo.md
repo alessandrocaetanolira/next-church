@@ -14,7 +14,7 @@
 ```txt
 global.db
   Church
-  PlatformAdmin? (opcional e separado de usuarios da igreja)
+  PlatformAdmin (separado de usuarios da igreja)
 
 church_<databaseKey>.db
   User, Member, Product, Sale, CreditTransaction, Notification

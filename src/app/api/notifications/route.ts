@@ -1,81 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
-import { hasActionPermission } from '@/lib/access-control';
+import { jsonError, jsonOk } from '@/lib/http/response';
+import { UnauthenticatedError, ValidationError } from '@/lib/http/errors';
+import { listNotifications, markAllNotificationsRead } from '@/server/notifications/notifications.controller';
+import { NotificationsRepository } from '@/server/notifications/notifications.repository';
+import { NotificationsService } from '@/server/notifications/notifications.service';
 
-export async function GET() {
+async function getContext() {
   const session = await auth();
-  const email = session?.user?.email?.trim().toLowerCase();
-  const tenantId = session?.user?.tenantId;
-
-  if (!tenantId || !email) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'notifications', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-
-  const prisma = getTenantClient(tenantId);
+  if (!session?.user?.tenantId || !session.user.email) throw new UnauthenticatedError();
+  const prisma = getTenantClient(session.user.tenantId);
   await ensureTenantSchemaExtensions(prisma);
-
-  const notifications = await prisma.$queryRawUnsafe<Array<{
-    id: string;
-    userEmail: string;
-    type: string;
-    title: string;
-    message: string;
-    href: string | null;
-    sourceType: string | null;
-    sourceId: string | null;
-    readAt: Date | null;
-    createdAt: Date;
-  }>>(
-    `
-      SELECT id, userEmail, type, title, message, href, sourceType, sourceId, readAt, createdAt
-      FROM "Notification"
-      WHERE userEmail = ? AND deletedAt IS NULL
-      ORDER BY createdAt DESC
-      LIMIT 100
-    `,
-    email
-  );
-
-  return NextResponse.json({
-    notifications: notifications.map((notification) => ({
-      ...notification,
-      readAt: notification.readAt?.toISOString() ?? null,
-      createdAt: notification.createdAt.toISOString(),
-    })),
-  });
+  return { user: session.user, service: new NotificationsService(new NotificationsRepository(prisma)) };
 }
 
-export async function PATCH(request: NextRequest) {
-  const session = await auth();
-  const email = session?.user?.email?.trim().toLowerCase();
-  const tenantId = session?.user?.tenantId;
+export async function GET() {
+  try { const context = await getContext(); return jsonOk(await listNotifications(context.user, context.service)); }
+  catch (error) { return jsonError(error); }
+}
 
-  if (!tenantId || !email) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-  }
-  if (!hasActionPermission(session.user, 'notifications', 'update')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
-
-  const { action } = await request.json();
-  if (action !== 'markAllRead') {
-    return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
-  }
-
-  const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
-
-  await prisma.$executeRawUnsafe(
-    `
-      UPDATE "Notification"
-      SET readAt = ?, updatedAt = ?
-      WHERE userEmail = ? AND readAt IS NULL AND deletedAt IS NULL
-    `,
-    new Date().toISOString(),
-    new Date().toISOString(),
-    email
-  );
-
-  return NextResponse.json({ success: true });
+export async function PATCH(request: Request) {
+  try {
+    const context = await getContext();
+    const body = await request.json();
+    if (body?.action !== 'markAllRead') throw new ValidationError('Ação inválida.');
+    return jsonOk(await markAllNotificationsRead(context.user, context.service));
+  } catch (error) { return jsonError(error); }
 }
