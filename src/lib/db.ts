@@ -216,6 +216,37 @@ export interface SyncOutbox {
   timestamp: string;
 }
 
+export interface OfflineMetadata {
+  key: string;
+  tenantSlug?: string;
+  userId?: string;
+  contentVersion?: string;
+  lastSyncAt?: string;
+  updatedAt: string;
+}
+
+export interface OfflineUserState {
+  key: string;
+  tenantSlug: string;
+  userId: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  lastAuthenticatedAt: string;
+  updatedAt: string;
+}
+
+export interface SyncQueueItem extends SyncOutbox {
+  tenantSlug?: string;
+  userId?: string;
+  entity?: string;
+  entityId?: string;
+  status?: 'pending' | 'processing' | 'error';
+  retryCount?: number;
+  lastError?: string;
+  idempotencyKey?: string;
+}
+
 // --- CLASSE PRINCIPAL DO BANCO ---
 
 /**
@@ -230,6 +261,9 @@ class ChurchDB extends Dexie {
   products!: Table<LocalProduct>;
   members!: Table<LocalMember>;
   syncOutbox!: Table<SyncOutbox>;
+  offlineMetadata!: Table<OfflineMetadata>;
+  offlineUserState!: Table<OfflineUserState>;
+  syncQueue!: Table<SyncQueueItem>;
   quizQuestions!: Table<QuizQuestion>;
   quizAttempts!: Table<QuizAttempt>;
   feedPosts!: Table<FeedPost>;
@@ -250,6 +284,9 @@ class ChurchDB extends Dexie {
       products: 'id, category, stock, _status, deletedAt',
       members: 'id, email, status, _status, deletedAt',
       syncOutbox: '++id, module, action, timestamp',
+      offlineMetadata: 'key, tenantSlug, userId, updatedAt',
+      offlineUserState: 'key, tenantSlug, userId, updatedAt',
+      syncQueue: '++id, tenantSlug, userId, module, action, status, timestamp, idempotencyKey',
       quizQuestions: '++id, category, difficulty',
       quizAttempts: '++id, userId, score, completedAt',
       feedPosts: '++id, userId, type, createdAt',

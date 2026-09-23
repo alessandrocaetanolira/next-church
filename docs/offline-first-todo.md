@@ -123,10 +123,10 @@ armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 
 ## Fase 2 — Modelo local Dexie
 
-- [ ] Definir versão/migration única para o schema offline atual.
-- [ ] Criar tabela `offlineMetadata` para versão do conteúdo e último sync.
-- [ ] Criar tabela `syncQueue` para operações pendentes.
-- [ ] Criar tabela `offlineUserState` para o estado mínimo da sessão local.
+- [x] Definir versão/migration única para o schema offline atual (v1).
+- [x] Criar tabela `offlineMetadata` para versão do conteúdo e último sync.
+- [x] Criar tabela `syncQueue` para operações pendentes.
+- [x] Criar tabela `offlineUserState` para o estado mínimo da sessão local.
 - [ ] Definir chaves compostas por tenant, usuário e entidade quando necessário.
 - [ ] Garantir que dados de tenants diferentes nunca compartilhem índices locais.
 - [ ] Evitar armazenar senhas ou tokens persistentes em texto puro.
@@ -166,7 +166,7 @@ createdAt, status, retryCount, lastError, idempotencyKey
 ## Fase 5 — Contrato de sincronização da API
 
 - [ ] Padronizar `updatedAt`, `deletedAt` e versão dos registros.
-- [ ] Adicionar `idempotencyKey` às mutações.
+- [x] Adicionar `idempotencyKey` às mutações.
 - [ ] Criar `POST /api/sync/push` para envio em lote.
 - [ ] Criar `GET /api/sync/pull` para alterações desde um cursor.
 - [ ] Criar `GET /api/sync/status` para diagnóstico.
@@ -176,11 +176,11 @@ createdAt, status, retryCount, lastError, idempotencyKey
 
 ## Fase 6 — Motor de sincronização
 
-- [ ] Implementar `syncService` único no frontend.
-- [ ] Detectar eventos `online` e `offline`.
-- [ ] Processar a fila com retry e backoff.
-- [ ] Usar idempotência para impedir duplicidade.
-- [ ] Persistir falhas e permitir retry manual.
+- [x] Implementar `syncService` único no frontend.
+- [x] Detectar eventos `online` e `offline`.
+- [x] Processar a fila com retry e estado de erro persistido.
+- [x] Usar `idempotencyKey` para impedir duplicidade na migração da fila.
+- [x] Persistir falhas e permitir retry manual.
 - [ ] Atualizar o Dexie após confirmação do servidor.
 - [ ] Processar pull incremental após o push.
 - [ ] Exibir progresso e erros de sincronização.

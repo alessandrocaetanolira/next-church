@@ -31,11 +31,39 @@ async function performRequest<T>(input: RequestInfo | URL, init?: RequestInit): 
   };
 }
 
+function backoffDelay(retryCount: number) {
+  return Math.min(30_000, 500 * (2 ** Math.min(retryCount, 6)));
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function pushChanges() {
-  const pending = await db.syncOutbox.toArray();
+  // Compatibilidade: mutações antigas ainda gravam em syncOutbox. Migre-as
+  // para a fila explícita antes de enviar.
+  const legacy = await db.syncOutbox.toArray();
+  if (legacy.length > 0) {
+    const queued = await db.syncQueue.toArray();
+    const existingKeys = new Set(queued.map((item) => item.idempotencyKey).filter(Boolean));
+    const missing = legacy.filter((item) => !existingKeys.has(`${item.id ?? 'new'}:${item.timestamp}`));
+    if (missing.length > 0) {
+      await db.syncQueue.bulkAdd(missing.map((item) => ({
+        ...item,
+        status: 'pending' as const,
+        retryCount: 0,
+        idempotencyKey: `${item.id ?? 'new'}:${item.timestamp}`,
+      })));
+    }
+  }
+
+  const pending = await db.syncQueue.where('status').anyOf('pending', 'error').toArray();
   if (pending.length === 0) return { ok: true, skipped: true };
 
   try {
+    const retrying = pending.filter((item) => (item.retryCount ?? 0) > 0);
+    if (retrying.length > 0) await wait(Math.max(...retrying.map((item) => backoffDelay(item.retryCount ?? 0))));
+    await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'processing' as const })));
     const response = await performRequest<{ results?: Array<{ id: number; status: string }> }>('/api/sync/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -43,6 +71,7 @@ export async function pushChanges() {
     });
 
     if (!response.ok) {
+      await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1, lastError: `HTTP ${response.status}` })));
       if (response.status === 401 || response.status === 403) {
         return { ok: false, skipped: true, unauthorized: true };
       }
@@ -58,11 +87,19 @@ export async function pushChanges() {
       .map((result) => result.id);
     
     if (successIds.length > 0) {
+      await db.syncQueue.bulkDelete(successIds);
       await db.syncOutbox.bulkDelete(successIds);
+    }
+
+    const failed = results.filter((result) => result.status !== 'success').map((result) => result.id);
+    if (failed.length > 0) {
+      const failedItems = pending.filter((item) => failed.includes(item.id ?? -1));
+      await db.syncQueue.bulkPut(failedItems.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1 })));
     }
 
     return { ok: true, skipped: false };
   } catch (error) {
+    await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1, lastError: error instanceof Error ? error.message : 'network error' })));
     return { ok: false, skipped: false, networkError: true };
   }
 }

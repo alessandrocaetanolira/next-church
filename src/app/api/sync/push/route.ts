@@ -47,6 +47,16 @@ export async function POST(request: Request) {
 
   for (const change of changes) {
     try {
+      const idempotencyKey = typeof change.idempotencyKey === 'string' ? change.idempotencyKey : null;
+      if (idempotencyKey) {
+        const [previous] = await prisma.$queryRawUnsafe<Array<{ status: string; responseJson: string | null }>>(
+          `SELECT status, responseJson FROM "SyncOperation" WHERE idempotencyKey = ? LIMIT 1`, idempotencyKey,
+        );
+        if (previous?.status === 'success') {
+          results.push({ id: change.id, status: 'success', replayed: true });
+          continue;
+        }
+      }
       if (change.module === 'sales' && change.action === 'create') {
         await createSale({ user: session.user, service: salesService }, change.data);
         results.push({ id: change.id, status: 'success' });
@@ -75,6 +85,16 @@ export async function POST(request: Request) {
         results.push({ id: change.id, status: 'success' });
       } else {
         results.push({ id: change.id, status: 'ignored' });
+      }
+      const result = results[results.length - 1];
+      if (idempotencyKey && result?.id === change.id && result.status === 'success') {
+        const now = new Date().toISOString();
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO "SyncOperation" (id, idempotencyKey, status, responseJson, createdAt, updatedAt)
+           VALUES (?, ?, 'success', ?, ?, ?)
+           ON CONFLICT(idempotencyKey) DO UPDATE SET status='success', responseJson=excluded.responseJson, updatedAt=excluded.updatedAt`,
+          `sync_${idempotencyKey}`, idempotencyKey, JSON.stringify(result), now, now,
+        );
       }
       // Adicionar outros módulos conforme necessidade
     } catch (error) {
