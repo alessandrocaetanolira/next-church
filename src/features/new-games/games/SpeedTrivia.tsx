@@ -48,7 +48,7 @@ const SpeedTrivia = () => {
   const [timeLeft, setTimeLeft] = useState(TIMER);
   const [selected, setSelected] = useState<number | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const currentQ = questions[qIndex];
 

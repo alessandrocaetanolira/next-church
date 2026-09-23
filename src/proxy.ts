@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { canAccessRoute } from "@/lib/access-control";
+import { canAccessRoute, hasPlanFeature } from "@/lib/access-control";
 import { getPlanFeatureForPath } from "@/lib/plan-features";
-import { hasPlanFeature } from "@/lib/access-control";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { nextUrl } = request;
-  if (nextUrl.pathname === "/sw.js" || nextUrl.pathname === "/manifest.webmanifest") {
+  if (nextUrl.pathname === "/manifest.webmanifest") {
+    return NextResponse.next();
+  }
+
+  if (nextUrl.pathname.startsWith("/serwist/")) {
     return NextResponse.next();
   }
 
@@ -30,23 +33,23 @@ export async function middleware(request: NextRequest) {
     secret: process.env.AUTH_SECRET,
   });
 
-  if (nextUrl.pathname.startsWith('/api/')) {
+  if (nextUrl.pathname.startsWith("/api/")) {
     const planFeature = getPlanFeatureForPath(nextUrl.pathname);
     if (token && planFeature && !hasPlanFeature(token, planFeature)) {
-      return NextResponse.json({ error: 'Recurso não disponível no plano atual.' }, { status: 403 });
+      return NextResponse.json({ error: "Recurso não disponível no plano atual." }, { status: 403 });
     }
     return NextResponse.next();
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL(nextUrl.pathname.startsWith('/admin') ? "/admin/login" : "/auth/login", nextUrl));
+    return NextResponse.redirect(new URL(nextUrl.pathname.startsWith("/admin") ? "/admin/login" : "/auth/login", nextUrl));
   }
 
-  if (nextUrl.pathname.startsWith('/admin') && !token.isPlatformAdmin) {
+  if (nextUrl.pathname.startsWith("/admin") && !token.isPlatformAdmin) {
     return NextResponse.redirect(new URL("/", nextUrl));
   }
 
-  if (!nextUrl.pathname.startsWith('/admin') && token.isPlatformAdmin) {
+  if (!nextUrl.pathname.startsWith("/admin") && token.isPlatformAdmin) {
     return NextResponse.redirect(new URL("/admin/tenants", nextUrl));
   }
 
@@ -58,5 +61,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest).*)"],
 };

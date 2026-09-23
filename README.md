@@ -48,6 +48,10 @@ BIBLE_DATABASE_URL="file:../databases/bible.db"
 CHURCH_DATABASE_DIR="./prisma/databases"
 AUTH_SECRET="gere-uma-chave-local-forte"
 AUTH_URL="http://localhost:3000"
+
+# Em produção, use a origem pública do deploy, sem barra final:
+# AUTH_URL="https://app.domilembrancinhas.com.br"
+# NEXTAUTH_URL="https://app.domilembrancinhas.com.br"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
 ```
@@ -119,6 +123,13 @@ Login da igreja em `/auth/login`:
 Igreja: igreja-teste
 Email: admin@teste.com
 Senha: 123456
+
+Se o usuário existir no tenant, mas a senha do ambiente estiver divergente, atualize
+somente a credencial com:
+
+```bash
+npm run db:tenant:reset-password -- --tenant igreja-teste --email admin@teste.com --password 123456
+```
 ```
 
 Login do administrador global em `/admin/login`:

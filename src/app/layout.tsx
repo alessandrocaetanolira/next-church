@@ -1,13 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { PWAProvider } from "@/components/providers/PWAProvider";
 import { AppSettingsProvider } from "@/components/providers/AppSettingsProvider";
 import { DrawerProvider } from "@/components/providers/DrawerProvider";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Church App",
@@ -41,18 +39,20 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className}>
-        <AuthProvider>
-          <AppSettingsProvider>
-            <DrawerProvider>
-              <PWAProvider>
-                <LayoutWrapper>
-                  {children}
-                </LayoutWrapper>
-              </PWAProvider>
-            </DrawerProvider>
-          </AppSettingsProvider>
-        </AuthProvider>
+      <body className="font-sans">
+        <SerwistProvider swUrl="/serwist/sw.js" options={{ scope: "/", updateViaCache: "none" }}>
+          <AuthProvider>
+            <AppSettingsProvider>
+              <DrawerProvider>
+                <PWAProvider>
+                  <LayoutWrapper>
+                    {children}
+                  </LayoutWrapper>
+                </PWAProvider>
+              </DrawerProvider>
+            </AppSettingsProvider>
+          </AuthProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { useProducts } from '@/features/canteen/hooks/use-products';
@@ -47,7 +47,7 @@ function getMonthLabel(value: string) {
   return format(new Date(value), "MMMM 'de' yyyy", { locale: ptBR });
 }
 
-export default function MyAccountPage() {
+function MyAccountPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
@@ -702,4 +702,10 @@ export default function MyAccountPage() {
       )}
     </div>
   );
+}
+
+export default function MyAccountPage() {
+  return <Suspense fallback={<div className="p-8 text-center">Carregando minha conta...</div>}>
+    <MyAccountPageContent />
+  </Suspense>;
 }

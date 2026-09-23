@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { db, seedQuizQuestions, type QuizQuestion } from '@/lib/db';
 import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Award, Flame, TrendingUp, Swords } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -193,9 +192,9 @@ export default function QuizPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
-      <AnimatePresence mode="wait">
+      <>
         {gameState === 'menu' && (
-          <motion.div key="menu" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="menu" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
               <CardHeader className="text-center pb-2">
                 <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
@@ -315,11 +314,11 @@ export default function QuizPage() {
                 </Tabs>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )}
 
         {gameState === 'playing' && currentQ && (
-          <motion.div key="playing" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
+          <div key="playing" className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
             <div className="flex items-center justify-between">
               <Badge variant="secondary">{currentIndex + 1}/{questions.length}</Badge>
               <div className="flex items-center gap-3">
@@ -349,7 +348,7 @@ export default function QuizPage() {
                     const isCorrect = i === currentQ.correctIndex;
                     const isSelected = i === selectedAnswer;
                     return (
-                      <motion.button key={i} whileTap={{ scale: 0.98 }} onClick={() => handleAnswer(i)}
+                      <button key={i} onClick={() => handleAnswer(i)}
                         className={cn(
                           'w-full text-left p-3 rounded-xl border-2 transition-all text-sm font-medium',
                           showAnswer && isCorrect && 'border-green-500 bg-green-500/10 text-green-700 dark:text-green-400',
@@ -362,24 +361,24 @@ export default function QuizPage() {
                           {showAnswer && isSelected && !isCorrect && <XCircle className="w-4 h-4 shrink-0" />}
                           {opt}
                         </span>
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
                 {showAnswer && (
-                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4">
+                  <div className="mt-4">
                     <Button className="w-full" onClick={nextQuestion}>
                       {currentIndex + 1 >= questions.length ? 'Ver Resultado' : 'Próxima →'}
                     </Button>
-                  </motion.div>
+                  </div>
                 )}
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )}
 
         {gameState === 'result' && (
-          <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+          <div key="result" className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
             <Card className="text-center border-primary/20">
               <CardContent className="pt-8 pb-6 space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
@@ -403,9 +402,9 @@ export default function QuizPage() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }

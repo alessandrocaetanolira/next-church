@@ -16,7 +16,6 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import {
@@ -224,14 +223,10 @@ export default function NotificationsPage() {
                   {dateLabel}
                 </p>
                 <div className="space-y-2">
-                  <AnimatePresence>
+                  <>
                     {dateNotifications.map((notification, index) => (
-                      <motion.button
+                      <button
                         key={notification.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -100 }}
-                        transition={{ delay: index * 0.03 }}
                         className={cn(
                           'w-full text-left rounded-xl border p-4 transition-all hover:shadow-sm',
                           !notification.readAt
@@ -266,9 +261,9 @@ export default function NotificationsPage() {
                             </p>
                           </div>
                         </div>
-                      </motion.button>
+                      </button>
                     ))}
-                  </AnimatePresence>
+                  </>
                 </div>
               </div>
             ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
@@ -74,7 +74,7 @@ const icons: Record<GroupType, React.ComponentType<{ className?: string }>> = {
   parking: Car,
 };
 
-export default function GroupsPage() {
+function GroupsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
@@ -444,4 +444,10 @@ export default function GroupsPage() {
       </Drawer>
     </div>
   );
+}
+
+export default function GroupsPage() {
+  return <Suspense fallback={<div className="p-8 text-center">Carregando grupos...</div>}>
+    <GroupsPageContent />
+  </Suspense>;
 }

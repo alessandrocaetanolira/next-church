@@ -11,7 +11,6 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { db, seedOfflineData } from '@/lib/db';
 import { Trophy, Star, CheckCircle2, XCircle, RotateCcw, Gamepad2, Type, Grid3X3, Sparkles } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -317,9 +316,9 @@ export default function GamesPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
-      <AnimatePresence mode="wait">
+      <>
         {activeGame === 'menu' && (
-          <motion.div key="menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="menu" className="space-y-4 animate-in fade-in duration-300">
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
               <CardHeader className="text-center pb-2">
                 <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
@@ -352,12 +351,12 @@ export default function GamesPage() {
                 </Card>
               ))}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* TRUE/FALSE */}
         {activeGame === 'truefalse' && tfQuestions.length > 0 && (
-          <motion.div key="tf" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="tf" className="space-y-4 animate-in fade-in duration-300">
             <div className="flex justify-between items-center">
               <Badge variant="secondary">{tfIndex + 1}/{tfQuestions.length}</Badge>
               <Badge><Star className="w-3 h-3 mr-1" />{tfScore} pts</Badge>
@@ -379,23 +378,23 @@ export default function GamesPage() {
                   </Button>
                 </div>
                 {tfAnswered && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                  <div className="space-y-2">
                     <p className={cn('text-sm font-medium', tfCorrect ? 'text-green-500' : 'text-destructive')}>
                       {tfCorrect ? '✅ Correto!' : '❌ Errado!'}
                     </p>
                     <p className="text-xs text-muted-foreground">{tfQuestions[tfIndex].explanation}</p>
                     <Button className="w-full" onClick={nextTf}>{tfIndex + 1 >= tfQuestions.length ? 'Finalizar' : 'Próxima →'}</Button>
-                  </motion.div>
+                  </div>
                 )}
               </CardContent>
             </Card>
             <Button variant="ghost" size="sm" onClick={() => setActiveGame('menu')}>← Voltar</Button>
-          </motion.div>
+          </div>
         )}
 
         {/* COMPLETE VERSE */}
         {activeGame === 'complete' && cvQuestions.length > 0 && (
-          <motion.div key="cv" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="cv" className="space-y-4 animate-in fade-in duration-300">
             <div className="flex justify-between items-center">
               <Badge variant="secondary">{cvIndex + 1}/{cvQuestions.length}</Badge>
               <Badge><Star className="w-3 h-3 mr-1" />{cvScore} pts</Badge>
@@ -411,22 +410,22 @@ export default function GamesPage() {
                   {!cvAnswered && <Button onClick={handleCvAnswer}>Verificar</Button>}
                 </div>
                 {cvAnswered && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+                  <div className="space-y-2">
                     <p className={cn('text-sm font-medium', cvCorrect ? 'text-green-500' : 'text-destructive')}>
                       {cvCorrect ? '✅ Correto!' : `❌ Resposta: "${cvQuestions[cvIndex].answer}"`}
                     </p>
                     <Button className="w-full" onClick={nextCv}>{cvIndex + 1 >= cvQuestions.length ? 'Finalizar' : 'Próxima →'}</Button>
-                  </motion.div>
+                  </div>
                 )}
               </CardContent>
             </Card>
             <Button variant="ghost" size="sm" onClick={() => setActiveGame('menu')}>← Voltar</Button>
-          </motion.div>
+          </div>
         )}
 
         {/* HANGMAN */}
         {activeGame === 'hangman' && hmWord && (
-          <motion.div key="hm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="hm" className="space-y-4 animate-in fade-in duration-300">
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <div className="flex justify-between items-center">
@@ -460,12 +459,12 @@ export default function GamesPage() {
               </CardContent>
             </Card>
             <Button variant="ghost" size="sm" onClick={() => setActiveGame('menu')}>← Voltar</Button>
-          </motion.div>
+          </div>
         )}
 
         {/* WORD SEARCH */}
         {activeGame === 'wordsearch' && wsSet && (
-          <motion.div key="ws" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+          <div key="ws" className="space-y-4 animate-in fade-in duration-300">
             <Card>
               <CardContent className="pt-4 space-y-3">
                 <div className="flex justify-between items-center">
@@ -493,9 +492,9 @@ export default function GamesPage() {
               </CardContent>
             </Card>
             <Button variant="ghost" size="sm" onClick={() => setActiveGame('menu')}>← Voltar</Button>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }

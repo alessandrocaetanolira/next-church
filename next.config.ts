@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
+import { withSerwist } from "@serwist/turbopack";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ['app.domilembrancinhas.com.br'],
+  experimental: {
+    useTypeScriptCli: false,
+  },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

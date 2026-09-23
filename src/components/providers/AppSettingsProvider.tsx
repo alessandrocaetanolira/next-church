@@ -46,9 +46,13 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      setSettings(prev => ({ ...prev, ...JSON.parse(stored) }));
+    try {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        setSettings(prev => ({ ...prev, ...JSON.parse(stored) }));
+      }
+    } catch {
+      localStorage.removeItem(SETTINGS_KEY);
     }
   }, []);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown, WifiOff, NotebookPen } from 'lucide-react';
+import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown, WifiOff, NotebookPen, ScrollText } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -17,6 +17,7 @@ import { useDrawer } from '@/components/providers/DrawerProvider';
 import { getBibleBooks, getBibleChapter, getBibleChapters, type BibleBook, type BibleContentSource, type BibleTranslation } from '@/features/bible/api/bible.api';
 import { BibleAnnotationForm } from '@/features/bible/components/BibleAnnotationForm';
 import { BibleSavedItemsDrawer } from '@/features/bible/components/BibleSavedItemsDrawer';
+import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 
 export default function BiblePage() {
@@ -39,6 +40,7 @@ export default function BiblePage() {
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
   const [chaptersByBook, setChaptersByBook] = useState<Record<string, number[]>>({});
   const [contentSource, setContentSource] = useState<BibleContentSource>('network');
+  const bibleReaderRef = useRef<HTMLDivElement>(null);
 
   const toggleVerse = (index: number) => {
     setSelectedVerses(prev => 
@@ -95,14 +97,34 @@ export default function BiblePage() {
     }
   }, [selectedBook, selectedChapter, translation]);
 
+  useEffect(() => {
+    const viewport = bibleReaderRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
+    viewport?.scrollTo({ top: 0, behavior: 'auto' });
+  }, [selectedBook?.abbrev, selectedChapter, translation]);
+
   const favorites = useLiveQuery(() =>
     userEmail ? db.bibleFavorites.where('userId').equals(userEmail).toArray() : [],
+    [userEmail]
+  );
+  const annotations = useLiveQuery(() =>
+    userEmail ? db.bibleAnnotations.where('userId').equals(userEmail).toArray() : [],
     [userEmail]
   );
 
   const selectedVerseNumbers = useMemo(() => selectedVerses.map((verse) => verse + 1), [selectedVerses]);
   const selectionKey = useMemo(() => selectedVerseNumbers.join(','), [selectedVerseNumbers]);
   const favorite = favorites?.find((item) => item.translation === translation && item.bookAbbrev === selectedBook?.abbrev && item.chapter === selectedChapter && item.selectionKey === selectionKey);
+
+  const getVerseMarker = useCallback((verseIndex: number) => {
+    const verseNumber = verseIndex + 1;
+    const matches = (item: { translation: BibleTranslation; bookAbbrev: string; chapter: number; verseNumbers: number[] }) =>
+      item.translation === translation && item.bookAbbrev === selectedBook?.abbrev && item.chapter === selectedChapter && item.verseNumbers.includes(verseNumber);
+
+    return {
+      isFavorite: favorites?.some(matches) ?? false,
+      hasAnnotation: annotations?.some(matches) ?? false,
+    };
+  }, [annotations, favorites, selectedBook?.abbrev, selectedChapter, translation]);
 
   const toggleFavorite = useCallback(async () => {
     if (!userEmail || !selectedBook || selectedVerseNumbers.length === 0) return;
@@ -254,21 +276,24 @@ export default function BiblePage() {
     openDrawer({
       content: <>
         <DrawerHeader className="border-b text-left"><DrawerTitle>Versão da Bíblia</DrawerTitle></DrawerHeader>
-        <div className="grid gap-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {[
-            ['NVI', 'Nova Versão Internacional'],
-            ['ACF', 'Almeida Corrigida Fiel'],
-            ['AA', 'Almeida Atualizada'],
-          ].map(([code, name]) => (
-            <Button key={code} type="button" variant={translation === code ? 'default' : 'outline'} className="h-auto justify-start py-3 text-left" onClick={() => {
-              setTranslation(code as BibleTranslation);
-              setChaptersByBook({});
-              setSelectedVerses([]);
-              closeDrawer();
-            }}>
-              <span className="font-semibold">{code}</span><span className="ml-2 text-xs opacity-80">{name}</span>
-            </Button>
-          ))}
+          <div className="grid gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {[
+              ['NVI', 'Nova Versão Internacional'],
+              ['ACF', 'Almeida Corrigida Fiel'],
+              ['AA', 'Almeida Atualizada'],
+            ].map(([code, name]) => (
+              <div key={code} className="space-y-2">
+                <Button type="button" variant={translation === code ? 'default' : 'outline'} className="h-auto w-full justify-start py-3 text-left" onClick={() => {
+                  setTranslation(code as BibleTranslation);
+                  setChaptersByBook({});
+                  setSelectedVerses([]);
+                  closeDrawer();
+                }}>
+                  <span className="font-semibold">{code}</span><span className="ml-2 text-xs opacity-80">{name}</span>
+                </Button>
+                <BibleDownloadControl translation={code as BibleTranslation} />
+              </div>
+            ))}
         </div>
       </>,
     });
@@ -396,13 +421,28 @@ export default function BiblePage() {
         {contentSource === 'cache' && <p className="flex items-center gap-1 text-xs text-muted-foreground"><WifiOff className="h-3.5 w-3.5" /> Conteúdo salvo no dispositivo</p>}
       </div>
 
-      <ScrollArea className="flex-1 bg-background/50">
+      <ScrollArea ref={bibleReaderRef} className="flex-1 bg-background/50">
         <div className="max-w-2xl mx-auto px-5 py-8 pb-32">
           {verses.map((v, i) => (
-            <p key={i} className={cn('text-[17px] leading-8 py-1 px-3 rounded-lg cursor-pointer', selectedVerses.includes(i) ? 'bg-primary/20 text-foreground font-medium' : 'hover:bg-muted/50')}
+            (() => {
+              const marker = getVerseMarker(i);
+              const markerBackground = marker.isFavorite && marker.hasAnnotation
+                ? 'bg-amber-500/15 ring-1 ring-inset ring-violet-500/40'
+                : marker.isFavorite
+                  ? 'bg-amber-500/15'
+                  : marker.hasAnnotation
+                    ? 'bg-violet-500/15'
+                    : '';
+              return <p key={i} className={cn('flex items-start gap-2 text-[17px] leading-8 py-1 px-3 rounded-lg cursor-pointer', selectedVerses.includes(i) ? 'bg-primary/20 text-foreground font-medium' : cn(markerBackground, 'hover:bg-muted/50'))}
               onClick={() => toggleVerse(i)}>
-              <sup className="text-[10px] font-bold text-primary/60 mr-1.5">{i + 1}</sup>{v}
-            </p>
+                <span className="shrink-0"><sup className="text-[10px] font-bold text-primary/60">{i + 1}</sup></span>
+                <span className="min-w-0 flex-1">{v}</span>
+                {(marker.isFavorite || marker.hasAnnotation) && <span className="flex shrink-0 items-center gap-1 pt-1 text-muted-foreground" aria-label={[marker.isFavorite && 'Favorito', marker.hasAnnotation && 'Com anotação'].filter(Boolean).join(' e ')}>
+                  {marker.hasAnnotation && <ScrollText className="h-4 w-4 text-violet-600" />}
+                  {marker.isFavorite && <BookmarkCheck className="h-4 w-4 text-amber-600" />}
+                </span>}
+              </p>;
+            })()
           ))}
         </div>
       </ScrollArea>

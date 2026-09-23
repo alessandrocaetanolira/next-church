@@ -9,25 +9,11 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator && (window.isSecureContext || window.location.hostname === 'localhost')) {
-      void navigator.serviceWorker
-        .register('/sw.js', {
-          scope: '/',
-          updateViaCache: 'none',
-        })
-        .then((registration) => {
-          void registration.update();
-          console.log('SW registrado:', registration.scope);
-        })
-        .catch((error) => {
-          console.log('SW falhou:', error);
-        });
-    }
-
     if (!hasRun.current && isAuthenticated) {
       void performFullSync();
       hasRun.current = true;
     }
+    // performFullSync is supplied by the sync hook and is intentionally not a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 

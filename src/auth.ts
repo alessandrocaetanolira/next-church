@@ -31,7 +31,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        * @returns {Promise<Object|null>} Objeto do usuário autenticado ou null se falhar.
        */
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.warn('[Auth] Credenciais incompletas.');
+          return null;
+        }
 
         const email = String(credentials.email).trim().toLowerCase();
         const password = credentials.password as string;
@@ -57,7 +60,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        if (!credentials?.churchSlug) return null;
+        if (!credentials?.churchSlug) {
+          console.warn('[Auth] Slug da igreja ausente para login de tenant:', email);
+          return null;
+        }
         const churchSlug = String(credentials.churchSlug).trim().toLowerCase();
 
         try {
@@ -67,7 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!church || !church.active || (church.status && church.status !== 'ACTIVE')) {
-            console.log("Auth: Igreja não encontrada ou inativa:", churchSlug);
+            console.warn('[Auth] Igreja não encontrada ou inativa:', churchSlug);
             return null;
           }
 
@@ -89,12 +95,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!user || !user.active || !user.passwordHash) {
-             console.log("Auth: Perfil de usuário não encontrado ou inativo no banco da igreja.");
+             console.warn('[Auth] Usuário não encontrado, inativo ou sem senha:', { email, churchSlug, databaseKey });
              return null;
           }
 
           const passwordMatch = await bcrypt.compare(password, user.passwordHash);
-          if (!passwordMatch) return null;
+          if (!passwordMatch) {
+            console.warn('[Auth] Senha inválida:', { email, churchSlug });
+            return null;
+          }
 
           // Retorna o objeto padronizado para a sessão
           return {

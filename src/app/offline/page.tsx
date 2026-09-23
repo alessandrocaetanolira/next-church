@@ -1,4 +1,6 @@
 import { EmptyState } from "@/components/common/EmptyState";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
   return (
@@ -12,6 +14,7 @@ export default function OfflinePage() {
         }
         title="Você está offline"
         description="Alguns dados continuam disponíveis no app, mas esta tela precisa de conexão para atualizar."
+        action={<Button asChild variant="outline"><Link href="/bible">Abrir Bíblia offline</Link></Button>}
       />
     </main>
   );

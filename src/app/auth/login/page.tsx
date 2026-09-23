@@ -6,6 +6,7 @@
  */
 
 import { LoginForm } from "@/features/auth/components/LoginForm";
+import { Suspense } from 'react';
 
 /**
  * LoginPage
@@ -15,7 +16,7 @@ import { LoginForm } from "@/features/auth/components/LoginForm";
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <LoginForm />
+      <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando login...</div>}><LoginForm /></Suspense>
     </div>
   );
 }

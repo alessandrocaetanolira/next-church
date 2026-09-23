@@ -2,7 +2,7 @@
  * features/dashboard/components/SwipeableCard.tsx
  * 
  * Wrapper para cartões que permite interações de "swipe" (deslizar).
- * Utiliza framer-motion para animações fluidas.
+ * Usa eventos de ponteiro nativos para manter o gesto sem dependências externas.
  * 
  * @param {SwipeableCardProps} props - Propriedades do componente.
  * @returns {JSX.Element} Cartão com suporte a gestos.
@@ -10,8 +10,7 @@
 
 "use client";
 
-import { ReactNode, useState } from 'react';
-import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { ReactNode, useRef, useState } from 'react';
 import { Check, Trash2, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,41 +41,33 @@ export function SwipeableCard({
   className,
 }: SwipeableCardProps) {
   const [isRevealed, setIsRevealed] = useState(false);
-  const x = useMotionValue(0);
-  
-  // Transformações para opacidade dos botões de fundo
-  const leftOpacity = useTransform(x, [0, 80], [0, 1]);
-  const rightOpacity = useTransform(x, [-80, 0], [1, 0]);
+  const [dragOffset, setDragOffset] = useState(0);
+  const pointerStart = useRef<number | null>(null);
 
   /**
    * Lida com o fim do gesto de arrastar.
    */
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (offset: number) => {
     const threshold = 80;
-    if (info.offset.x > threshold && onComplete) {
+    if (offset > threshold && onComplete) {
       onComplete();
-    } else if (info.offset.x < -threshold) {
+    } else if (offset < -threshold) {
       setIsRevealed(true);
     } else {
       setIsRevealed(false);
     }
+    setDragOffset(0);
   };
 
   return (
     <div className="relative overflow-hidden rounded-xl">
       {/* Ação Esquerda (Completar) */}
-      <motion.div
-        style={{ opacity: leftOpacity }}
-        className="absolute inset-y-0 left-0 w-20 bg-success flex items-center justify-center rounded-l-xl"
-      >
+      <div className="absolute inset-y-0 left-0 flex w-20 items-center justify-center rounded-l-xl bg-success">
         <Check className="w-6 h-6 text-success-foreground" />
-      </motion.div>
+      </div>
 
       {/* Ações Direita (Editar/Excluir) */}
-      <motion.div
-        style={{ opacity: rightOpacity }}
-        className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2"
-      >
+      <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
         {onEdit && (
           <button
             onClick={() => {
@@ -99,23 +90,30 @@ export function SwipeableCard({
             <Trash2 className="w-5 h-5 text-destructive-foreground" />
           </button>
         )}
-      </motion.div>
+      </div>
 
       {/* Cartão Principal (Arrastável) */}
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: -100, right: 100 }}
-        dragElastic={0.1}
-        style={{ x }}
-        onDragEnd={handleDragEnd}
-        animate={{ x: isRevealed ? -100 : 0 }}
+      <div
+        onPointerDown={(event) => { pointerStart.current = event.clientX; event.currentTarget.setPointerCapture(event.pointerId); }}
+        onPointerMove={(event) => {
+          if (pointerStart.current === null) return;
+          const offset = event.clientX - pointerStart.current;
+          setDragOffset(Math.max(-100, Math.min(100, offset)));
+        }}
+        onPointerUp={(event) => {
+          if (pointerStart.current === null) return;
+          handleDragEnd(event.clientX - pointerStart.current);
+          pointerStart.current = null;
+        }}
+        style={{ transform: `translateX(${isRevealed ? -100 : dragOffset}px)` }}
         className={cn(
           'bg-card border border-border rounded-xl shadow-card cursor-grab active:cursor-grabbing relative z-10',
-          className
+          'transition-transform duration-200',
+          className,
         )}
       >
         {children}
-      </motion.div>
+      </div>
     </div>
   );
 }

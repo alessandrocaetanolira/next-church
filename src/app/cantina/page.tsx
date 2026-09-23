@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { CanteenContainer } from '@/features/canteen/components/CanteenContainer';
 import { useUIStore } from '@/features/ui/store';
 
@@ -20,7 +20,7 @@ export default function CantinaPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
-      <CanteenContainer />
+      <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando cantina...</div>}><CanteenContainer /></Suspense>
     </div>
   );
 }

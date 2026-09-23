@@ -12,7 +12,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
 import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Pin } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -268,7 +267,7 @@ export default function FeedPage() {
           </CardContent>
         </Card>
       ) : canCreatePost ? (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
           <Card className="border-primary/30">
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -412,7 +411,7 @@ export default function FeedPage() {
               </div>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       ) : null}
 
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
@@ -429,7 +428,7 @@ export default function FeedPage() {
         ))}
       </div>
 
-      <AnimatePresence>
+      <>
         {initialLoading ? (
           <Card>
             <CardContent className="py-10 text-center">
@@ -452,7 +451,7 @@ export default function FeedPage() {
             const liked = currentUserId ? post.likes.includes(currentUserId) : false;
 
             return (
-              <motion.div key={String(post.id)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} layout>
+              <div key={String(post.id)} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <Card className="overflow-hidden border-border">
                   <CardContent className="pt-4 space-y-3">
                     <div className="flex items-center gap-2">
@@ -546,7 +545,7 @@ export default function FeedPage() {
                     )}
 
                     {canUpdateFeed && commentingOn === post.id && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2">
                         <Textarea
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
@@ -562,15 +561,15 @@ export default function FeedPage() {
                         >
                           <Send className="w-3 h-3" />
                         </Button>
-                      </motion.div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             );
           })
         )}
-      </AnimatePresence>
+      </>
 
       {hasMore && (
         <div className="pt-2">

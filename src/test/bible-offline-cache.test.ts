@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/lib/db';
-import { getBibleBooks, getBibleChapter } from '@/features/bible/api/bible.api';
+import { downloadBibleTranslation, getBibleBooks, getBibleChapter } from '@/features/bible/api/bible.api';
 
 describe('cache offline da Bíblia', () => {
   beforeEach(async () => {
@@ -59,6 +59,22 @@ describe('cache offline da Bíblia', () => {
     const result = await getBibleChapter('gn', 1, 'NVI', fetcher);
 
     expect(result.source).toBe('network');
+    await expect(db.offlineBibleChapters.get(['NVI', 'gn', 1])).resolves.toMatchObject({ verses: ['No princípio'] });
+  });
+
+  it('baixa uma versão e persiste o progresso até ficar pronta', async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/books?')) {
+        return new Response(JSON.stringify([{ translation: 'NVI', abbrev: 'gn', name: 'Gênesis', testament: 'AT', position: 1 }]));
+      }
+      if (url.includes('/gn/chapters?')) return new Response(JSON.stringify([1]));
+      return new Response(JSON.stringify({ book: 'Gênesis', chapter: 1, translation: 'NVI', verses: ['No princípio'] }));
+    }) as unknown as typeof fetch;
+
+    const result = await downloadBibleTranslation('NVI', { fetcher });
+
+    expect(result).toMatchObject({ translation: 'NVI', status: 'ready', downloadedChapters: 1, totalChapters: 1 });
     await expect(db.offlineBibleChapters.get(['NVI', 'gn', 1])).resolves.toMatchObject({ verses: ['No princípio'] });
   });
 });

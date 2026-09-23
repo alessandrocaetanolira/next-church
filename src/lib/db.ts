@@ -198,7 +198,7 @@ export interface OfflineBibleChapter {
 
 export interface OfflineBibleDownload {
   translation: 'AA' | 'ACF' | 'NVI';
-  status: 'idle' | 'downloading' | 'ready' | 'error';
+  status: 'idle' | 'downloading' | 'paused' | 'ready' | 'error';
   downloadedChapters: number;
   totalChapters: number;
   contentVersion: string;

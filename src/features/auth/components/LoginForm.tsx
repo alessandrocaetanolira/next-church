@@ -31,6 +31,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [churchSlug, setChurchSlug] = useState(searchParams.get('igreja')?.trim().toLowerCase() ?? "");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [branding, setBranding] = useState<{
     name: string;
     logoUrl?: string | null;
@@ -98,6 +99,13 @@ export function LoginForm() {
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+    if (!navigator.onLine) {
+      const message = 'Você está offline. Conecte-se à internet para autenticar.';
+      setErrorMessage(message);
+      toast.error(message);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -108,8 +116,12 @@ export function LoginForm() {
         redirect: false,
       });
 
-      if (result?.error) {
-        toast.error("Credenciais inválidas ou acesso negado.");
+      if (!result || result.error || result.ok !== true) {
+        const message = result?.error === 'Configuration'
+          ? 'O serviço de autenticação está indisponível. Verifique a configuração do servidor.'
+          : 'Credenciais inválidas, igreja não encontrada ou acesso negado.';
+        setErrorMessage(message);
+        toast.error(message);
       } else {
         toast.success("Login realizado com sucesso!");
         // Forçar redirecionamento via location para garantir limpeza de estados de cache do Next.js
@@ -117,7 +129,9 @@ export function LoginForm() {
       }
     } catch (err) {
       console.error("Erro durante o login:", err);
-      toast.error("Ocorreu um erro ao tentar fazer login.");
+      const message = 'Não foi possível autenticar. Verifique sua conexão e tente novamente.';
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -137,6 +151,7 @@ export function LoginForm() {
       
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {errorMessage && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorMessage}</p>}
           <div className="space-y-2">
             <Label htmlFor="churchSlug">Igreja (Slug)</Label>
             <Input
