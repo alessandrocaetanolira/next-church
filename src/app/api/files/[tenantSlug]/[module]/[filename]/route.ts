@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getGlobalClient } from '@/lib/prisma-factory';
 
 const FILES_ROOT = path.resolve(process.cwd(), 'files');
 const ALLOWED_MODULES = new Set(['products', 'materials', 'feed', 'branding']);
@@ -15,7 +16,10 @@ export async function GET(
 ) {
   const session = await auth();
   const { tenantSlug, module, filename } = await params;
-  if (!session?.user?.tenantId || session.user.tenantSlug !== tenantSlug) {
+  if (module === 'branding') {
+    const church = await getGlobalClient().church.findUnique({ where: { slug: tenantSlug }, select: { active: true, deletedAt: true } });
+    if (!church?.active || church.deletedAt) return new NextResponse('Não autorizado', { status: 401 });
+  } else if (!session?.user?.tenantId || session.user.tenantSlug !== tenantSlug) {
     return new NextResponse('Não autorizado', { status: 401 });
   }
   if (!/^[a-zA-Z0-9_-]+$/.test(tenantSlug) || !ALLOWED_MODULES.has(module) || !/^[a-zA-Z0-9_-]+\.(jpg|jpeg|png|webp|gif)$/.test(filename)) {

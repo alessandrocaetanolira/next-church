@@ -127,12 +127,13 @@ export default function SettingsPage() {
   const handleSaveBranding = async () => {
     setSavingBranding(true);
     try {
+      const isNewLogo = branding.logoUrl.startsWith('data:');
       const response = await fetch('/api/settings/branding', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: branding.name,
-          logoUrl: branding.logoUrl,
+          logoBase64: isNewLogo ? branding.logoUrl : undefined,
           themeVariant: branding.themeVariant,
         }),
       });

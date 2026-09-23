@@ -78,6 +78,7 @@ export function canAccessCanteen(user: AppUser | null | undefined) {
 export function hasPlanFeature(user: AppUser | null | undefined, feature?: PlanFeature) {
   if (!user || !feature) return true;
   if (user.isPlatformAdmin) return true;
+  if (feature === 'settings' && ['ADMIN', 'PASTOR'].includes(user.role?.toUpperCase() ?? '')) return true;
   if (user.planFeatures === undefined || user.planFeatures === null) return true;
   return normalizePlanFeatures(user.planFeatures).includes(feature);
 }

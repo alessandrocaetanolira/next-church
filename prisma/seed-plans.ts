@@ -12,7 +12,7 @@ const plans = [
     priceCents: 0,
     maxUsers: 50,
     maxStorageMb: 500,
-    features: JSON.stringify(['dashboard', 'members', 'groups', 'bible', 'feed', 'notifications']),
+    features: JSON.stringify(['dashboard', 'members', 'groups', 'bible', 'feed', 'notifications', 'settings']),
   },
   {
     code: 'PREMIUM',
