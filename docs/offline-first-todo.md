@@ -19,7 +19,8 @@ e pelos assets; o Dexie será responsável pelos dados e pela fila de sincroniza
 - [x] `/api/*` fora do Cache Storage.
 - [x] Bíblia, favoritos e anotações com cache Dexie.
 - [ ] Validar abertura e refresh totalmente offline em navegador/dispositivo real.
-- [ ] Adicionar ícones PNG PWA 192x192 e 512x512 no `next-church`.
+- [x] Adicionar ícones PNG PWA 192x192 e 512x512 no `next-church`.
+- [x] Definir persistência de branding PWA por tenant com fallback para o branding padrão do app.
 
 ## Fase 1 — Shell PWA offline
 
@@ -34,6 +35,91 @@ e pelos assets; o Dexie será responsável pelos dados e pela fila de sincroniza
 - [ ] Revisar se páginas autenticadas/RSC não estão sendo armazenadas de forma insegura.
 - [ ] Adicionar PNGs 192x192, 512x512 e `apple-touch-icon`.
 - [ ] Verificar instalação no Chrome Android e Safari iOS.
+
+## Fase 1.5 — Branding PWA dinâmico por tenant
+
+O banco global já possui `Church.name` e `Church.logoUrl`. Esses campos devem
+continuar sendo o fallback institucional, mas o PWA precisa de configuração
+explícita para não confundir o nome da igreja com o nome de instalação do app.
+
+### Decisão de modelagem
+
+Não usar um JSON como única fonte dos campos essenciais. Nome, ícones, cores e
+versão de branding precisam ser validados, migrados e usados diretamente pelo
+manifest e pelo tema. A recomendação é um modelo híbrido:
+
+- [x] Manter campos essenciais tipados em `ChurchBranding` no modelo global.
+- [x] Usar `configJson TEXT` apenas para extensões futuras não críticas.
+- [ ] Validar `brandingConfig` com schema Zod antes de ler ou persistir.
+- [ ] Versionar o formato do JSON (`schemaVersion`) e rejeitar versões inválidas.
+- [ ] Não duplicar no JSON valores que também existam em colunas essenciais.
+- [x] Centralizar fallback e normalização em um serviço de branding.
+
+No SQLite, o JSON deve ser armazenado como `TEXT` serializado. O painel não deve
+editar essa string diretamente: o CRUD trabalha com um objeto tipado e o servidor
+faz parse, validação, normalização e serialização.
+
+- [x] Adicionar `pwaName` e `pwaShortName` em `ChurchBranding`.
+- [x] Adicionar campos separados para ícones `icon192Url` e `icon512Url`.
+- [x] Adicionar `themeColor` e `backgroundColor` em `ChurchBranding`.
+- [x] Adicionar `primaryColor` e `secondaryColor` em `ChurchBranding`.
+- [ ] Adicionar suporte visual completo a `pwaThemeColor` e `pwaBackgroundColor` se forem
+      necessários para personalização completa da instalação.
+- [ ] Adicionar cores de marca opcionais `brandPrimaryColor` e
+      `brandSecondaryColor`.
+- [ ] Definir se `primary` será usado como `theme_color` do manifest e `secondary`
+      como cor de apoio/background do PWA.
+- [ ] Definir fallback: `pwaName` → `Church.name` → `Church App`.
+- [ ] Definir fallback de ícone: ícone PWA do tenant → `pwa-512x512.png`/
+      `pwa-192x192.png` padrão do app.
+- [x] Criar migration global para `ChurchBranding`.
+- [x] Atualizar provisionamento e seed sem exigir branding personalizado.
+- [x] Expor branding público resolvido pelo tenant sem retornar dados sensíveis.
+- [x] Reutilizar `/api/settings/branding` para GET e PATCH do branding do tenant.
+- [x] Implementar upsert administrativo da configuração de branding.
+- [x] Restringir atualização a ADMIN/PASTOR com permissão de settings.
+- [x] Validar nomes, cores e tamanho/formato dos arquivos no servidor.
+- [ ] Exibir preview de nome, logo, cor primária e cor secundária no admin.
+- [ ] Permitir restaurar o branding padrão do app.
+- [ ] Registrar `updatedAt`/`brandingVersion` a cada alteração.
+- [ ] Resolver o tenant do manifest por hostname, slug ou contexto público definido.
+- [ ] Tornar `/manifest.webmanifest` dinâmico por tenant.
+- [ ] Alterar `metadata.title`, `appleWebApp.title` e ícones do layout conforme o
+      branding resolvido.
+- [ ] Aplicar `primary` e `secondary` às variáveis CSS do tema sem depender de
+      classes Tailwind geradas estaticamente.
+- [ ] Validar formato das cores (hex/RGB/HSL) e rejeitar valores inválidos.
+- [ ] Verificar contraste mínimo entre texto e as cores personalizadas.
+- [ ] Atualizar preview de branding antes de salvar no painel administrativo.
+- [ ] Garantir que o manifest não seja precacheado como se fosse igual para todos
+      os tenants.
+- [ ] Definir cache runtime versionado para manifest e ícones por tenant.
+- [ ] Invalidar o cache de branding quando `brandingVersion` ou `updatedAt` mudar.
+- [ ] Garantir que o Service Worker não misture logo, manifest ou nome de tenants.
+- [ ] Permitir que tenant sem imagem continue usando os ícones padrão.
+- [ ] Validar instalação do PWA com dois tenants no mesmo navegador/dispositivo.
+- [ ] Validar atualização do nome/logo sem reinstalar o aplicativo manualmente.
+
+### Contrato sugerido
+
+```text
+Church
+├── name                 nome institucional da igreja
+├── logoUrl              logo geral já existente
+├── pwaName              nome exibido na instalação do PWA
+├── pwaShortName         nome curto opcional
+├── pwaIcon192Url        ícone 192x192 opcional
+├── pwaIcon512Url        ícone 512x512 opcional
+├── brandPrimaryColor    cor primária da igreja opcional
+├── brandSecondaryColor  cor secundária da igreja opcional
+├── pwaThemeColor        cor da interface/instalação opcional
+├── pwaBackgroundColor   cor de splash opcional
+└── brandingVersion      versão para invalidação de cache
+```
+
+O armazenamento deve aceitar uma única imagem original apenas se houver uma
+estratégia confiável para gerar os tamanhos exigidos. Caso contrário, devem ser
+armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 
 ## Fase 2 — Modelo local Dexie
 
@@ -166,3 +252,6 @@ créditos e conflitos concorrentes.
 - [Bíblia offline com Dexie](./bible-offline-todo.md)
 - [Arquitetura em camadas](./layered-architecture-todo.md)
 - [Separação de tenants](./tenant-separation-todo.md)
+### Regra arquitetural obrigatória
+
+As rotas HTTP (`src/app/api/**/route.ts`) não podem instanciar ou chamar repositories/services diretamente. Elas devem apenas delegar ao controller HTTP. A composição de dependências, autenticação/autorização e orquestração ficam no controller; regras de negócio no service; persistência no repository.

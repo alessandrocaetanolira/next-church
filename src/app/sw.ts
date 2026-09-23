@@ -1,9 +1,14 @@
 /// <reference lib="esnext" />
 /// <reference lib="webworker" />
 
-import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { NetworkOnly, Serwist } from "serwist";
+import {
+  CacheFirst,
+  ExpirationPlugin,
+  NetworkOnly,
+  Serwist,
+  StaleWhileRevalidate,
+} from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -18,14 +23,34 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  // A Bíblia, autenticação e demais dados de API pertencem ao fluxo de rede
-  // e ao Dexie. O primeiro match impede que defaultCache armazene qualquer API.
+  // Dados de API pertencem ao servidor e ao Dexie. Não devem ser duplicados no
+  // Cache Storage, especialmente respostas bíblicas ou dados autenticados.
   runtimeCaching: [
     {
       matcher: ({ sameOrigin, url: { pathname } }) => sameOrigin && pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
     },
-    ...defaultCache,
+    {
+      matcher: /\/_next\/static.+\.js$/i,
+      handler: new CacheFirst({
+        cacheName: "church-next-static-js",
+        plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
+    },
+    {
+      matcher: /\.(?:css|less|js)$/i,
+      handler: new StaleWhileRevalidate({
+        cacheName: "church-static-assets",
+        plugins: [new ExpirationPlugin({ maxEntries: 64, maxAgeSeconds: 24 * 60 * 60 })],
+      }),
+    },
+    {
+      matcher: /\.(?:png|svg|ico|webp|jpg|jpeg|gif|woff|woff2|ttf|otf)$/i,
+      handler: new StaleWhileRevalidate({
+        cacheName: "church-static-media",
+        plugins: [new ExpirationPlugin({ maxEntries: 96, maxAgeSeconds: 30 * 24 * 60 * 60 })],
+      }),
+    },
   ],
   fallbacks: {
     entries: [

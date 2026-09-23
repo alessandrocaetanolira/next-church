@@ -33,6 +33,7 @@ npm run db:global:migrate:deploy
 npm run db:tenant:migrate:all
 npm run db:seed:platform-admin
 npm run db:backup
+npm run db:setup:initial
 ```
 
 ## Ambiente local
@@ -66,7 +67,19 @@ absolutos em volume persistente.
 Os bancos de tenant e o global são locais e ignorados pelo Git. O `bible.db` é uma
 exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação.
 
-### Instalação limpa
+### Instalação limpa — comando inicial
+
+Use o comando único para preparar o ambiente na ordem correta:
+
+```bash
+npm run db:setup:initial
+```
+
+Ele executa geração dos clients, migration global, planos, administrador global,
+migration/importação da Bíblia e provisionamento do tenant de desenvolvimento. Se o
+tenant já existir, o provisionamento é ignorado; a Bíblia existente é preservada.
+
+Execução manual equivalente, apenas para diagnóstico:
 
 Na raiz do projeto:
 
@@ -74,13 +87,13 @@ Na raiz do projeto:
 npm install
 npm run prisma:generate
 npm run db:global:migrate:deploy
-npx tsx prisma/provision.ts
 npm run db:seed:platform-admin
+npx tsx prisma/provision.ts
 ```
 
-O `provision.ts` cria a igreja `igreja-teste`, aplica o schema do tenant e cria o
-usuário inicial da igreja. O seed de administrador global é executado separadamente
-porque esse usuário pertence ao banco global.
+O `provision.ts` cria a igreja `igreja-teste`, aplica as migrations do tenant e cria o
+usuário inicial da igreja. O seed de administrador global vem antes porque esse usuário
+pertence ao banco global. Não rode `db:tenant:migrate:all` nessa instalação inicial.
 
 Se os bancos dos tenants já existirem e apenas as migrations precisarem ser aplicadas:
 
@@ -96,9 +109,8 @@ TENANT_MIGRATION_URL="file:/caminho/absoluto/church_reference.db" \
   npm run db:tenant:migrate:dev
 ```
 
-`prisma/seed-complete.ts` é um seed legado e não deve ser usado como fluxo principal
-de instalação do app atual. Para criar usuários de teste adicionais, use os fixtures
-documentados em [Operações](docs/operations.md).
+Para criar usuários de teste adicionais, use os fixtures documentados em
+[Operações](docs/operations.md).
 
 ### Bíblia completa
 

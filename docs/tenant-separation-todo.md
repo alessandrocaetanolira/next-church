@@ -30,9 +30,7 @@ prisma/
   global/migrations/
   tenant/schema.prisma
   tenant/migrations/
-  scripts/baseline-databases.ts
   scripts/migrate-tenants.ts
-  scripts/provision-test-tenants.ts
   databases/global.db
   databases/church_<databaseKey>.db
 ```

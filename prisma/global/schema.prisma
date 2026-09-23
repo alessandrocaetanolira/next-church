@@ -25,6 +25,27 @@ model Church {
   provisioningStartedAt DateTime?
   provisionedAt DateTime?
   provisioningError String?
+  branding      ChurchBranding?
+}
+
+model ChurchBranding {
+  id                  String   @id @default(cuid())
+  churchId            String   @unique
+  pwaName             String?
+  pwaShortName        String?
+  logoUrl             String?
+  icon192Url          String?
+  icon512Url          String?
+  primaryColor        String?
+  secondaryColor      String?
+  themeColor          String?
+  backgroundColor     String?
+  configJson          String?
+  schemaVersion       Int      @default(1)
+  brandingVersion     Int      @default(1)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  church              Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
 }
 
 model PlatformAdmin {

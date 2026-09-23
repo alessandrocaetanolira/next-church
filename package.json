@@ -16,8 +16,6 @@
     "db:bible:migrate:deploy": "prisma migrate deploy --schema=prisma/bible/schema.prisma",
     "db:tenant:migrate:deploy": "prisma migrate deploy --schema=prisma/tenant/schema.prisma",
     "db:tenant:migrate:all": "tsx prisma/scripts/migrate-tenants.ts",
-    "db:baseline": "tsx prisma/scripts/baseline-databases.ts",
-    "db:promote-baseline": "tsx prisma/scripts/promote-baseline.ts",
     "db:seed:tenant-fixtures": "tsx prisma/scripts/seed-tenant-fixtures.ts",
     "db:seed:permission-fixtures": "tsx prisma/scripts/seed-permission-fixtures.ts",
     "db:tenant:reset-password": "tsx prisma/scripts/reset-tenant-password.ts",
@@ -25,6 +23,7 @@
     "db:seed:bible": "npm run db:import:bible",
     "db:import:bible": "tsx prisma/scripts/import-bible-translations.ts",
     "db:seed:plans": "tsx prisma/seed-plans.ts",
+    "db:setup:initial": "tsx prisma/scripts/setup-initial.ts",
     "db:inventory": "tsx prisma/scripts/inventory-databases.ts",
     "db:backup": "tsx prisma/scripts/backup-databases.ts"
   },

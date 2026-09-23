@@ -81,6 +81,20 @@ export class TenantService {
       });
     }
 
+    // A migration faz backfill de igrejas existentes; tenants novos recebem
+    // sua identidade visual padrão durante o provisionamento.
+    await globalClient.$executeRawUnsafe(
+      `INSERT OR IGNORE INTO "ChurchBranding" (id, churchId, pwaName, pwaShortName, logoUrl, schemaVersion, brandingVersion, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+      `branding_${church.id}`,
+      church.id,
+      name.trim(),
+      name.trim(),
+      null,
+      new Date().toISOString(),
+      new Date().toISOString(),
+    );
+
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     let tenantClient: TenantPrismaClient | null = null;
     try {

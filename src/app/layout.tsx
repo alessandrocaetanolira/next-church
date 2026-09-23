@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/pwa-192x192.svg", sizes: "192x192", type: "image/svg+xml" },
-      { url: "/pwa-512x512.svg", sizes: "512x512", type: "image/svg+xml" },
+      { url: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/pwa-192x192.svg" }],
+    apple: [{ url: "/pwa-192x192.png" }],
   },
   appleWebApp: {
     capable: true,

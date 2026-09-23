@@ -17,15 +17,40 @@ AUTH_TRUST_HOST="true"
 `DATABASE_URL` é relativo ao arquivo `prisma/global/schema.prisma`; portanto,
 `file:../databases/global.db` aponta para `prisma/databases/global.db`.
 
-Fluxo local:
+### Ordem obrigatória — ambiente novo
+
+Use preferencialmente o comando único:
+
+```bash
+npm run db:setup:initial
+```
+
+Ele coordena todas as etapas e é idempotente para o tenant de desenvolvimento.
+Para diagnóstico manual, a ordem é:
+
+Execute nesta ordem:
 
 ```bash
 npm install
 npm run prisma:generate
 npm run db:global:migrate:deploy
-npx tsx prisma/provision.ts
 npm run db:seed:platform-admin
+npx tsx prisma/provision.ts
 ```
+
+O `provision.ts` deve ser executado depois do banco global e do administrador
+estrutural. Ele registra o tenant, aplica as migrations do tenant e cria o usuário
+administrador da igreja. Não execute `db:tenant:migrate:all` logo depois: ele é para
+tenants já existentes que receberam uma nova migration.
+
+Se o `bible.db` ainda não existir, inicialize-o separadamente, antes de iniciar o app:
+
+```bash
+npm run db:bible:migrate:deploy
+npm run db:import:bible
+```
+
+Se o `bible.db` já existir e estiver íntegro, não remova nem reimporte os dados.
 
 O provisionamento cria `igreja-teste` e o arquivo `church_igreja-teste.db`. Para um
 tenant já existente, aplique a migration diretamente informando seu arquivo:
@@ -88,9 +113,6 @@ npm run db:seed:permission-fixtures
 ```
 
 O script informa as contas no próprio arquivo `prisma/scripts/seed-permission-fixtures.ts`.
-
-Não use `prisma/seed-complete.ts` como seed principal: ele é mantido apenas como
-referência legada e não representa o fluxo atual de autenticação.
 
 ## Bancos
 
