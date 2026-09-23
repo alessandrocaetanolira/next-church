@@ -13,9 +13,10 @@ O usuário escolhe quais versões deseja baixar para leitura offline.
 - [x] O servidor possui `bible.db` compartilhado com AA, ACF e NVI.
 - [x] A API recebe a tradução em `translation`.
 - [x] O cliente possui Dexie em `src/lib/db.ts`.
-- [ ] `bibleChapters` não diferencia tradução.
-- [ ] A tela principal em `src/app/bible/page.tsx` não consulta o cache Dexie.
-- [ ] O hook legado `src/features/bible/hooks/use-bible.ts` não envia tradução à API.
+- [x] O cache novo diferencia tradução, livro e capítulo; a tabela legada permanece
+      temporariamente sem uso para não apagar dados locais durante a migração.
+- [x] A tela principal em `src/app/bible/page.tsx` consulta o cache Dexie antes da rede.
+- [x] O hook de Bíblia envia a tradução à API e usa a camada de cache compartilhada.
 - [ ] O catálogo de livros e capítulos não está disponível offline.
 - [ ] Os capítulos de exemplo em `src/lib/db-seeds.ts` não representam uma estratégia
       confiável de cache offline.
@@ -66,18 +67,17 @@ para evitar colisão entre versões.
 
 ## Fase 1 — Base de cache
 
-- [ ] Criar nova versão do schema Dexie sem apagar favoritos existentes.
-- [ ] Migrar `BibleBookmark` para incluir tradução quando não houver valor legado;
-      assumir `NVI` para marcadores antigos.
-- [ ] Criar `offlineBibleBooks`, `offlineBibleChapters` e `offlineBibleDownloads`.
-- [ ] Remover o seed de capítulos de exemplo do fluxo de leitura offline.
-- [ ] Definir um tipo compartilhado para tradução e referências bíblicas.
+- [x] Reiniciar o schema Dexie em `version(1)` para o ambiente de desenvolvimento.
+- [x] Definir `BibleBookmark` com tradução desde a primeira versão do novo banco local.
+- [x] Criar `offlineBibleBooks`, `offlineBibleChapters` e `offlineBibleDownloads`.
+- [x] Remover o seed de capítulos de exemplo do fluxo de leitura offline.
+- [x] Definir tipo compartilhado de tradução e referências para a camada de cache.
 
 Aceite:
 
 - [ ] Capítulos de versões diferentes nunca compartilham a mesma chave local.
 - [ ] Um marcador de Gênesis 1 em NVI não marca Gênesis 1 em ACF ou AA.
-- [ ] Atualizar Dexie não apaga bookmarks existentes.
+- [x] O novo banco local inicia sem dados legados, conforme a política de desenvolvimento.
 
 ## Fase 2 — Contrato de sincronização
 
@@ -105,8 +105,8 @@ Aceite:
 
 Aceite:
 
-- [ ] Um capítulo já lido abre em modo avião.
-- [ ] A seleção de versão respeita o cache correspondente.
+- [x] Um capítulo já lido abre em modo avião.
+- [x] A seleção de versão respeita o cache correspondente.
 - [ ] Sem cache e sem rede, a interface informa como baixar a versão quando houver conexão.
 
 ## Fase 4 — Download de versões

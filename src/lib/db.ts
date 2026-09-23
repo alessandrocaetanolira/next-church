@@ -7,7 +7,7 @@
  */
 
 import Dexie, { type Table } from 'dexie';
-import { initialQuizQuestions, initialBibleChapters } from './db-seeds';
+import { initialQuizQuestions } from './db-seeds';
 
 // --- INTERFACES SINCRONIZADAS (PRISMA-LIKE) ---
 
@@ -154,25 +154,55 @@ export interface FeedComment {
   createdAt: string;
 }
 
-/** Marcador de capítulo da Bíblia. */
-export interface BibleBookmark {
+/** Favorito vinculado a um ou mais versículos. */
+export interface BibleFavorite {
   id?: number;
   userId: string;
-  translation: string;
-  book: string;
+  translation: 'AA' | 'ACF' | 'NVI';
+  bookAbbrev: string;
+  bookName: string;
+  testament: 'AT' | 'NT';
   chapter: number;
-  verse?: number;
-  note?: string;
+  verseNumbers: number[];
+  selectionKey: string;
   createdAt: string;
 }
 
-/** Capítulo da Bíblia armazenado para leitura offline. */
-export interface BibleChapter {
-  id?: number;
-  book: string;
+/** Anotação pessoal vinculada a um ou mais versículos. */
+export interface BibleAnnotation extends BibleFavorite {
+  note: string;
+  updatedAt: string;
+}
+
+/** Livro disponível localmente para leitura offline. */
+export interface OfflineBibleBook {
+  translation: 'AA' | 'ACF' | 'NVI';
+  abbrev: string;
+  name: string;
+  testament: 'AT' | 'NT';
+  position: number;
+  chapterNumbers?: number[];
+  cachedAt: string;
+  contentVersion: string;
+}
+
+/** Capítulo disponível localmente para leitura offline. */
+export interface OfflineBibleChapter {
+  translation: 'AA' | 'ACF' | 'NVI';
+  bookAbbrev: string;
   chapter: number;
   verses: string[];
-  testament: 'AT' | 'NT';
+  cachedAt: string;
+  contentVersion: string;
+}
+
+export interface OfflineBibleDownload {
+  translation: 'AA' | 'ACF' | 'NVI';
+  status: 'idle' | 'downloading' | 'ready' | 'error';
+  downloadedChapters: number;
+  totalChapters: number;
+  contentVersion: string;
+  updatedAt: string;
 }
 
 // --- INFRAESTRUTURA DE SINCRONIZAÇÃO ---
@@ -203,14 +233,17 @@ class ChurchDB extends Dexie {
   quizQuestions!: Table<QuizQuestion>;
   quizAttempts!: Table<QuizAttempt>;
   feedPosts!: Table<FeedPost>;
-  bibleBookmarks!: Table<BibleBookmark>;
-  bibleChapters!: Table<BibleChapter>;
+  bibleFavorites!: Table<BibleFavorite>;
+  bibleAnnotations!: Table<BibleAnnotation>;
+  offlineBibleBooks!: Table<OfflineBibleBook>;
+  offlineBibleChapters!: Table<OfflineBibleChapter>;
+  offlineBibleDownloads!: Table<OfflineBibleDownload>;
 
   constructor() {
-    super('church-app-db');
+    super('church-app-db-v1');
     
     // Definição do Schema e Índices
-    this.version(6).stores({
+    this.version(1).stores({
       tasks: 'id, teamId, date, status, _status',
       teams: 'id, name, _status, deletedAt',
       sales: 'id, memberId, createdAt, _status',
@@ -220,22 +253,11 @@ class ChurchDB extends Dexie {
       quizQuestions: '++id, category, difficulty',
       quizAttempts: '++id, userId, score, completedAt',
       feedPosts: '++id, userId, type, createdAt',
-      bibleBookmarks: '++id, userId, book, chapter',
-      bibleChapters: '++id, [book+chapter], book, testament',
-    });
-
-    this.version(7).stores({
-      tasks: 'id, teamId, date, status, _status',
-      teams: 'id, name, _status, deletedAt',
-      sales: 'id, memberId, createdAt, _status',
-      products: 'id, category, stock, _status, deletedAt',
-      members: 'id, email, status, _status, deletedAt',
-      syncOutbox: '++id, module, action, timestamp',
-      quizQuestions: '++id, category, difficulty',
-      quizAttempts: '++id, userId, score, completedAt',
-      feedPosts: '++id, userId, type, createdAt',
-      bibleBookmarks: '++id, userId, [userId+translation+book+chapter], translation, book, chapter',
-      bibleChapters: '++id, [book+chapter], book, testament',
+      bibleFavorites: '++id, userId, &[userId+translation+bookAbbrev+chapter+selectionKey], translation, bookAbbrev, chapter, createdAt',
+      bibleAnnotations: '++id, userId, translation, bookAbbrev, chapter, createdAt, updatedAt',
+      offlineBibleBooks: '[translation+abbrev], translation, testament, position',
+      offlineBibleChapters: '[translation+bookAbbrev+chapter], translation, bookAbbrev',
+      offlineBibleDownloads: 'translation, status',
     });
   }
 }
@@ -255,20 +277,8 @@ export async function seedQuizQuestions() {
 }
 
 /**
- * Alimenta o banco local com capítulos da Bíblia para leitura offline.
- */
-export async function seedBibleChapters() {
-  const count = await db.bibleChapters.count();
-  if (count > 0) return;
-  await db.bibleChapters.bulkAdd(initialBibleChapters);
-}
-
-/**
  * Alimenta todos os dados iniciais necessários para o funcionamento offline.
  */
 export async function seedOfflineData() {
-  await Promise.all([
-    seedQuizQuestions(),
-    seedBibleChapters()
-  ]);
+  await seedQuizQuestions();
 }

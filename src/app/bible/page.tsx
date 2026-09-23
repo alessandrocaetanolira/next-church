@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
@@ -8,23 +8,28 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown, WifiOff, NotebookPen } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
 import { useDrawer } from '@/components/providers/DrawerProvider';
+import { getBibleBooks, getBibleChapter, getBibleChapters, type BibleBook, type BibleContentSource, type BibleTranslation } from '@/features/bible/api/bible.api';
+import { BibleAnnotationForm } from '@/features/bible/components/BibleAnnotationForm';
+import { BibleSavedItemsDrawer } from '@/features/bible/components/BibleSavedItemsDrawer';
+import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 
 export default function BiblePage() {
   const { data: session } = useSession();
   const user = session?.user;
+  const userEmail = user?.email;
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { openDrawer, closeDrawer } = useDrawer();
 
-  const [books, setBooks] = useState<any[]>([]);
-  const [translation, setTranslation] = useState('NVI');
-  const [selectedBook, setSelectedBook] = useState<any>(null);
+  const [books, setBooks] = useState<BibleBook[]>([]);
+  const [translation, setTranslation] = useState<BibleTranslation>('NVI');
+  const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [verses, setVerses] = useState<string[]>([]);
@@ -33,6 +38,7 @@ export default function BiblePage() {
   const [bookListOpen, setBookListOpen] = useState(false);
   const [expandedBook, setExpandedBook] = useState<string | null>(null);
   const [chaptersByBook, setChaptersByBook] = useState<Record<string, number[]>>({});
+  const [contentSource, setContentSource] = useState<BibleContentSource>('network');
 
   const toggleVerse = (index: number) => {
     setSelectedVerses(prev => 
@@ -40,42 +46,47 @@ export default function BiblePage() {
     );
   };
 
+  async function fetchBooks() {
+    try {
+      const result = await getBibleBooks(translation);
+      setBooks(result.data);
+      setContentSource(result.source);
+      if (result.data.length > 0) setSelectedBook(result.data[0]);
+    } catch {
+      toast.error('Erro ao carregar livros');
+    }
+  }
+
+  async function fetchAvailableChapters(book: string) {
+    try {
+      const result = await getBibleChapters(book, translation);
+      const chapters = result.data;
+      setContentSource(result.source);
+      setChaptersByBook((current) => ({ ...current, [book]: chapters }));
+      setAvailableChapters(chapters);
+      if (!chapters.includes(selectedChapter)) {
+          setSelectedChapter(chapters[0] || 1);
+      }
+    } catch {
+      toast.error('Erro ao carregar capítulos');
+    }
+  }
+
+  async function loadChapterData(book: string, chapter: number) {
+    try {
+      const result = await getBibleChapter(book, chapter, translation);
+      setVerses(result.data.verses);
+      setContentSource(result.source);
+    } catch {
+      setVerses([]);
+      toast.error('Erro ao carregar versículos.');
+    }
+  }
+
   useEffect(() => {
     setPageTitle('Bíblia');
     fetchBooks();
   }, [setPageTitle, translation]);
-
-  const fetchBooks = async () => {
-    try {
-      const res = await fetch(`/api/bible/books?translation=${translation}`);
-      const data = await res.json();
-      setBooks(data);
-      if (data.length > 0) setSelectedBook(data[0]);
-    } catch (e) {
-      toast.error('Erro ao carregar livros');
-    }
-  };
-
-  const [loadingChapters, setLoadingChapters] = useState(false);
-
-  const fetchAvailableChapters = async (book: string) => {
-    setLoadingChapters(true);
-    try {
-      const res = await fetch(`/api/bible/${book.toLowerCase()}/chapters?translation=${translation}`);
-      if (res.ok) {
-        const chapters = await res.json();
-        setChaptersByBook((current) => ({ ...current, [book]: chapters }));
-        setAvailableChapters(chapters);
-        if (!chapters.includes(selectedChapter)) {
-            setSelectedChapter(chapters[0] || 1);
-        }
-      }
-    } catch {
-      toast.error('Erro ao carregar capítulos');
-    } finally {
-      setLoadingChapters(false);
-    }
-  };
 
   useEffect(() => {
     if (selectedBook) {
@@ -84,49 +95,38 @@ export default function BiblePage() {
     }
   }, [selectedBook, selectedChapter, translation]);
 
-  const loadChapterData = async (book: string, chapter: number) => {
-    try {
-      const res = await fetch(`/api/bible/${book.toLowerCase()}/${chapter}?translation=${translation}`);
-      if (res.ok) {
-        const data = await res.json();
-        setVerses(data.verses);
-      } else {
-        setVerses([]);
-      }
-    } catch (e) {
-      setVerses([]);
-      toast.error('Erro ao carregar versículos.');
-    }
-  };
-
-  const bookmarks = useLiveQuery(() =>
-    user?.email ? db.bibleBookmarks.where('userId').equals(user.email).toArray() : [],
-    [user?.email]
+  const favorites = useLiveQuery(() =>
+    userEmail ? db.bibleFavorites.where('userId').equals(userEmail).toArray() : [],
+    [userEmail]
   );
 
-  const isBookmarked = bookmarks?.some(b => b.translation === translation && b.book === selectedBook?.name && b.chapter === selectedChapter);
+  const selectedVerseNumbers = useMemo(() => selectedVerses.map((verse) => verse + 1), [selectedVerses]);
+  const selectionKey = useMemo(() => selectedVerseNumbers.join(','), [selectedVerseNumbers]);
+  const favorite = favorites?.find((item) => item.translation === translation && item.bookAbbrev === selectedBook?.abbrev && item.chapter === selectedChapter && item.selectionKey === selectionKey);
 
-  const handleBookmark = async () => {
-    if (!user?.email || !selectedBook) return;
-    const existing = bookmarks?.find(b => b.translation === translation && b.book === selectedBook.name && b.chapter === selectedChapter);
-    if (existing) {
-      await db.bibleBookmarks.delete(existing.id!);
-      toast.info('Marcador removido');
+  const toggleFavorite = useCallback(async () => {
+    if (!userEmail || !selectedBook || selectedVerseNumbers.length === 0) return;
+    if (favorite) {
+      await db.bibleFavorites.delete(favorite.id!);
+      toast.info('Favorito removido');
     } else {
-      await db.bibleBookmarks.add({
-        userId: user.email,
+      await db.bibleFavorites.add({
+        userId: userEmail,
         translation,
-        book: selectedBook.name,
+        bookAbbrev: selectedBook.abbrev,
+        bookName: selectedBook.name,
+        testament: selectedBook.testament,
         chapter: selectedChapter,
-        verse: selectedVerses[0] ?? undefined,
+        verseNumbers: selectedVerseNumbers,
+        selectionKey,
         createdAt: new Date().toISOString(),
       });
-      toast.success('Capítulo marcado!');
+      toast.success('Versículos marcados como favoritos!');
     }
-  };
+  }, [favorite, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
 
   const shareToFeed = useCallback(async () => {
-    if (!user?.email || selectedVerses.length === 0 || !selectedBook) return;
+    if (!userEmail || selectedVerses.length === 0 || !selectedBook) return;
     const verseText = selectedVerses.map(i => verses[i]).join(' ');
     const response = await fetch('/api/feed', {
       method: 'POST',
@@ -147,12 +147,57 @@ export default function BiblePage() {
     toast.success('Versículos compartilhados!');
     setSelectedVerses([]);
     closeDrawer();
-  }, [closeDrawer, selectedBook, selectedChapter, selectedVerses, user?.email, verses]);
+  }, [closeDrawer, selectedBook, selectedChapter, selectedVerses, userEmail, verses]);
 
   const clearVerseSelection = useCallback(() => {
     setSelectedVerses([]);
     closeDrawer();
   }, [closeDrawer]);
+
+  const openAnnotationDrawer = useCallback(() => {
+    if (!userEmail || !selectedBook || selectedVerseNumbers.length === 0) return;
+    const userId = userEmail;
+    const reference = `${selectedBook.name} ${selectedChapter}:${selectedVerseNumbers.join(', ')} · ${translation}`;
+    openDrawer({
+      contentClassName: 'max-h-[70dvh]',
+      content: <BibleAnnotationForm reference={reference} onCancel={closeDrawer} onSave={async (note) => {
+        const now = new Date().toISOString();
+        await db.bibleAnnotations.add({
+          userId,
+          translation,
+          bookAbbrev: selectedBook.abbrev,
+          bookName: selectedBook.name,
+          testament: selectedBook.testament,
+          chapter: selectedChapter,
+          verseNumbers: selectedVerseNumbers,
+          selectionKey,
+          note,
+          createdAt: now,
+          updatedAt: now,
+        });
+        toast.success('Anotação salva!');
+        setSelectedVerses([]);
+        closeDrawer();
+      }} />,
+    });
+  }, [closeDrawer, openDrawer, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
+
+  const openSavedItemsDrawer = useCallback(() => {
+    if (!userEmail) {
+      toast.error('Faça login para acessar os itens salvos.');
+      return;
+    }
+    openDrawer({
+      contentClassName: 'max-h-[70dvh]',
+      content: <BibleSavedItemsDrawer userId={userEmail} onSelect={(item: BibleFavorite | BibleAnnotation) => {
+        setTranslation(item.translation);
+        setSelectedBook({ abbrev: item.bookAbbrev, name: item.bookName, testament: item.testament, position: 0, translation: item.translation });
+        setSelectedChapter(item.chapter);
+        setSelectedVerses(item.verseNumbers.map((verse) => verse - 1));
+        closeDrawer();
+      }} />,
+    });
+  }, [closeDrawer, openDrawer, userEmail]);
 
   const copySelectedVerses = useCallback(async () => {
     if (!selectedBook || selectedVerses.length === 0) return;
@@ -184,6 +229,12 @@ export default function BiblePage() {
         <div className="space-y-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <p className="max-h-28 overflow-y-auto rounded-lg bg-muted p-3 text-sm leading-6 text-muted-foreground">{selectedText}</p>
           <div className="grid gap-2">
+            <Button type="button" variant={favorite ? 'secondary' : 'outline'} className="justify-start gap-2" onClick={toggleFavorite}>
+              {favorite ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />} {favorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
+            </Button>
+            <Button type="button" variant="outline" className="justify-start gap-2" onClick={openAnnotationDrawer}>
+              <NotebookPen className="h-4 w-4" /> Adicionar anotação
+            </Button>
             <Button type="button" variant="outline" className="justify-start gap-2" onClick={copySelectedVerses}>
               <Copy className="h-4 w-4" /> Copiar versículo
             </Button>
@@ -197,7 +248,7 @@ export default function BiblePage() {
         </div>
       </>,
     });
-  }, [canShareToFeed, clearVerseSelection, closeDrawer, copySelectedVerses, openDrawer, selectedBook, selectedChapter, selectedVerses, shareToFeed, translation, verses]);
+  }, [canShareToFeed, clearVerseSelection, closeDrawer, copySelectedVerses, favorite, openAnnotationDrawer, openDrawer, selectedBook, selectedChapter, selectedVerses, shareToFeed, toggleFavorite, translation, verses]);
 
   const openTranslationDrawer = useCallback(() => {
     openDrawer({
@@ -210,7 +261,7 @@ export default function BiblePage() {
             ['AA', 'Almeida Atualizada'],
           ].map(([code, name]) => (
             <Button key={code} type="button" variant={translation === code ? 'default' : 'outline'} className="h-auto justify-start py-3 text-left" onClick={() => {
-              setTranslation(code);
+              setTranslation(code as BibleTranslation);
               setChaptersByBook({});
               setSelectedVerses([]);
               closeDrawer();
@@ -242,7 +293,7 @@ export default function BiblePage() {
     });
   }, [availableChapters, closeDrawer, openDrawer, selectedChapter]);
 
-  const selectBook = (book: any) => {
+  const selectBook = (book: BibleBook) => {
     setSelectedBook(book);
     setSelectedChapter(1);
     setSelectedVerses([]);
@@ -250,7 +301,7 @@ export default function BiblePage() {
     setSearchTerm('');
   };
 
-  const toggleBook = async (book: any) => {
+  const toggleBook = async (book: BibleBook) => {
     if (expandedBook === book.abbrev) {
       setExpandedBook(null);
       return;
@@ -259,7 +310,7 @@ export default function BiblePage() {
     if (!chaptersByBook[book.abbrev]) await fetchAvailableChapters(book.abbrev);
   };
 
-  const selectChapterFromDrawer = (book: any, chapter: number) => {
+  const selectChapterFromDrawer = (book: BibleBook, chapter: number) => {
     setSelectedBook(book);
     setSelectedChapter(chapter);
     setSelectedVerses([]);
@@ -313,7 +364,7 @@ export default function BiblePage() {
                     <section className="py-4">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title as string}</p>
                       <div className="divide-y divide-border rounded-lg border border-border">
-                        {(testamentBooks as any[]).map((book) => {
+                        {(testamentBooks as BibleBook[]).map((book) => {
                           const isExpanded = expandedBook === book.abbrev;
                           const chapters = chaptersByBook[book.abbrev] ?? [];
                           return <div key={`${translation}-${book.abbrev}`}>
@@ -338,10 +389,11 @@ export default function BiblePage() {
             Cap {selectedChapter}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
           </Button>
 
-          <Button size="icon" variant="ghost" onClick={handleBookmark}>
-            {isBookmarked ? <BookmarkCheck className="w-5 h-5 text-primary" /> : <Bookmark className="w-5 h-5" />}
+          <Button size="icon" variant="ghost" onClick={openSavedItemsDrawer} aria-label="Itens salvos">
+            <BookmarkCheck className="w-5 h-5" />
           </Button>
         </div>
+        {contentSource === 'cache' && <p className="flex items-center gap-1 text-xs text-muted-foreground"><WifiOff className="h-3.5 w-3.5" /> Conteúdo salvo no dispositivo</p>}
       </div>
 
       <ScrollArea className="flex-1 bg-background/50">

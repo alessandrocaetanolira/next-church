@@ -6,7 +6,7 @@ export class BibleRepository {
   async listBooks(translation: string) {
     const books = await this.prisma.bibleBook.findMany({
       orderBy: { position: 'asc' },
-      select: { id: true, name: true, abbrev: true, testament: true },
+      select: { id: true, name: true, abbrev: true, testament: true, position: true },
     });
     return books.map((book) => ({ ...book, translation }));
   }
