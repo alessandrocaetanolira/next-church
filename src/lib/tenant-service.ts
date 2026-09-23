@@ -185,6 +185,11 @@ export class TenantService {
     });
   }
 
+  static async getTenant(id: string, options: { databaseDirectory?: string } = {}) {
+    const globalClient = getGlobalClient(options.databaseDirectory);
+    return globalClient.church.findUnique({ where: { id } });
+  }
+
   /**
    * Fluxo de Deleção:
    * 1. Soft Delete (Inativa o acesso via Global DB)

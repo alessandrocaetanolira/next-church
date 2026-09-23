@@ -64,4 +64,41 @@ const serwist = new Serwist({
   },
 });
 
+type PushPayload = {
+  title?: string;
+  body?: string;
+  url?: string;
+  tag?: string;
+  data?: Record<string, unknown>;
+};
+
+self.addEventListener('push', (event: Event) => {
+  const pushEvent = event as PushEvent;
+  let payload: PushPayload = {};
+  try {
+    payload = pushEvent.data?.json() as PushPayload;
+  } catch {
+    payload = { body: pushEvent.data?.text() ?? 'Nova notificação.' };
+  }
+  const data = payload.data ?? {};
+  pushEvent.waitUntil(self.registration.showNotification(payload.title ?? 'Church App', {
+    body: payload.body ?? 'Você recebeu uma nova notificação.',
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
+    tag: payload.tag,
+    data: { ...data, url: payload.url ?? data.url ?? '/notifications' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event: Event) => {
+  const notificationEvent = event as NotificationEvent;
+  notificationEvent.notification.close();
+  notificationEvent.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    const target = new URL(String(notificationEvent.notification.data?.url ?? '/notifications'), self.location.origin).href;
+    const current = clients.find((client) => client.url === target);
+    if (current && 'focus' in current) return current.focus();
+    return self.clients.openWindow?.(target);
+  }));
+});
+
 serwist.addEventListeners();

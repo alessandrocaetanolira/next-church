@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check } from 'lucide-react';
+import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
+import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 
 function CollapsibleSection({ icon: Icon, title, children }: any) {
   const [open, setOpen] = useState(false);
@@ -214,13 +215,22 @@ export default function SettingsPage() {
         </div>
       </CollapsibleSection>
 
+      <CollapsibleSection icon={Download} title="Bíblia offline">
+        <p className="text-sm text-muted-foreground">O download é opcional e fica salvo somente neste dispositivo. Escolha quais versões deseja acessar sem internet.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <BibleDownloadControl translation="AA" />
+          <BibleDownloadControl translation="ACF" />
+          <BibleDownloadControl translation="NVI" />
+        </div>
+      </CollapsibleSection>
+
       {canUpdateSettings && (
         <CollapsibleSection icon={ImageIcon} title="Nome e Logo da Igreja">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nome da igreja</Label>
               <Input
-                value={branding.name}
+                value={branding.name ?? ''}
                 onChange={(event) => setBranding((current) => ({ ...current, name: event.target.value }))}
                 placeholder="Nome exibido no app e no login"
               />

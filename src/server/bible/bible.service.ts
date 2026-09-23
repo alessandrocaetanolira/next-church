@@ -6,6 +6,12 @@ const BOOK_ALIASES: Record<string, string> = { 'gênesis': 'gn', genesis: 'gn', 
 export class BibleService {
   constructor(private readonly repository: BibleRepository) {}
 
+  async manifest() {
+    const translations = await this.repository.contentManifest();
+    const contentVersion = `shared-bible-v1-${translations.map((item) => `${item.translationCode}:${item.bookCount}:${item.verseCount}`).join('|')}`;
+    return { contentVersion, generatedAt: new Date().toISOString(), translations };
+  }
+
   listBooks(translation = 'NVI') { return this.repository.listBooks(this.normalizeTranslation(translation)); }
 
   async listChapters(book: string, translation = 'NVI') {

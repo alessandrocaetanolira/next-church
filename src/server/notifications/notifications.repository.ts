@@ -9,6 +9,14 @@ export class NotificationsRepository {
     return this.prisma.$queryRawUnsafe<NotificationRow[]>(`SELECT id, userEmail, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 100`, userEmail);
   }
 
+  listSince(userEmail: string, createdAfter: string) {
+    return this.prisma.$queryRawUnsafe<NotificationRow[]>(
+      `SELECT id, userEmail, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL AND datetime(createdAt) > datetime(?) ORDER BY datetime(createdAt) ASC, id ASC LIMIT 50`,
+      userEmail,
+      createdAfter,
+    );
+  }
+
   async markRead(id: string, userEmail: string) {
     const now = new Date().toISOString();
     await this.prisma.$executeRawUnsafe(`UPDATE "Notification" SET readAt = ?, updatedAt = ? WHERE id = ? AND userEmail = ? AND deletedAt IS NULL`, now, now, id, userEmail);

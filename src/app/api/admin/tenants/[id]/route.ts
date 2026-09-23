@@ -30,6 +30,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await validateSuperAdmin();
+  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  const { id } = await params;
+  const tenant = await TenantService.getTenant(id);
+  if (!tenant) return new NextResponse("Not found", { status: 404 });
+  return NextResponse.json(tenant);
+}
+
 /**
  * DELETE /api/admin/tenants/[id]
  * Inativa (Soft delete) um tenant.

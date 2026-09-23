@@ -6,6 +6,8 @@ export class NotificationsService {
 
   async list(userEmail: string) { return { notifications: (await this.repository.list(this.email(userEmail))).map((notification) => this.serialize(notification)) }; }
 
+  async listSince(userEmail: string, createdAfter: string) { return (await this.repository.listSince(this.email(userEmail), createdAfter)).map((notification) => this.serialize(notification)); }
+
   markRead(id: string, userEmail: string) { if (!id) throw new ValidationError('Notificação inválida.'); return this.repository.markRead(id, this.email(userEmail)); }
   markAllRead(userEmail: string) { return this.repository.markAllRead(this.email(userEmail)); }
 

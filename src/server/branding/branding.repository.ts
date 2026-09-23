@@ -18,6 +18,18 @@ export class BrandingRepository {
     return row ?? null;
   }
 
+  async findByChurchId(churchId: string) {
+    const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
+      `SELECT c.id, c.slug, c.name, c.logoUrl, c.themeVariant, c.themeMode,
+              b.logoUrl AS brandingLogoUrl, b.pwaName, b.pwaShortName, b.icon192Url, b.icon512Url,
+              b.primaryColor, b.secondaryColor, b.themeColor, b.backgroundColor, b.configJson,
+              b.schemaVersion, b.brandingVersion
+         FROM "Church" c LEFT JOIN "ChurchBranding" b ON b.churchId = c.id
+        WHERE c.id = ? AND c.deletedAt IS NULL LIMIT 1`, churchId,
+    );
+    return row ?? null;
+  }
+
   async findPublic(slug: string) {
     const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
       `SELECT c.id, c.slug, c.name, c.logoUrl, c.themeVariant, c.themeMode, c.active,
@@ -42,4 +54,3 @@ export class BrandingRepository {
     });
   }
 }
-

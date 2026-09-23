@@ -21,6 +21,8 @@ import {
 import { MoreHorizontal, ShieldCheck, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAppBaseUrl } from '@/lib/app-base-url';
+import Link from 'next/link';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 interface Tenant {
   id: string;
@@ -29,12 +31,15 @@ interface Tenant {
   plan: string;
   active: boolean;
   createdAt: string;
+  databaseKey?: string | null;
+  status?: string;
   _count?: { users: number };
 }
 
 export function TenantList() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const appBaseUrl = getAppBaseUrl();
 
   const fetchTenants = async () => {
@@ -72,7 +77,8 @@ export function TenantList() {
   if (loading) return <div className="p-8 text-center">Carregando igrejas...</div>;
 
   return (
-    <div className="rounded-md border">
+    <>
+    <div className="overflow-x-auto rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -86,7 +92,7 @@ export function TenantList() {
         </TableHeader>
         <TableBody>
           {tenants.map((tenant) => (
-            <TableRow key={tenant.id}>
+            <TableRow key={tenant.id} className="cursor-pointer" onClick={() => setSelectedTenant(tenant)}>
               <TableCell className="font-medium">{tenant.name}</TableCell>
               <TableCell className="text-muted-foreground">{tenant.slug}</TableCell>
               <TableCell>
@@ -102,20 +108,23 @@ export function TenantList() {
               </TableCell>
               <TableCell>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
+                    <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
+                    <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Ações de ${tenant.name}`}>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setSelectedTenant(tenant)}>
+                      <ExternalLink className="mr-2 h-4 w-4" /> Ver detalhes
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        const targetUrl = appBaseUrl ? `${appBaseUrl}/cadastro?igreja=${tenant.slug}` : `/cadastro?igreja=${tenant.slug}`;
-                        window.open(targetUrl, '_blank');
+                        const targetUrl = appBaseUrl ? `${appBaseUrl}/auth/login?igreja=${tenant.slug}` : `/auth/login?igreja=${tenant.slug}`;
+                        window.location.assign(targetUrl);
                       }}
                     >
-                      <ExternalLink className="mr-2 h-4 w-4" /> Acessar
+                      <ExternalLink className="mr-2 h-4 w-4" /> Abrir login da igreja
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleStatus(tenant)}>
                       <ShieldCheck className="mr-2 h-4 w-4" /> 
@@ -139,5 +148,26 @@ export function TenantList() {
         </TableBody>
       </Table>
     </div>
+    <Sheet open={Boolean(selectedTenant)} onOpenChange={(open) => { if (!open) setSelectedTenant(null); }}>
+      <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl">
+        {selectedTenant && (
+          <SheetHeader className="text-left">
+            <SheetTitle>{selectedTenant.name}</SheetTitle>
+            <SheetDescription>Detalhes da igreja e do tenant</SheetDescription>
+            <div className="space-y-4 pt-4">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                <div><span className="text-muted-foreground">Slug</span><p className="font-medium">{selectedTenant.slug}</p></div>
+                <div><span className="text-muted-foreground">Database key</span><p className="font-medium">{selectedTenant.databaseKey ?? '—'}</p></div>
+                <div><span className="text-muted-foreground">Status</span><p className="font-medium">{selectedTenant.status ?? (selectedTenant.active ? 'ACTIVE' : 'INACTIVE')}</p></div>
+                <div><span className="text-muted-foreground">Criada em</span><p className="font-medium">{new Date(selectedTenant.createdAt).toLocaleDateString('pt-BR')}</p></div>
+                <div><span className="text-muted-foreground">Usuários</span><p className="font-medium">{selectedTenant._count?.users ?? 0}</p></div>
+              </div>
+              <Button asChild className="w-full"><Link href={`/admin/tenants/${selectedTenant.id}`}>Abrir detalhes completos</Link></Button>
+            </div>
+          </SheetHeader>
+        )}
+      </SheetContent>
+    </Sheet>
+    </>
   );
 }

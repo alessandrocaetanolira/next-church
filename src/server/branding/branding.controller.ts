@@ -44,3 +44,16 @@ export async function handlePublicBranding(slug: string | null) {
   if (!row || !row.active) return NextResponse.json({ error: 'Igreja não encontrada.' }, { status: 404 });
   return NextResponse.json(new BrandingService(repository).normalize(row));
 }
+
+export async function handleAdminBranding(request: NextRequest, churchId: string, method: 'GET' | 'PATCH') {
+  try {
+    const session = await auth();
+    if (!(session?.user as { isPlatformAdmin?: boolean } | undefined)?.isPlatformAdmin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    const repository = new BrandingRepository(getGlobalClient());
+    const service = new BrandingService(repository);
+    const row = await repository.findByChurchId(churchId);
+    if (!row) return NextResponse.json({ error: 'Tenant não encontrado.' }, { status: 404 });
+    if (method === 'GET') return NextResponse.json(service.normalize(row));
+    return NextResponse.json(await updateBranding(service, row, row.slug, await request.json()));
+  } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Erro ao processar branding.' }, { status: 400 }); }
+}

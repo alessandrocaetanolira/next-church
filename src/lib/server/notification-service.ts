@@ -1,5 +1,7 @@
 import { PrismaClient } from '../../../src/generated/prisma-tenant';
-import { publishTenantEvent } from '@/lib/server/sse-broker';
+import { publishTenantEvent } from '@/infra/sse/sse-broker';
+import { webPushService } from '@/infra/web-push/web-push-service';
+import { PushSubscriptionsRepository } from '@/server/notifications/push-subscriptions.repository';
 import { generateId } from '@/lib/id';
 
 type NotificationInput = {
@@ -272,6 +274,25 @@ export async function createNotifications(
       sourceId: notification.sourceId ?? null,
       createdAt: now,
     });
+  }
+
+  const recipients = Array.from(new Set(notifications.map((notification) => normalizeEmail(notification.userEmail)).filter(Boolean)));
+  if (!recipients.length) return;
+  try {
+    const subscriptionsRepository = new PushSubscriptionsRepository(prisma);
+    const subscriptions = await subscriptionsRepository.listByEmails(recipients);
+    const result = await webPushService.send(
+      subscriptions,
+      {
+        title: notifications[0]?.title ?? 'Nova notificação',
+        body: notifications[0]?.message ?? 'Você recebeu uma nova notificação.',
+        url: notifications[0]?.href ?? '/notifications',
+        tag: notifications[0]?.type,
+      },
+    );
+    if (result.expiredIds.length) await subscriptionsRepository.removeMany(result.expiredIds);
+  } catch (error) {
+    console.warn('[push] entrega ignorada:', error instanceof Error ? error.message : String(error));
   }
 }
 

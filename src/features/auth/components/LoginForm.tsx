@@ -109,6 +109,7 @@ export function LoginForm() {
     setLoading(true);
 
     try {
+      if (churchSlug.trim()) document.cookie = `church-tenant-slug=${encodeURIComponent(churchSlug.trim().toLowerCase())}; Path=/; Max-Age=31536000; SameSite=Lax`;
       const result = await signIn("credentials", {
         email,
         password,

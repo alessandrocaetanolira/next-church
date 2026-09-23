@@ -51,8 +51,8 @@ AUTH_SECRET="gere-uma-chave-local-forte"
 AUTH_URL="http://localhost:3000"
 
 # Em produção, use a origem pública do deploy, sem barra final:
-# AUTH_URL="https://app.domilembrancinhas.com.br"
-# NEXTAUTH_URL="https://app.domilembrancinhas.com.br"
+# AUTH_URL="https://church.bennipersonalizados.com.br"
+# NEXTAUTH_URL="https://church.bennipersonalizados.com.br"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
 ```
@@ -131,7 +131,7 @@ CC BY-NC; confirme os direitos das traduções antes de qualquer uso comercial.
 
 Login da igreja em `/auth/login`:
 
-```text
+````text
 Igreja: igreja-teste
 Email: admin@igreja-teste.com
 Senha: 123456
@@ -141,15 +141,16 @@ somente a credencial com:
 
 ```bash
 npm run db:tenant:reset-password -- --tenant igreja-teste --email admin@igreja-teste.com --password 123456
-```
-```
+````
+
+````
 
 Na tela `/auth/login`, deixe o slug da igreja vazio para entrar como administrador global:
 
 ```text
 Email: admin@church.local
 Senha: admin@church
-```
+````
 
 São contas distintas e ficam em bancos diferentes: a primeira fica no banco do tenant
 e a segunda na tabela `PlatformAdmin` do banco global.

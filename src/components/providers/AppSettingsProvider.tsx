@@ -14,6 +14,8 @@ interface AppSettings {
   themeMode: ThemeMode;
   viewMode: ViewMode;
   notificationsEnabled: boolean;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 }
 
 interface AppSettingsContextType {
@@ -33,7 +35,20 @@ const defaultSettings: AppSettings = {
   themeMode: 'system',
   viewMode: 'cards',
   notificationsEnabled: true,
+  primaryColor: null,
+  secondaryColor: null,
 };
+
+function hexToHsl(value?: string | null) {
+  if (!value || !/^#[0-9a-f]{6}$/i.test(value)) return null;
+  const n = Number.parseInt(value.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255; const g = ((n >> 8) & 255) / 255; const b = (n & 255) / 255;
+  const max = Math.max(r, g, b); const min = Math.min(r, g, b); const delta = max - min; let h = 0;
+  const l = (max + min) / 2; const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+  if (delta) h = max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  h = Math.round(h * 60); if (h < 0) h += 360;
+  return `${h} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
 
 const SETTINGS_KEY = 'church-app-settings';
 
@@ -77,6 +92,10 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       } else {
         root.setAttribute('data-theme', settings.themeVariant);
       }
+      const primary = hexToHsl(settings.primaryColor);
+      const secondary = hexToHsl(settings.secondaryColor);
+      if (primary) root.style.setProperty('--primary', primary); else root.style.removeProperty('--primary');
+      if (secondary) root.style.setProperty('--secondary', secondary); else root.style.removeProperty('--secondary');
     };
 
     applyTheme();
@@ -110,6 +129,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           appName: branding.name || current.appName,
           logoUrl: branding.logoUrl ?? null,
           themeVariant: (branding.themeVariant as ThemeVariant | undefined) ?? current.themeVariant,
+          primaryColor: branding.primaryColor ?? null,
+          secondaryColor: branding.secondaryColor ?? null,
         }));
       } catch {
         // mantém fallback local

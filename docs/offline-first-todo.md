@@ -69,8 +69,8 @@ faz parse, validação, normalização e serialização.
       `brandSecondaryColor`.
 - [ ] Definir se `primary` será usado como `theme_color` do manifest e `secondary`
       como cor de apoio/background do PWA.
-- [ ] Definir fallback: `pwaName` → `Church.name` → `Church App`.
-- [ ] Definir fallback de ícone: ícone PWA do tenant → `pwa-512x512.png`/
+- [x] Definir fallback: `pwaName` → `Church.name` → `Church App`.
+- [x] Definir fallback de ícone: ícone PWA do tenant → `pwa-512x512.png`/
       `pwa-192x192.png` padrão do app.
 - [x] Criar migration global para `ChurchBranding`.
 - [x] Atualizar provisionamento e seed sem exigir branding personalizado.
@@ -83,20 +83,29 @@ faz parse, validação, normalização e serialização.
 - [ ] Permitir restaurar o branding padrão do app.
 - [ ] Registrar `updatedAt`/`brandingVersion` a cada alteração.
 - [ ] Resolver o tenant do manifest por hostname, slug ou contexto público definido.
-- [ ] Tornar `/manifest.webmanifest` dinâmico por tenant.
+- [x] Tornar `/manifest.webmanifest` dinâmico por tenant via cookie público.
 - [ ] Alterar `metadata.title`, `appleWebApp.title` e ícones do layout conforme o
       branding resolvido.
-- [ ] Aplicar `primary` e `secondary` às variáveis CSS do tema sem depender de
+- [x] Aplicar `primary` e `secondary` às variáveis CSS do tema sem depender de
       classes Tailwind geradas estaticamente.
-- [ ] Validar formato das cores (hex/RGB/HSL) e rejeitar valores inválidos.
-- [ ] Verificar contraste mínimo entre texto e as cores personalizadas.
+- [x] Aplicar `logoUrl` no login, sidebar e configurações do tenant.
+- [x] Aplicar `icon192Url` e `icon512Url` no manifest do PWA.
+- [x] Aplicar `primaryColor` e `secondaryColor` nas variáveis CSS do app.
+- [x] Aplicar `themeColor` e `backgroundColor` no manifest do PWA.
+- [ ] Aplicar `themeColor` também no metadata/layout renderizado do tenant.
+- [ ] Separar o cache local de branding por `tenantSlug` e usuário.
+- [ ] Limpar branding anterior ao trocar de tenant no mesmo navegador.
+- [ ] Evitar que logo, nome e cores de um tenant sejam exibidos durante o
+      carregamento inicial de outro tenant.
+- [x] Validar formato das cores hex e rejeitar valores inválidos.
+- [x] Verificar contraste mínimo entre as cores personalizadas.
 - [ ] Atualizar preview de branding antes de salvar no painel administrativo.
 - [ ] Garantir que o manifest não seja precacheado como se fosse igual para todos
       os tenants.
 - [ ] Definir cache runtime versionado para manifest e ícones por tenant.
 - [ ] Invalidar o cache de branding quando `brandingVersion` ou `updatedAt` mudar.
 - [ ] Garantir que o Service Worker não misture logo, manifest ou nome de tenants.
-- [ ] Permitir que tenant sem imagem continue usando os ícones padrão.
+- [x] Permitir que tenant sem imagem continue usando os ícones padrão.
 - [ ] Validar instalação do PWA com dois tenants no mesmo navegador/dispositivo.
 - [ ] Validar atualização do nome/logo sem reinstalar o aplicativo manualmente.
 
@@ -130,7 +139,7 @@ armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 - [ ] Definir chaves compostas por tenant, usuário e entidade quando necessário.
 - [ ] Garantir que dados de tenants diferentes nunca compartilhem índices locais.
 - [ ] Evitar armazenar senhas ou tokens persistentes em texto puro.
-- [ ] Criar testes de migration e recuperação de banco local.
+- [x] Criar testes de schema e recuperação de banco local.
 
 Modelo mínimo da fila:
 
@@ -145,12 +154,13 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Separar cache por tradução, livro e capítulo.
 - [x] Persistir favoritos e anotações localmente.
 - [x] Permitir download opcional das versões.
+- [x] Disponibilizar a escolha das versões offline nas configurações do usuário.
 - [ ] Completar o fluxo com as três versões disponíveis.
-- [ ] Criar manifesto de conteúdo com `contentVersion`/hash.
+- [x] Criar manifesto de conteúdo com `contentVersion` derivada do catálogo.
 - [ ] Atualizar somente capítulos quando a versão do conteúdo mudar.
 - [ ] Retomar downloads interrompidos sem apagar capítulos íntegros.
 - [ ] Tratar quota excedida do IndexedDB.
-- [ ] Testar versão cacheada, versão ausente e versão desatualizada offline.
+- [x] Testar versão cacheada e versão ausente offline.
 
 ## Fase 4 — Sessão e modo offline
 
@@ -202,6 +212,85 @@ createdAt, status, retryCount, lastError, idempotencyKey
 
 Os módulos de cantina devem ser os últimos por envolverem estoque, vendas,
 créditos e conflitos concorrentes.
+
+## Fase 7.5 — Notificações em tempo real (SSE + Web Push)
+
+Adotar uma infraestrutura semelhante à utilizada no projeto `maxguard`, sem
+misturar transporte, regra de negócio e persistência. A notificação persistida
+no banco continua sendo a fonte oficial; SSE e Web Push são apenas canais de
+entrega.
+
+### Arquitetura obrigatória
+
+```text
+route → controller → service → repository
+                         ├── infra/sse
+                         └── infra/web-push
+```
+
+- [x] Mover o broker atual de `src/lib/server/sse-broker.ts` para
+      `src/infra/sse/`.
+- [ ] Criar uma abstração de stream SSE em `src/infra/sse/`, responsável por
+      encoding, heartbeat, cancelamento e limpeza da conexão.
+- [x] Refatorar `src/app/api/events/route.ts` para delegar ao controller, sem
+      acessar Prisma, SQL ou repository diretamente.
+- [x] Remover o polling SQL da rota e concentrar o catch-up de notificações no
+      service/repository usando cursor (`lastEventId` ou `createdAt`).
+- [ ] Identificar conexões por `tenantId + userId`, nunca somente pelo tenant.
+- [ ] Manter reconexão do cliente com backoff e evitar conexões duplicadas.
+- [ ] Garantir que SSE não seja tratado como armazenamento durável.
+
+### Persistência e entrega
+
+- [x] Criar repository de notificações com listagem incremental por cursor.
+- [ ] Persistir a notificação antes de publicar o evento em tempo real.
+- [ ] Criar `PushSubscription` no banco do tenant, com endpoint único e chaves
+      `p256dh`/`auth`.
+- [x] Criar `src/infra/web-push/` para configuração VAPID e envio paralelo.
+- [x] Criar service/controller/repository para registrar e remover subscriptions.
+- [x] Remover subscriptions expiradas quando o provedor retornar 404 ou 410.
+- [x] Criar endpoint autenticado para expor somente a chave pública VAPID.
+- [x] Orquestrar persistência, SSE e Web Push no service de notificações.
+- [ ] Definir retry, TTL, timeout e política de falha por canal.
+- [ ] Garantir idempotência da entrega e evitar notificações duplicadas no cliente.
+
+### Service Worker e frontend
+
+- [x] Integrar o evento `push` ao Service Worker gerado pelo Serwist em
+      `src/app/sw.ts`.
+- [x] Implementar `showNotification` e `notificationclick` no worker existente.
+- [ ] Não criar um segundo `public/sw.js` manual.
+- [ ] Não armazenar notificações privadas ou dados bíblicos no Cache Storage.
+- [ ] Permitir que o clique da notificação abra a rota correta do tenant.
+- [ ] Registrar/reassociar a subscription quando o usuário trocar de conta.
+- [ ] Permitir ativar e desativar Web Push nas configurações do usuário.
+- [ ] Manter SSE somente em áreas autenticadas e quando houver suporte do
+      navegador.
+- [ ] Garantir fallback para a central persistida quando SSE estiver offline.
+
+### Segurança e operação
+
+- [x] Não usar `Access-Control-Allow-Origin: *` em endpoints autenticados.
+- [x] Não expor chave privada VAPID no cliente ou em logs.
+- [ ] Excluir rotas SSE, Push e APIs privadas do Cache Storage.
+- [ ] Validar tenant e usuário em todas as operações de inscrição e entrega.
+- [ ] Documentar variáveis `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY` e
+      `VAPID_PRIVATE_KEY`.
+- [ ] Documentar que o broker em memória suporta apenas uma instância; para
+      múltiplas instâncias, avaliar Redis/pub-sub ou outro transporte externo.
+- [ ] Adicionar métricas de conexões SSE, entregas Push, expirados e falhas.
+
+### Testes
+
+- [ ] Testar conexão, heartbeat, cancelamento e reconexão SSE.
+- [ ] Testar isolamento entre tenants e usuários.
+- [ ] Testar catch-up após o cliente ficar desconectado.
+- [ ] Testar registro, atualização e remoção de subscriptions.
+- [ ] Testar remoção automática de endpoints 404/410.
+- [ ] Testar payload do evento `push` no Service Worker.
+- [ ] Testar clique da notificação com app aberto, fechado e offline.
+- [ ] Testar que a persistência continua funcionando quando SSE ou Push falham.
+- [ ] Testar entrega sem duplicidade após reconexão ou retry.
 
 ## Fase 8 — Testes e aceite
 

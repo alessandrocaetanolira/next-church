@@ -32,4 +32,11 @@ export class BibleRepository {
     });
     return { ...book, verses };
   }
+
+  async contentManifest() {
+    return this.prisma.$queryRawUnsafe<Array<{ translationCode: string; verseCount: number; bookCount: number }>>(
+      `SELECT v.translationCode, COUNT(v.id) AS verseCount, COUNT(DISTINCT v.bookId) AS bookCount
+         FROM "BibleVerse" v GROUP BY v.translationCode ORDER BY v.translationCode ASC`,
+    );
+  }
 }
