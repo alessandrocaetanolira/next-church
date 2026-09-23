@@ -196,6 +196,7 @@ Abra `http://localhost:3000/auth/login` para usuários da igreja ou
 - [TODO de arquitetura em camadas](docs/layered-architecture-todo.md)
 - [TODO de separação de tenants](docs/tenant-separation-todo.md)
 - [TODO da Bíblia offline](docs/bible-offline-todo.md)
+- [TODO do offline-first](docs/offline-first-todo.md)
 - [Ranking dos jogos](docs/game-ranking-plan.md)
 
 ## Estado atual da validação
