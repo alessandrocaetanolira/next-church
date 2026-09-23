@@ -10,7 +10,7 @@ async function validateSuperAdmin() {
   const session = await auth();
   if (!session?.user) return null;
   
-  // Por enquanto, apenas o admin@teste.com pode gerenciar tenants
+  // Apenas administradores globais autenticados podem gerenciar tenants.
   if (!(session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin) return null;
   
   return session;

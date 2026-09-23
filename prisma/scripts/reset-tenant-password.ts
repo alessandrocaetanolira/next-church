@@ -13,7 +13,7 @@ const email = argument('email')?.trim().toLowerCase();
 const password = argument('password');
 
 if (!tenant || !email || !password || password.length < 6 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(tenant)) {
-  throw new Error('Uso: npx tsx prisma/scripts/reset-tenant-password.ts --tenant igreja-teste --email admin@teste.com --password 123456');
+  throw new Error('Uso: npx tsx prisma/scripts/reset-tenant-password.ts --tenant igreja-teste --email admin@igreja-teste.com --password 123456');
 }
 
 const validatedTenant = tenant;

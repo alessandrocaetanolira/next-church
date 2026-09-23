@@ -133,34 +133,34 @@ Login da igreja em `/auth/login`:
 
 ```text
 Igreja: igreja-teste
-Email: admin@teste.com
+Email: admin@igreja-teste.com
 Senha: 123456
 
 Se o usuário existir no tenant, mas a senha do ambiente estiver divergente, atualize
 somente a credencial com:
 
 ```bash
-npm run db:tenant:reset-password -- --tenant igreja-teste --email admin@teste.com --password 123456
+npm run db:tenant:reset-password -- --tenant igreja-teste --email admin@igreja-teste.com --password 123456
 ```
 ```
 
-Login do administrador global em `/admin/login`:
+Na tela `/auth/login`, deixe o slug da igreja vazio para entrar como administrador global:
 
 ```text
-Email: admin@teste.com
-Senha: 123456
+Email: admin@church.local
+Senha: admin@church
 ```
 
-São contas distintas, mesmo usando o mesmo e-mail e senha por padrão: a primeira
-fica no banco do tenant e a segunda na tabela `PlatformAdmin` do banco global.
+São contas distintas e ficam em bancos diferentes: a primeira fica no banco do tenant
+e a segunda na tabela `PlatformAdmin` do banco global.
 O administrador global acessa as rotas `/admin/*`; ele não entra automaticamente
 no contexto de dados da igreja.
 
 Para recriar ou alterar o administrador global por variáveis de ambiente:
 
 ```bash
-PLATFORM_ADMIN_EMAIL="admin@teste.com" \
-PLATFORM_ADMIN_PASSWORD="123456" \
+PLATFORM_ADMIN_EMAIL="admin@church.local" \
+PLATFORM_ADMIN_PASSWORD="admin@church" \
 npm run db:seed:platform-admin
 ```
 

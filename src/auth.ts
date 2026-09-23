@@ -60,9 +60,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        if (!credentials?.churchSlug) {
-          console.warn('[Auth] Slug da igreja ausente para login de tenant:', email);
-          return null;
+        // Sem slug, somente o administrador global pode autenticar. Isso permite
+        // usar uma única tela sem misturar contas de tenant e plataforma.
+        if (!credentials?.churchSlug || !String(credentials.churchSlug).trim()) {
+          const platformAdmin = await globalClient.platformAdmin.findUnique({ where: { email } });
+          if (!platformAdmin || !platformAdmin.active || !(await bcrypt.compare(password, platformAdmin.passwordHash))) {
+            console.warn('[Auth] Slug ausente e credenciais não pertencem ao administrador global:', email);
+            return null;
+          }
+          return {
+            id: platformAdmin.id,
+            name: platformAdmin.name,
+            email: platformAdmin.email,
+            role: platformAdmin.role,
+            permissions: platformAdmin.permissions?.split(',').map((permission) => permission.trim()).filter(Boolean) ?? [],
+            tenantId: '',
+            tenantSlug: '',
+            linkedMemberId: null,
+            version: platformAdmin.version,
+            isPlatformAdmin: true,
+          };
         }
         const churchSlug = String(credentials.churchSlug).trim().toLowerCase();
 

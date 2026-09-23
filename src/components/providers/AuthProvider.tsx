@@ -6,11 +6,26 @@ import { ReactNode, useEffect, useState } from "react";
 
 const OFFLINE_SESSION_KEY = 'church-app-offline-session';
 
+type OfflineSession = Session & {
+  user: Session['user'] & {
+    id?: string;
+    role?: string;
+    tenantId?: string;
+    tenantSlug?: string;
+    permissions?: string[];
+    linkedMemberId?: string | null;
+    planCode?: string;
+    planFeatures?: string[];
+    version?: number;
+    isPlatformAdmin?: boolean;
+  };
+};
+
 function readCachedSession(): Session | null {
   if (typeof window === 'undefined') return null;
   try {
     const stored = window.localStorage.getItem(OFFLINE_SESSION_KEY);
-    return stored ? JSON.parse(stored) as Session : null;
+    return stored ? JSON.parse(stored) as OfflineSession : null;
   } catch {
     window.localStorage.removeItem(OFFLINE_SESSION_KEY);
     return null;
@@ -27,7 +42,25 @@ function SessionCacheBridge() {
     }
     if (status !== 'authenticated' || !session) return;
     try {
-      window.localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(session));
+      const user = session.user as OfflineSession['user'];
+      const snapshot: OfflineSession = {
+        expires: session.expires,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId,
+          tenantSlug: user.tenantSlug,
+          permissions: user.permissions,
+          linkedMemberId: user.linkedMemberId,
+          planCode: user.planCode,
+          planFeatures: user.planFeatures,
+          version: user.version,
+          isPlatformAdmin: user.isPlatformAdmin,
+        },
+      };
+      window.localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(snapshot));
     } catch {
       // O cache da sessão é opcional; a sessão online continua funcionando.
     }

@@ -84,12 +84,13 @@ Seed local principal:
 
 ```text
 Igreja: igreja-teste
-Email: admin@teste.com
+Email: admin@igreja-teste.com
 Senha: 123456
 ```
 
-O usuário acima é do tenant `igreja-teste`. O administrador global é uma conta
-separada, criada por `npm run db:seed:platform-admin`, e usa `/admin/login`.
+O usuário acima é do tenant `igreja-teste`. Na mesma tela `/auth/login`, deixe o
+campo de slug vazio para autenticar o administrador global; nesse caso o sistema
+redireciona para `/admin/tenants`. O administrador global não é um usuário de tenant.
 
 ## Bíblia completa
 

@@ -2,8 +2,8 @@ import { PrismaClient } from '../src/generated/prisma-global';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 
-const email = process.env.PLATFORM_ADMIN_EMAIL ?? 'admin@teste.com';
-const password = process.env.PLATFORM_ADMIN_PASSWORD ?? '123456';
+const email = process.env.PLATFORM_ADMIN_EMAIL ?? 'admin@church.local';
+const password = process.env.PLATFORM_ADMIN_PASSWORD ?? 'admin@church';
 const databaseUrl = process.env.DATABASE_URL ?? `file:${path.resolve(process.cwd(), 'prisma/databases/global.db')}`;
 
 const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });

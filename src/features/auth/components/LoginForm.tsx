@@ -125,7 +125,7 @@ export function LoginForm() {
       } else {
         toast.success("Login realizado com sucesso!");
         // Forçar redirecionamento via location para garantir limpeza de estados de cache do Next.js
-        window.location.href = "/";
+        window.location.href = churchSlug.trim() ? "/" : "/admin/tenants";
       }
     } catch (err) {
       console.error("Erro durante o login:", err);
@@ -153,11 +153,10 @@ export function LoginForm() {
         <CardContent className="space-y-4">
           {errorMessage && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorMessage}</p>}
           <div className="space-y-2">
-            <Label htmlFor="churchSlug">Igreja (Slug)</Label>
+            <Label htmlFor="churchSlug">Igreja (Slug) <span className="font-normal text-muted-foreground">(deixe vazio para administrador global)</span></Label>
             <Input
               id="churchSlug"
               type="text"
-              required
               value={churchSlug}
               onChange={(e) => setChurchSlug(e.target.value.toLowerCase())}
               placeholder="ex: igreja-central"
@@ -201,7 +200,7 @@ export function LoginForm() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
           <div className="text-center text-xs text-muted-foreground">
-            <p>Dica: Use a senha padrão 123456 para testes</p>
+            <p>Informe o slug para acessar uma igreja. Sem slug, somente o administrador global pode entrar.</p>
           </div>
           <Button asChild variant="ghost" className="w-full">
             <Link href={registerHref}>Solicitar cadastro</Link>

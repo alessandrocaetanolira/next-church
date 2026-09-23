@@ -155,7 +155,7 @@ createdAt, status, retryCount, lastError, idempotencyKey
 ## Fase 4 — Sessão e modo offline
 
 - [x] Exibir indicador de modo offline.
-- [ ] Persistir somente o estado mínimo da última sessão válida.
+- [x] Persistir somente o estado mínimo da última sessão válida.
 - [ ] Permitir navegação offline sem redirecionamento indevido para login.
 - [ ] Marcar a sessão como `offline` no cliente.
 - [ ] Bloquear claramente ações que exigem servidor.
