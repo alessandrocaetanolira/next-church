@@ -10,7 +10,7 @@ function repositoryMock() {
   return {
     listBooks: vi.fn().mockResolvedValue([{ id: 'book-1', name: 'Gênesis', abbrev: 'gn', testament: 'AT' }]),
     listChapterNumbers: vi.fn().mockResolvedValue([1, 2]),
-    findChapter: vi.fn().mockResolvedValue({ name: 'Gênesis', chapters: [{ number: 1, verses: [{ text: 'No princípio' }] }] }),
+    findChapter: vi.fn().mockResolvedValue({ name: 'Gênesis', verses: [{ text: 'No princípio' }] }),
   } as unknown as BibleRepository;
 }
 
@@ -25,9 +25,9 @@ describe('camadas da Bíblia', () => {
     const service = new BibleService(repository);
 
     await expect(service.listChapters('gênesis')).resolves.toEqual([1, 2]);
-    await expect(service.getChapter('gênesis', '1')).resolves.toEqual({ book: 'Gênesis', chapter: 1, verses: ['No princípio'] });
-    expect(repository.listChapterNumbers).toHaveBeenCalledWith('gn');
-    expect(repository.findChapter).toHaveBeenCalledWith('gn', 1);
+    await expect(service.getChapter('gênesis', '1')).resolves.toEqual({ book: 'Gênesis', chapter: 1, translation: 'NVI', verses: ['No princípio'] });
+    expect(repository.listChapterNumbers).toHaveBeenCalledWith('gn', 'NVI');
+    expect(repository.findChapter).toHaveBeenCalledWith('gn', 1, 'NVI');
   });
 
   it('rejeita capítulo inválido', async () => {

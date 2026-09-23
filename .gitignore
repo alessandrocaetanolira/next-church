@@ -36,6 +36,8 @@ yarn-error.log*
 # local databases
 prisma/databases/*.db
 prisma/databases/*.db-*
+prisma/databases/.tenant-migration-backup-*/
+!prisma/databases/bible.db
 
 # generated Prisma clients
 /src/generated/

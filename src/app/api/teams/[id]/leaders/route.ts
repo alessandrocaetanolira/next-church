@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { ensureGroupTeamCompatibility, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
 import { hasActionPermission } from '@/lib/access-control';
 
@@ -26,7 +25,6 @@ export async function PATCH(
     : [];
 
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   await ensureGroupTeamCompatibility(prisma);
 
   const [group] = await prisma.$queryRawUnsafe<Array<{

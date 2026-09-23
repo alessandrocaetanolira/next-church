@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getGlobalClient } from '@/lib/prisma-factory';
-import { ensureGlobalSchemaExtensions } from '@/lib/global-schema';
 import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
@@ -12,7 +11,6 @@ export async function GET() {
   if (!hasActionPermission(session.user, 'settings', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const prisma = getGlobalClient();
-  await ensureGlobalSchemaExtensions();
 
   const [church] = await prisma.$queryRawUnsafe<Array<{
     slug: string;
@@ -56,7 +54,6 @@ export async function PATCH(request: NextRequest) {
   }
 
   const prisma = getGlobalClient();
-  await ensureGlobalSchemaExtensions();
 
   await prisma.$executeRawUnsafe(
     `

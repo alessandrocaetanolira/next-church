@@ -1,6 +1,5 @@
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { jsonError, jsonOk } from '@/lib/http/response';
 import { UnauthenticatedError } from '@/lib/http/errors';
 import { deleteMember, getMember, updateMember } from '@/server/members/members.controller';
@@ -11,7 +10,6 @@ async function getController() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   return { user: session.user, service: new MembersService(new MembersRepository(prisma)) };
 }
 

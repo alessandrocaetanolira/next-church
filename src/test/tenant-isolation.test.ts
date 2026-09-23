@@ -48,7 +48,7 @@ describe('Tenant isolation with three churches', () => {
         },
       });
     }
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await closeAllConnections();

@@ -1,5 +1,4 @@
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { hasPermission } from '@/lib/access-control';
 
 type SessionLike = {
@@ -33,7 +32,6 @@ export async function getTeamScopedAccess(session: SessionLike, permission: 'tas
   }
 
   const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   // Líderes continuam restritos às equipes vinculadas, mesmo quando possuem
   // a permissão legada do módulo. Acesso global fica reservado a admin/pastor.

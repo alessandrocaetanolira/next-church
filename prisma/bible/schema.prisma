@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../src/generated/prisma-bible"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("BIBLE_DATABASE_URL")
+}
+
+model BibleTranslation {
+  code   String      @id
+  name   String
+  verses BibleVerse[]
+}
+
+model BibleBook {
+  id        String       @id @default(cuid())
+  abbrev    String       @unique
+  name      String
+  testament String
+  position  Int          @unique
+  verses    BibleVerse[]
+}
+
+model BibleVerse {
+  id              String           @id @default(cuid())
+  translationCode String
+  bookId          String
+  chapter         Int
+  number          Int
+  text            String
+  translation     BibleTranslation @relation(fields: [translationCode], references: [code])
+  book            BibleBook        @relation(fields: [bookId], references: [id])
+
+  @@unique([translationCode, bookId, chapter, number])
+  @@index([translationCode, bookId, chapter, number])
+}

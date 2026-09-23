@@ -8,7 +8,6 @@
 import { NextResponse } from "next/server";
 import { getTenantClient } from "@/lib/prisma-factory";
 import { auth } from "@/auth";
-import { ensureTenantSchemaExtensions } from "@/lib/tenant-schema";
 import { hasActionPermission } from '@/lib/access-control';
 import { createSale } from '@/server/canteen/sales.controller';
 import { CanteenSalesRepository } from '@/server/canteen/sales.repository';
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
 
   const prisma = getTenantClient(session.user.tenantId);
   const tenantId = session.user.tenantId;
-  await ensureTenantSchemaExtensions(prisma);
   const tasksRepository = new TasksRepository(prisma);
   const tasksService = new TasksService(tasksRepository);
   const tasksScope = await getTeamScopedAccess(session, 'tasks');

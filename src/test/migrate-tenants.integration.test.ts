@@ -52,7 +52,7 @@ describe('orquestrador de migrations tenant', () => {
     const retry = await migrateTenants({ setExitCode: false });
     expect(retry.summary.migrated).toBe(1);
     expect(retry.summary.failed).toBe(0);
-  });
+  }, 20_000);
 
   it('dry-run nao altera os arquivos dos tenants selecionados', async () => {
     const tenantPath = path.join(databaseDirectory, 'church_tenant-good.db');

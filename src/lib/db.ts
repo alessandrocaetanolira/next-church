@@ -158,6 +158,7 @@ export interface FeedComment {
 export interface BibleBookmark {
   id?: number;
   userId: string;
+  translation: string;
   book: string;
   chapter: number;
   verse?: number;
@@ -220,6 +221,20 @@ class ChurchDB extends Dexie {
       quizAttempts: '++id, userId, score, completedAt',
       feedPosts: '++id, userId, type, createdAt',
       bibleBookmarks: '++id, userId, book, chapter',
+      bibleChapters: '++id, [book+chapter], book, testament',
+    });
+
+    this.version(7).stores({
+      tasks: 'id, teamId, date, status, _status',
+      teams: 'id, name, _status, deletedAt',
+      sales: 'id, memberId, createdAt, _status',
+      products: 'id, category, stock, _status, deletedAt',
+      members: 'id, email, status, _status, deletedAt',
+      syncOutbox: '++id, module, action, timestamp',
+      quizQuestions: '++id, category, difficulty',
+      quizAttempts: '++id, userId, score, completedAt',
+      feedPosts: '++id, userId, type, createdAt',
+      bibleBookmarks: '++id, userId, [userId+translation+book+chapter], translation, book, chapter',
       bibleChapters: '++id, [book+chapter], book, testament',
     });
   }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
 import { ensureGroupTeamCompatibility, upsertCanonicalTeamGroup } from '@/lib/group-team-compat';
 import { hasActionPermission } from '@/lib/access-control';
@@ -14,7 +13,6 @@ export async function GET() {
 
   const tenantId = session.user.tenantId;
   const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   await ensureGroupTeamCompatibility(prisma);
 
   try {
@@ -41,7 +39,6 @@ export async function POST(request: NextRequest) {
   const data = await request.json();
   const tenantId = session.user.tenantId;
   const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   await ensureGroupTeamCompatibility(prisma);
 
   try {

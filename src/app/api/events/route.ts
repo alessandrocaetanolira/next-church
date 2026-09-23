@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { subscribeToTenantEvents } from '@/lib/server/sse-broker';
 import { hasActionPermission } from '@/lib/access-control';
 
@@ -15,7 +14,6 @@ export async function GET(request: NextRequest) {
   if (!hasActionPermission(session.user, 'notifications', 'view')) return new Response('Sem permissão', { status: 403 });
 
   const prisma = getTenantClient(tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   const stream = new TransformStream();
   const writer = stream.writable.getWriter();

@@ -1,30 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { db, type FeedPost } from '@/lib/db';
+import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { BookOpen, Share2, Bookmark, BookmarkCheck, Search, X, List, WifiOff } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 
 export default function BiblePage() {
   const { data: session } = useSession();
   const user = session?.user;
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
+  const { openDrawer, closeDrawer } = useDrawer();
 
   const [books, setBooks] = useState<any[]>([]);
+  const [translation, setTranslation] = useState('NVI');
   const [selectedBook, setSelectedBook] = useState<any>(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +31,8 @@ export default function BiblePage() {
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
   const [bookListOpen, setBookListOpen] = useState(false);
+  const [expandedBook, setExpandedBook] = useState<string | null>(null);
+  const [chaptersByBook, setChaptersByBook] = useState<Record<string, number[]>>({});
 
   const toggleVerse = (index: number) => {
     setSelectedVerses(prev => 
@@ -42,11 +43,11 @@ export default function BiblePage() {
   useEffect(() => {
     setPageTitle('Bíblia');
     fetchBooks();
-  }, [setPageTitle]);
+  }, [setPageTitle, translation]);
 
   const fetchBooks = async () => {
     try {
-      const res = await fetch('/api/bible/books');
+      const res = await fetch(`/api/bible/books?translation=${translation}`);
       const data = await res.json();
       setBooks(data);
       if (data.length > 0) setSelectedBook(data[0]);
@@ -60,9 +61,10 @@ export default function BiblePage() {
   const fetchAvailableChapters = async (book: string) => {
     setLoadingChapters(true);
     try {
-      const res = await fetch(`/api/bible/${book.toLowerCase()}/chapters`);
+      const res = await fetch(`/api/bible/${book.toLowerCase()}/chapters?translation=${translation}`);
       if (res.ok) {
         const chapters = await res.json();
+        setChaptersByBook((current) => ({ ...current, [book]: chapters }));
         setAvailableChapters(chapters);
         if (!chapters.includes(selectedChapter)) {
             setSelectedChapter(chapters[0] || 1);
@@ -80,27 +82,20 @@ export default function BiblePage() {
       fetchAvailableChapters(selectedBook.abbrev);
       loadChapterData(selectedBook.abbrev, selectedChapter);
     }
-  }, [selectedBook, selectedChapter]);
+  }, [selectedBook, selectedChapter, translation]);
 
   const loadChapterData = async (book: string, chapter: number) => {
-    const local = await db.bibleChapters.where({ book, chapter }).first();
-    
-    if (local) {
-      setVerses(local.verses);
-    } else {
-      try {
-        const res = await fetch(`/api/bible/${book.toLowerCase()}/${chapter}`);
-        if (res.ok) {
-          const data = await res.json();
-          setVerses(data.verses);
-          await db.bibleChapters.add({ book, chapter, verses: data.verses, testament: 'AT' });
-        } else {
-          setVerses([]);
-        }
-      } catch (e) {
+    try {
+      const res = await fetch(`/api/bible/${book.toLowerCase()}/${chapter}?translation=${translation}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVerses(data.verses);
+      } else {
         setVerses([]);
-        toast.error('Erro ao carregar versículos.');
       }
+    } catch (e) {
+      setVerses([]);
+      toast.error('Erro ao carregar versículos.');
     }
   };
 
@@ -109,17 +104,18 @@ export default function BiblePage() {
     [user?.email]
   );
 
-  const isBookmarked = bookmarks?.some(b => b.book === selectedBook?.name && b.chapter === selectedChapter);
+  const isBookmarked = bookmarks?.some(b => b.translation === translation && b.book === selectedBook?.name && b.chapter === selectedChapter);
 
   const handleBookmark = async () => {
     if (!user?.email || !selectedBook) return;
-    const existing = bookmarks?.find(b => b.book === selectedBook.name && b.chapter === selectedChapter);
+    const existing = bookmarks?.find(b => b.translation === translation && b.book === selectedBook.name && b.chapter === selectedChapter);
     if (existing) {
       await db.bibleBookmarks.delete(existing.id!);
       toast.info('Marcador removido');
     } else {
       await db.bibleBookmarks.add({
         userId: user.email,
+        translation,
         book: selectedBook.name,
         chapter: selectedChapter,
         verse: selectedVerses[0] ?? undefined,
@@ -129,7 +125,7 @@ export default function BiblePage() {
     }
   };
 
-  const shareToFeed = async () => {
+  const shareToFeed = useCallback(async () => {
     if (!user?.email || selectedVerses.length === 0 || !selectedBook) return;
     const verseText = selectedVerses.map(i => verses[i]).join(' ');
     const response = await fetch('/api/feed', {
@@ -150,7 +146,101 @@ export default function BiblePage() {
 
     toast.success('Versículos compartilhados!');
     setSelectedVerses([]);
-  };
+    closeDrawer();
+  }, [closeDrawer, selectedBook, selectedChapter, selectedVerses, user?.email, verses]);
+
+  const clearVerseSelection = useCallback(() => {
+    setSelectedVerses([]);
+    closeDrawer();
+  }, [closeDrawer]);
+
+  const copySelectedVerses = useCallback(async () => {
+    if (!selectedBook || selectedVerses.length === 0) return;
+    const reference = `${selectedBook.name} ${selectedChapter}:${selectedVerses.map((verse) => verse + 1).join(', ')} (${translation})`;
+    const text = `${selectedVerses.map((verse) => verses[verse]).join(' ')}\n\n${reference}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Versículos copiados!');
+    } catch {
+      toast.error('Não foi possível copiar os versículos.');
+    }
+  }, [selectedBook, selectedChapter, selectedVerses, translation, verses]);
+
+  useEffect(() => {
+    if (!selectedBook || selectedVerses.length === 0) {
+      closeDrawer();
+      return;
+    }
+
+    const reference = `${selectedBook.name} ${selectedChapter}:${selectedVerses.map((verse) => verse + 1).join(', ')}`;
+    const selectedText = selectedVerses.map((verse) => verses[verse]).join(' ');
+    openDrawer({
+      contentClassName: 'max-h-[70dvh]',
+      content: <>
+        <DrawerHeader className="border-b text-left">
+          <DrawerTitle>Ações do versículo</DrawerTitle>
+          <p className="text-sm font-medium text-primary">{reference} · {translation}</p>
+        </DrawerHeader>
+        <div className="space-y-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <p className="max-h-28 overflow-y-auto rounded-lg bg-muted p-3 text-sm leading-6 text-muted-foreground">{selectedText}</p>
+          <div className="grid gap-2">
+            <Button type="button" variant="outline" className="justify-start gap-2" onClick={copySelectedVerses}>
+              <Copy className="h-4 w-4" /> Copiar versículo
+            </Button>
+            {canShareToFeed && <Button type="button" className="justify-start gap-2" onClick={shareToFeed}>
+              <Share2 className="h-4 w-4" /> Compartilhar no feed
+            </Button>}
+            <Button type="button" variant="ghost" className="justify-start gap-2" onClick={clearVerseSelection}>
+              <X className="h-4 w-4" /> Limpar seleção
+            </Button>
+          </div>
+        </div>
+      </>,
+    });
+  }, [canShareToFeed, clearVerseSelection, closeDrawer, copySelectedVerses, openDrawer, selectedBook, selectedChapter, selectedVerses, shareToFeed, translation, verses]);
+
+  const openTranslationDrawer = useCallback(() => {
+    openDrawer({
+      content: <>
+        <DrawerHeader className="border-b text-left"><DrawerTitle>Versão da Bíblia</DrawerTitle></DrawerHeader>
+        <div className="grid gap-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {[
+            ['NVI', 'Nova Versão Internacional'],
+            ['ACF', 'Almeida Corrigida Fiel'],
+            ['AA', 'Almeida Atualizada'],
+          ].map(([code, name]) => (
+            <Button key={code} type="button" variant={translation === code ? 'default' : 'outline'} className="h-auto justify-start py-3 text-left" onClick={() => {
+              setTranslation(code);
+              setChaptersByBook({});
+              setSelectedVerses([]);
+              closeDrawer();
+            }}>
+              <span className="font-semibold">{code}</span><span className="ml-2 text-xs opacity-80">{name}</span>
+            </Button>
+          ))}
+        </div>
+      </>,
+    });
+  }, [closeDrawer, openDrawer, translation]);
+
+  const openChapterDrawer = useCallback(() => {
+    const chapters = availableChapters.length > 0 ? Array.from(new Set(availableChapters)) : [1];
+    openDrawer({
+      contentClassName: 'max-h-[75dvh]',
+      content: <>
+        <DrawerHeader className="border-b text-left"><DrawerTitle>Escolha o capítulo</DrawerTitle></DrawerHeader>
+        <ScrollArea className="h-[calc(75dvh-6rem)] p-4 pb-6">
+          <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+            {chapters.map((chapter) => <Button key={chapter} type="button" variant={chapter === selectedChapter ? 'default' : 'outline'} className="h-11" onClick={() => {
+              setSelectedChapter(chapter);
+              setSelectedVerses([]);
+              closeDrawer();
+            }}>{chapter}</Button>)}
+          </div>
+        </ScrollArea>
+      </>,
+    });
+  }, [availableChapters, closeDrawer, openDrawer, selectedChapter]);
 
   const selectBook = (book: any) => {
     setSelectedBook(book);
@@ -158,6 +248,22 @@ export default function BiblePage() {
     setSelectedVerses([]);
     setBookListOpen(false);
     setSearchTerm('');
+  };
+
+  const toggleBook = async (book: any) => {
+    if (expandedBook === book.abbrev) {
+      setExpandedBook(null);
+      return;
+    }
+    setExpandedBook(book.abbrev);
+    if (!chaptersByBook[book.abbrev]) await fetchAvailableChapters(book.abbrev);
+  };
+
+  const selectChapterFromDrawer = (book: any, chapter: number) => {
+    setSelectedBook(book);
+    setSelectedChapter(chapter);
+    setSelectedVerses([]);
+    setBookListOpen(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -184,51 +290,53 @@ export default function BiblePage() {
       {/* Top Navigation Bar */}
       <div className="bg-card border-b border-border px-4 py-3 space-y-2">
         <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" className="w-[78px] justify-between bg-background px-2" onClick={openTranslationDrawer}>
+            {translation}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
           {/* Seletor de Livro */}
-          <Sheet open={bookListOpen} onOpenChange={setBookListOpen}>
-            <SheetTrigger asChild>
+          <Drawer open={bookListOpen} onOpenChange={setBookListOpen}>
+            <DrawerTrigger asChild>
               <Button variant="outline" className="flex-[2] justify-start gap-2 font-semibold bg-background">
                 <List className="w-4 h-4" />
                 {selectedBook?.name || 'Selecione...'}
               </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0">
-              <SheetHeader className="p-4 border-b"><SheetTitle>Livros da Bíblia</SheetTitle></SheetHeader>
-              <ScrollArea className="h-[calc(100vh-100px)]">
-                 <div className="p-4 space-y-4">
-                    {otBooks.length > 0 && <div><p className="text-[10px] uppercase font-bold text-muted-foreground">Antigo Testamento</p>
-                    {otBooks.map((b: any) => (
-                      <button key={b.abbrev} onClick={() => selectBook(b)} className={cn('block w-full text-left py-2 text-sm', b.abbrev === selectedBook?.abbrev ? 'text-primary font-bold' : '')}>{b.name}</button>
-                    ))}</div>}
-                    {ntBooks.length > 0 && <div><p className="text-[10px] uppercase font-bold text-muted-foreground">Novo Testamento</p>
-                    {ntBooks.map((b: any) => (
-                      <button key={b.abbrev} onClick={() => selectBook(b)} className={cn('block w-full text-left py-2 text-sm', b.abbrev === selectedBook?.abbrev ? 'text-primary font-bold' : '')}>{b.name}</button>
-                    ))}</div>}
-                 </div>
+            </DrawerTrigger>
+            <DrawerContent className="max-h-[82dvh]">
+              <DrawerHeader className="border-b text-left"><DrawerTitle>Livros da Bíblia</DrawerTitle></DrawerHeader>
+              <ScrollArea className="h-[calc(82dvh-6.5rem)] px-4 pb-6">
+                {[
+                  ['Antigo Testamento', otBooks],
+                  ['Novo Testamento', ntBooks],
+                ].map(([title, testamentBooks], index) => (
+                  <div key={title as string}>
+                    {index > 0 && <Separator />}
+                    <section className="py-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title as string}</p>
+                      <div className="divide-y divide-border rounded-lg border border-border">
+                        {(testamentBooks as any[]).map((book) => {
+                          const isExpanded = expandedBook === book.abbrev;
+                          const chapters = chaptersByBook[book.abbrev] ?? [];
+                          return <div key={`${translation}-${book.abbrev}`}>
+                            <button type="button" onClick={() => toggleBook(book)} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-medium">
+                              <span className={cn(book.abbrev === selectedBook?.abbrev ? 'text-primary' : 'text-foreground')}>{book.name}</span>
+                              <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
+                            </button>
+                            {isExpanded && <div className="grid grid-cols-6 gap-2 border-t border-border bg-muted/40 p-3">
+                              {chapters.map((chapter) => <Button key={`${book.abbrev}-${chapter}`} type="button" variant={book.abbrev === selectedBook?.abbrev && chapter === selectedChapter ? 'default' : 'outline'} size="sm" className="h-9 px-0" onClick={() => selectChapterFromDrawer(book, chapter)}>{chapter}</Button>)}
+                            </div>}
+                          </div>;
+                        })}
+                      </div>
+                    </section>
+                  </div>
+                ))}
               </ScrollArea>
-            </SheetContent>
-          </Sheet>
+            </DrawerContent>
+          </Drawer>
 
-          {/* Seletor de Capítulo */}
-          <Select 
-            value={selectedChapter.toString()} 
-            onValueChange={(v) => setSelectedChapter(parseInt(v))}
-          >
-            <SelectTrigger className="w-[100px] bg-background">
-              <SelectValue placeholder="Cap" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableChapters.length > 0 ? (
-                Array.from(new Set(availableChapters)).map((ch) => (
-                  <SelectItem key={`${selectedBook?.abbrev}-${ch}`} value={ch.toString()}>
-                    Cap {ch}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="1">Cap 1</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+          <Button type="button" variant="outline" className="w-[100px] justify-between bg-background px-2" onClick={openChapterDrawer}>
+            Cap {selectedChapter}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
 
           <Button size="icon" variant="ghost" onClick={handleBookmark}>
             {isBookmarked ? <BookmarkCheck className="w-5 h-5 text-primary" /> : <Bookmark className="w-5 h-5" />}
@@ -247,27 +355,6 @@ export default function BiblePage() {
         </div>
       </ScrollArea>
 
-      {selectedVerses.length > 0 && (
-        <motion.div 
-          initial={{ y: 100 }} 
-          animate={{ y: 0 }} 
-          exit={{ y: 100 }}
-          className="fixed bottom-[4.5rem] md:bottom-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-card border border-border/50 shadow-xl rounded-xl p-3 flex items-center gap-2 z-50 backdrop-blur-xl"
-        >
-          <div className="flex-1 min-w-0">
-             <p className="text-xs font-bold text-primary mb-0.5 truncate">{selectedBook?.name} {selectedChapter}:{selectedVerses.join(',')}</p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Button size="sm" variant="ghost" onClick={() => setSelectedVerses([])} className="h-8 w-8 p-0">
-              <X className="w-4 h-4" />
-            </Button>
-            {canShareToFeed ? <Button size="sm" onClick={shareToFeed} className="h-8 px-3 text-xs gap-1.5 shadow-sm">
-              <Share2 className="w-3.5 h-3.5" /> 
-              <span className="hidden sm:inline">Compartilhar ({selectedVerses.length})</span>
-            </Button> : null}
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }

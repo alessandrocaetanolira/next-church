@@ -28,6 +28,7 @@ export type TenantSelectionOptions = {
 };
 
 const SQLITE_HEADER = 'SQLite format 3\u0000';
+const TENANT_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function getOption(name: string) {
   const index = process.argv.indexOf(name);
@@ -52,7 +53,11 @@ function getRequestedTenants() {
 }
 
 export function resolveDatabaseKey(church: Pick<ChurchRecord, 'slug' | 'databaseKey'>) {
-  return church.databaseKey ?? church.slug;
+  const databaseKey = church.databaseKey ?? church.slug;
+  if (!TENANT_KEY_PATTERN.test(databaseKey)) {
+    throw new Error(`Identificador de tenant inválido: ${databaseKey}`);
+  }
+  return databaseKey;
 }
 
 export function selectChurches(churches: ChurchRecord[], options: TenantSelectionOptions = {}) {
@@ -109,8 +114,7 @@ function backupDatabase(sourcePath: string, backupDirectory: string, databaseKey
 function getBackupDirectory(databaseDirectory: string) {
   const configured = getOption('--backup-dir');
   if (configured) return path.resolve(configured);
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14);
-  return path.join(databaseDirectory, `.tenant-migration-backup-${stamp}`);
+  return fs.mkdtempSync(path.join(databaseDirectory, '.tenant-migration-backup-'));
 }
 
 async function checkIntegrity(filePath: string) {
@@ -144,7 +148,7 @@ export async function migrateTenants(options: { setExitCode?: boolean } = {}) {
   const dryRun = hasFlag('--dry-run');
   const includeArchived = hasFlag('--include-archived');
   const requestedTenants = getRequestedTenants();
-  const backupDirectory = getBackupDirectory(directory);
+  const backupDirectory = dryRun ? null : getBackupDirectory(directory);
   const results: TenantResult[] = [];
   const globalClient = new PrismaClient({ datasources: { db: { url: `file:${globalPath}` } } });
 
@@ -159,11 +163,10 @@ export async function migrateTenants(options: { setExitCode?: boolean } = {}) {
 
     for (const church of selected) {
       const startedAt = Date.now();
-      const databaseKey = resolveDatabaseKey(church);
-      const databasePath = path.join(directory, `church_${databaseKey}.db`);
-      const baseResult = { slug: church.slug, databaseKey, file: databasePath };
-
       try {
+        const databaseKey = resolveDatabaseKey(church);
+        const databasePath = path.join(directory, `church_${databaseKey}.db`);
+        const baseResult = { slug: church.slug, databaseKey, file: databasePath };
         if (!hasSQLiteHeader(databasePath)) {
           throw new Error(`Banco ausente ou invalido: ${databasePath}`);
         }
@@ -176,7 +179,10 @@ export async function migrateTenants(options: { setExitCode?: boolean } = {}) {
           continue;
         }
 
-        const backupPath = backupDatabase(databasePath, backupDirectory, databaseKey);
+        const backupPath = backupDatabase(databasePath, backupDirectory!, databaseKey);
+        if (!(await checkIntegrity(backupPath))) {
+          throw new Error(`Backup inconsistente: ${backupPath}`);
+        }
         runMigration(databasePath);
         if (!(await checkIntegrity(databasePath))) {
           throw new Error(`Banco ficou inconsistente apos migration: ${databasePath}`);
@@ -184,7 +190,9 @@ export async function migrateTenants(options: { setExitCode?: boolean } = {}) {
         results.push({ ...baseResult, status: 'migrated', backup: backupPath, durationMs: Date.now() - startedAt });
       } catch (error) {
         results.push({
-          ...baseResult,
+          slug: church.slug,
+          databaseKey: church.databaseKey ?? church.slug,
+          file: path.join(directory, `church_${church.databaseKey ?? church.slug}.db`),
           status: 'failed',
           durationMs: Date.now() - startedAt,
           error: error instanceof Error ? error.message : String(error),
@@ -201,7 +209,7 @@ export async function migrateTenants(options: { setExitCode?: boolean } = {}) {
     generatedAt: new Date().toISOString(),
     directory,
     dryRun,
-    backupDirectory: dryRun ? null : backupDirectory,
+    backupDirectory,
     results,
     summary: {
       selected: results.length,

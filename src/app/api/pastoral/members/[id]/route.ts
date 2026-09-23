@@ -1,6 +1,5 @@
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { jsonError, jsonOk } from '@/lib/http/response';
 import { UnauthenticatedError, ValidationError } from '@/lib/http/errors';
 import { approveMember, rejectMember } from '@/server/pastoral/pastoral.controller';
@@ -11,7 +10,6 @@ async function getContext() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   const repository = new PastoralRepository(prisma);
   return { user: session.user, service: new PastoralService(repository) };
 }

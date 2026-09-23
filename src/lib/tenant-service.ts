@@ -4,7 +4,7 @@ import * as path from 'path';
 import bcrypt from 'bcryptjs';
 import { execFileSync } from 'child_process';
 import { disconnectTenant, getDatabaseDirectory, getGlobalClient } from './prisma-factory';
-import { seedBasicTenantData } from './tenant-seed';
+import { seedTenantStructure } from './tenant-seed';
 
 /**
  * Serviço para gerenciamento de Tenants (Igrejas).
@@ -24,7 +24,7 @@ export class TenantService {
    * 1. Registro no banco Global
    * 2. Criação do arquivo SQLite físico
    * 3. Aplicação do Schema Prisma
-   * 4. População de dados básicos (Seed)
+   * 4. Validação de dados estruturais do tenant
    * 5. Criação do usuário administrador inicial no tenant
    */
   static async createTenant(
@@ -116,7 +116,7 @@ export class TenantService {
           version: 1,
         },
       });
-      await seedBasicTenantData(tenantClient);
+      await seedTenantStructure(tenantClient);
       await tenantClient.$disconnect();
       tenantClient = null;
 

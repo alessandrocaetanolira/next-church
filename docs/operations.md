@@ -6,13 +6,16 @@ Os bancos SQLite locais ficam em `prisma/databases/` e são ignorados pelo Git. 
 `.env.local` na raiz do projeto, com pelo menos:
 
 ```bash
-DATABASE_URL="file:./prisma/databases/global.db"
+DATABASE_URL="file:../databases/global.db"
 CHURCH_DATABASE_DIR="./prisma/databases"
 AUTH_SECRET="gere-uma-chave-local-forte"
 AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
 ```
+
+`DATABASE_URL` é relativo ao arquivo `prisma/global/schema.prisma`; portanto,
+`file:../databases/global.db` aponta para `prisma/databases/global.db`.
 
 Fluxo local:
 
@@ -34,6 +37,14 @@ npm run db:tenant:migrate:deploy
 
 `migrate dev` fica reservado para criar migrations em bancos de referencia. `db push` nao deve atualizar bancos reais.
 
+Para impedir que uma migration de tenant use acidentalmente o banco global, o comando
+exige uma URL explícita para um banco de referência separado:
+
+```bash
+TENANT_MIGRATION_URL="file:/caminho/absoluto/church_reference.db" \
+  npm run db:tenant:migrate:dev
+```
+
 Migrations de todos os tenants devem usar o orquestrador, que resolve cada arquivo pelo `databaseKey`, faz preflight e cria backup antes da alteracao:
 
 ```bash
@@ -54,6 +65,21 @@ Senha: 123456
 
 O usuário acima é do tenant `igreja-teste`. O administrador global é uma conta
 separada, criada por `npm run db:seed:platform-admin`, e usa `/admin/login`.
+
+## Bíblia completa
+
+Os JSONs AA, ACF e NVI ficam em `prisma/bible-source`. O conteúdo é importado no
+`bible.db` compartilhado por todos os tenants:
+
+```bash
+npm run db:bible:migrate:deploy
+npm run db:import:bible
+```
+
+Para outra fonte compatível, use `BIBLE_SOURCE_DIR=/caminho/dos/json`. O importador
+é idempotente para uma versão já completa e substitui somente a versão incompleta
+correspondente. Verifique licenças e direitos de uso das traduções antes de distribuir
+o conteúdo comercialmente.
 
 Para criar usuários de teste de todos os perfis nos tenants que já existem:
 

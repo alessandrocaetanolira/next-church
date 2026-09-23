@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalClient } from '@/lib/prisma-factory';
-import { ensureGlobalSchemaExtensions } from '@/lib/global-schema';
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get('igreja')?.trim().toLowerCase();
@@ -9,7 +8,6 @@ export async function GET(request: NextRequest) {
   }
 
   const prisma = getGlobalClient();
-  await ensureGlobalSchemaExtensions();
 
   const [church] = await prisma.$queryRawUnsafe<Array<{
     slug: string;

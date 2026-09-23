@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup } from '@/lib/groups';
 import { hasActionPermission } from '@/lib/access-control';
 
@@ -10,7 +9,6 @@ async function authorize(groupId: string, action: 'update' | 'delete') {
   if (!session?.user?.tenantId) return null;
   if (!hasActionPermission(session.user, 'groups', action)) return null;
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   const allowed = await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, groupId);
   if (!allowed) return null;
   return { session, prisma };

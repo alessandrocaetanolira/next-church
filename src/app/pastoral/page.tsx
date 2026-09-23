@@ -2,7 +2,6 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { PastoralManagement } from '@/features/pastoral/components/PastoralManagement';
 import { redirect } from 'next/navigation';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { PageShell } from '@/components/common/PageShell';
 
 type PendingMemberRow = {
@@ -49,7 +48,6 @@ export default async function PastoralPage() {
   if (!session.user?.tenantId) return <div>Acesso Negado</div>;
 
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   
   const [members, sales, tasks, announcements, pendingMembers, pendingJoinRequests, activeMembers, teams] = await Promise.all([
     prisma.member.count(),

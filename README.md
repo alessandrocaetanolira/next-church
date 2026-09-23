@@ -43,7 +43,8 @@ arquivo dentro de `src/app`, pois o Next.js carrega as variáveis a partir da ra
 Configuração mínima:
 
 ```bash
-DATABASE_URL="file:./prisma/databases/global.db"
+DATABASE_URL="file:../databases/global.db"
+BIBLE_DATABASE_URL="file:../databases/bible.db"
 CHURCH_DATABASE_DIR="./prisma/databases"
 AUTH_SECRET="gere-uma-chave-local-forte"
 AUTH_URL="http://localhost:3000"
@@ -51,11 +52,15 @@ NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
 ```
 
-`DATABASE_URL` aponta para o banco global. `CHURCH_DATABASE_DIR` define onde ficam os
-bancos físicos dos tenants; os caminhos relativos são resolvidos a partir da raiz do
-projeto. Em produção, prefira caminhos absolutos em volume persistente.
+`DATABASE_URL` aponta para o banco global e `BIBLE_DATABASE_URL` para o banco bíblico
+compartilhado; ambos são resolvidos a partir de seus schemas Prisma e, por isso,
+localmente usam `file:../databases/<nome>.db`.
+`CHURCH_DATABASE_DIR` define onde ficam os bancos físicos dos tenants; seus caminhos
+relativos são resolvidos a partir da raiz do projeto. Em produção, prefira caminhos
+absolutos em volume persistente.
 
-Os arquivos SQLite locais ficam em `prisma/databases/` e são ignorados pelo Git.
+Os bancos de tenant e o global são locais e ignorados pelo Git. O `bible.db` é uma
+exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação.
 
 ### Instalação limpa
 
@@ -79,9 +84,32 @@ Se os bancos dos tenants já existirem e apenas as migrations precisarem ser apl
 npm run db:tenant:migrate:all
 ```
 
+Para criar uma migration de tenant, use um banco SQLite de referência separado do
+`global.db` e informe-o explicitamente:
+
+```bash
+TENANT_MIGRATION_URL="file:/caminho/absoluto/church_reference.db" \
+  npm run db:tenant:migrate:dev
+```
+
 `prisma/seed-complete.ts` é um seed legado e não deve ser usado como fluxo principal
 de instalação do app atual. Para criar usuários de teste adicionais, use os fixtures
 documentados em [Operações](docs/operations.md).
+
+### Bíblia completa
+
+Os JSONs AA, ACF e NVI usados pelo importador ficam em `prisma/bible-source`. O texto
+bíblico é importado uma vez para `prisma/databases/bible.db` e compartilhado por todas
+as igrejas:
+
+```bash
+npm run db:bible:migrate:deploy
+npm run db:import:bible
+```
+
+Caso precise utilizar outra fonte, informe `BIBLE_SOURCE_DIR` com o caminho do diretório
+que contém `aa.json`, `acf.json` e `nvi.json`. As fontes incluídas possuem licença
+CC BY-NC; confirme os direitos das traduções antes de qualquer uso comercial.
 
 ### Acessos locais
 
@@ -156,6 +184,7 @@ Abra `http://localhost:3000/auth/login` para usuários da igreja ou
 - [Operacoes](docs/operations.md)
 - [TODO de arquitetura em camadas](docs/layered-architecture-todo.md)
 - [TODO de separação de tenants](docs/tenant-separation-todo.md)
+- [TODO da Bíblia offline](docs/bible-offline-todo.md)
 - [Ranking dos jogos](docs/game-ranking-plan.md)
 
 ## Estado atual da validação

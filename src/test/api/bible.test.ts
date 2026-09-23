@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { GET } from '@/app/api/bible/[book]/[chapter]/route';
 import { NextRequest } from 'next/server';
 
-// Mock do prisma e auth
+// Mock do banco bíblico compartilhado e auth
 vi.mock('@/lib/prisma-factory', () => ({
-  getTenantClient: () => ({
-    book: {
+  getBibleClient: () => ({
+    bibleBook: {
       findUnique: vi.fn().mockResolvedValue({
         id: '1',
         name: 'Gênesis',
-        chapters: [{
-          verses: [{ number: 1, text: 'No princípio, Deus criou os céus e a terra.' }]
-        }]
-      })
-    }
+      }),
+    },
+    bibleVerse: {
+      findMany: vi.fn().mockResolvedValue([{ number: 1, text: 'No princípio, Deus criou os céus e a terra.' }]),
+    },
   })
 }));
 

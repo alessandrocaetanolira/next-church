@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { canManageGroup, parseJsonField } from '@/lib/groups';
 import { generateId } from '@/lib/id';
 import { hasActionPermission } from '@/lib/access-control';
@@ -20,7 +19,6 @@ export async function GET(
 
   const { id } = await params;
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   const goals = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
     `
@@ -54,7 +52,6 @@ export async function POST(
 
   const { id } = await params;
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   const allowed = await canManageGroup(prisma, session.user.role, session.user.linkedMemberId, id);
   if (!allowed) {

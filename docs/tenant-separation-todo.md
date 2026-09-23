@@ -199,14 +199,14 @@ Aceite:
 - [ ] Revisar todas as chamadas de `getGlobalClient` e `getTenantClient`.
 - [ ] Remover `new PrismaClient` fora de factories e scripts controlados.
 - [ ] Revisar membros, pastoral, cantina, equipes, grupos, materiais, kids, estacionamento, feed, quiz, Biblia, sync e branding.
-- [ ] Substituir `ensureTenantSchemaExtensions` e `ensureGlobalSchemaExtensions` por migrations.
+- [x] Substituir `ensureTenantSchemaExtensions` e `ensureGlobalSchemaExtensions` por migrations.
 - [ ] Remover `$executeRawUnsafe` usado para evolucao estrutural.
 - [ ] Exigir sessao e tenant resolvido nas rotas operacionais.
 - [ ] Documentar e testar rotas mistas global + tenant.
 
 Aceite:
 
-- [ ] Nenhuma requisicao comum executa `CREATE TABLE` ou `ALTER TABLE`.
+- [x] Nenhuma requisicao comum executa `CREATE TABLE` ou `ALTER TABLE`.
 - [ ] Membro, produto e material criados em um tenant nao aparecem nos outros.
 
 ## Fase 8: Testes Com Tres Igrejas

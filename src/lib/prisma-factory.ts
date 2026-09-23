@@ -7,12 +7,14 @@
 
 import { PrismaClient as GlobalPrismaClient } from '../../src/generated/prisma-global';
 import { PrismaClient as TenantPrismaClient } from '../../src/generated/prisma-tenant';
+import { PrismaClient as BiblePrismaClient } from '../../src/generated/prisma-bible';
 import path from 'path';
 import fs from 'fs';
 
 // Cache de clientes Prisma para evitar múltiplas instâncias por tenant
 const globalClients: Record<string, GlobalPrismaClient> = {};
 const tenantClients: Record<string, TenantPrismaClient> = {};
+const bibleClients: Record<string, BiblePrismaClient> = {};
 
 export class TenantDatabaseNotFoundError extends Error {
   constructor(public readonly tenantId: string, public readonly dbPath: string) {
@@ -102,6 +104,21 @@ export const getTenantClient = (databaseKey: string, databaseDirectory?: string)
   return tenantClients[cacheKey];
 };
 
+/** Retorna o client do conteúdo bíblico compartilhado entre todos os tenants. */
+export const getBibleClient = (databaseDirectory?: string): BiblePrismaClient => {
+  const dbPath = path.join(getDatabaseDirectory(databaseDirectory), 'bible.db');
+  assertSQLiteFile('bible', dbPath);
+
+  const cacheKey = `bible:${dbPath}`;
+  if (!bibleClients[cacheKey]) {
+    bibleClients[cacheKey] = new BiblePrismaClient({
+      datasources: { db: { url: `file:${dbPath}` } },
+      log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    });
+  }
+  return bibleClients[cacheKey];
+};
+
 export const disconnectTenant = async (tenantId: string, databaseDirectory?: string) => {
   assertSafeTenantId(tenantId);
   const dbPath = path.join(getDatabaseDirectory(databaseDirectory), `church_${tenantId}.db`);
@@ -110,6 +127,16 @@ export const disconnectTenant = async (tenantId: string, databaseDirectory?: str
   if (client) {
     await client.$disconnect();
     delete tenantClients[cacheKey];
+  }
+};
+
+export const disconnectBible = async (databaseDirectory?: string) => {
+  const dbPath = path.join(getDatabaseDirectory(databaseDirectory), 'bible.db');
+  const cacheKey = `bible:${dbPath}`;
+  const client = bibleClients[cacheKey];
+  if (client) {
+    await client.$disconnect();
+    delete bibleClients[cacheKey];
   }
 };
 
@@ -124,5 +151,9 @@ export const closeAllConnections = async () => {
   for (const [cacheKey, client] of Object.entries(tenantClients)) {
     await client.$disconnect();
     delete tenantClients[cacheKey];
+  }
+  for (const [cacheKey, client] of Object.entries(bibleClients)) {
+    await client.$disconnect();
+    delete bibleClients[cacheKey];
   }
 };

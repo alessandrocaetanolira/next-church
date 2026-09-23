@@ -289,30 +289,6 @@ model EngagementProfile {
   deletedAt              DateTime?
 }
 
-model Book {
-  id        String    @id @default(cuid())
-  name      String
-  abbrev    String    @unique
-  testament String
-  chapters  Chapter[]
-}
-
-model Chapter {
-  id      String   @id @default(cuid())
-  number  Int
-  bookId  String
-  book    Book     @relation(fields: [bookId], references: [id])
-  verses  Verse[]
-}
-
-model Verse {
-  id        String  @id @default(cuid())
-  number    Int
-  text      String
-  chapterId String
-  chapter   Chapter @relation(fields: [chapterId], references: [id])
-}
-
 model CanteenSettings {
   id        String   @id
   isOpen    Boolean  @default(false)

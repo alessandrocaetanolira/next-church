@@ -2,7 +2,6 @@ import bcrypt from 'bcryptjs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalClient, getTenantClient } from '@/lib/prisma-factory';
 import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { generateId } from '@/lib/id';
 
 export async function POST(request: NextRequest) {
@@ -35,7 +34,6 @@ export async function POST(request: NextRequest) {
 
   const databaseKey = church.databaseKey ?? church.slug;
   const prisma = getTenantClient(databaseKey);
-  await ensureTenantSchemaExtensions(prisma);
 
   const existingMember = await prisma.$queryRawUnsafe<Array<{ id: string }>>(
     `SELECT id FROM "Member" WHERE email = ? AND deletedAt IS NULL LIMIT 1`,

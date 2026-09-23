@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { PWAProvider } from "@/components/providers/PWAProvider";
 import { AppSettingsProvider } from "@/components/providers/AppSettingsProvider";
+import { DrawerProvider } from "@/components/providers/DrawerProvider";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -43,11 +44,13 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <AppSettingsProvider>
-            <PWAProvider>
-              <LayoutWrapper>
-                {children}
-              </LayoutWrapper>
-            </PWAProvider>
+            <DrawerProvider>
+              <PWAProvider>
+                <LayoutWrapper>
+                  {children}
+                </LayoutWrapper>
+              </PWAProvider>
+            </DrawerProvider>
           </AppSettingsProvider>
         </AuthProvider>
       </body>

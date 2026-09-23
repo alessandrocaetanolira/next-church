@@ -8,7 +8,6 @@
 import { NextResponse } from "next/server";
 import { getTenantClient } from "@/lib/prisma-factory";
 import { auth } from "@/auth";
-import { ensureTenantSchemaExtensions } from "@/lib/tenant-schema";
 import { hasPlanFeature } from "@/lib/access-control";
 
 function parseSale(sale: {
@@ -71,7 +70,6 @@ export async function GET(request: Request) {
   const lastSyncDate = lastSync ? new Date(lastSync) : new Date(0);
 
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   // Buscar dados modificados
   const [sales, products, members, tasks] = await Promise.all([

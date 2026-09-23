@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { hasActionPermission } from '@/lib/access-control';
 
 function parseSale(sale: {
@@ -34,7 +33,6 @@ export async function GET() {
   if (!hasActionPermission(session.user, 'members', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
 
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
 
   const member = await prisma.member.findFirst({
     where: {

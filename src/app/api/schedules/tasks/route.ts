@@ -1,6 +1,5 @@
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
-import { ensureTenantSchemaExtensions } from '@/lib/tenant-schema';
 import { getTeamScopedAccess } from '@/lib/server/team-scope';
 import { jsonError, jsonOk } from '@/lib/http/response';
 import { UnauthenticatedError } from '@/lib/http/errors';
@@ -12,7 +11,6 @@ async function getContext() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
-  await ensureTenantSchemaExtensions(prisma);
   return { session, service: new TasksService(new TasksRepository(prisma)), repository: new TasksRepository(prisma), scope: await getTeamScopedAccess(session, 'tasks') };
 }
 

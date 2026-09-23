@@ -6,21 +6,27 @@ const BOOK_ALIASES: Record<string, string> = { 'gênesis': 'gn', genesis: 'gn', 
 export class BibleService {
   constructor(private readonly repository: BibleRepository) {}
 
-  listBooks() { return this.repository.listBooks(); }
+  listBooks(translation = 'NVI') { return this.repository.listBooks(this.normalizeTranslation(translation)); }
 
-  async listChapters(book: string) {
-    const numbers = await this.repository.listChapterNumbers(this.resolveBook(book));
+  async listChapters(book: string, translation = 'NVI') {
+    const numbers = await this.repository.listChapterNumbers(this.resolveBook(book), this.normalizeTranslation(translation));
     if (!numbers) throw new NotFoundError('Livro não encontrado.');
     return numbers;
   }
 
-  async getChapter(book: string, chapter: string) {
+  async getChapter(book: string, chapter: string, translation = 'NVI') {
     const number = Number(chapter);
     if (!Number.isInteger(number) || number <= 0) throw new ValidationError('Capítulo inválido.');
-    const data = await this.repository.findChapter(this.resolveBook(book), number);
-    if (!data || !data.chapters.length) throw new NotFoundError('Capítulo não encontrado.');
-    return { book: data.name, chapter: data.chapters[0].number, verses: data.chapters[0].verses.map((verse) => verse.text) };
+    const normalizedTranslation = this.normalizeTranslation(translation);
+    const data = await this.repository.findChapter(this.resolveBook(book), number, normalizedTranslation);
+    if (!data || !data.verses.length) throw new NotFoundError('Capítulo não encontrado.');
+    return { book: data.name, chapter: number, translation: normalizedTranslation, verses: data.verses.map((verse) => verse.text) };
   }
 
   private resolveBook(book: string) { const normalized = decodeURIComponent(book).trim().toLowerCase(); return BOOK_ALIASES[normalized] ?? normalized; }
+  private normalizeTranslation(value: string) {
+    const translation = value.trim().toUpperCase();
+    if (!['AA', 'ACF', 'NVI'].includes(translation)) throw new ValidationError('Tradução inválida.');
+    return translation;
+  }
 }
