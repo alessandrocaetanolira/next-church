@@ -1,9 +1,10 @@
 import { sendPushTest } from '@/server/test-webhooks/test-notification.controller';
+import { isLocalTestWebhookRequest } from '@/server/test-webhooks/test-webhook-access';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  if (process.env.ENABLE_TEST_WEBHOOKS !== 'true') return Response.json({ error: 'Webhook de teste desabilitado.' }, { status: 404 });
+  if (process.env.ENABLE_TEST_WEBHOOKS !== 'true' || !isLocalTestWebhookRequest(request)) return Response.json({ error: 'Webhook de teste disponível apenas localmente.' }, { status: 404 });
   try {
     const body = await request.json();
     const tenantId = typeof body?.tenantId === 'string' ? body.tenantId : '';
