@@ -21,6 +21,11 @@
         ],
         "body": {
           "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
           "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-sse-test\",\n  \"title\": \"Teste SSE via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook SSE.\",\n  \"href\": \"/notifications\"\n}"
         },
         "url": {
@@ -54,6 +59,11 @@
         ],
         "body": {
           "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
           "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-push-test\",\n  \"title\": \"Teste Push via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook Push.\",\n  \"href\": \"/notifications\"\n}"
         },
         "url": {
