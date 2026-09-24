@@ -15,9 +15,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useState, useEffect } from 'react';
-import { isOffline, onConnectivityChange, getNotificationPermission, requestNotificationPermission, isNotificationSupported } from '@/lib/pushNotifications';
+import { isOffline, onConnectivityChange } from '@/lib/pushNotifications';
+import { usePushSubscription } from '@/hooks/use-push-subscription';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { toast } from 'sonner';
 
 const CHANGELOG = [
   {
@@ -95,17 +97,20 @@ export function Header({ title }: HeaderProps) {
   const { settings, updateSettings } = useAppSettings();
   const [showAbout, setShowAbout] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [notifPerm, setNotifPerm] = useState<NotificationPermission>('default');
+  const push = usePushSubscription();
 
   useEffect(() => {
     setOffline(isOffline());
-    setNotifPerm(getNotificationPermission() as NotificationPermission);
     return onConnectivityChange((online) => setOffline(!online));
   }, []);
 
+  useEffect(() => {
+    if (push.error) toast.error(push.error);
+  }, [push.error]);
+
   const handleRequestNotifications = async () => {
-    const perm = await requestNotificationPermission();
-    setNotifPerm(perm as NotificationPermission);
+    const enabled = await push.subscribe();
+    if (enabled) toast.success('Notificações ativadas neste dispositivo.');
   };
 
   const displayTitle = title || settings.appName;
@@ -159,9 +164,9 @@ export function Header({ title }: HeaderProps) {
                 </Tooltip>
               )}
 
-              {isNotificationSupported() && notifPerm === 'default' && (
-                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={handleRequestNotifications}>
-                  Ativar alertas
+              {push.supported && !push.subscribed && push.permission !== 'denied' && (
+                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => void handleRequestNotifications()} disabled={push.loading}>
+                  {push.loading ? 'Ativando...' : 'Ativar alertas'}
                 </Button>
               )}
 

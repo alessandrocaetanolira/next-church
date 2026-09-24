@@ -66,10 +66,13 @@ const serwist = new Serwist({
 
 type PushPayload = {
   title?: string;
+  titulo?: string;
   body?: string;
+  mensagem?: string;
   url?: string;
   tag?: string;
   data?: Record<string, unknown>;
+  payload?: Record<string, unknown>;
 };
 
 self.addEventListener('push', (event: Event) => {
@@ -80,13 +83,16 @@ self.addEventListener('push', (event: Event) => {
   } catch {
     payload = { body: pushEvent.data?.text() ?? 'Nova notificação.' };
   }
-  const data = payload.data ?? {};
-  pushEvent.waitUntil(self.registration.showNotification(payload.title ?? 'Church App', {
-    body: payload.body ?? 'Você recebeu uma nova notificação.',
+  const data = payload.data ?? payload.payload ?? {};
+  const title = payload.title ?? payload.titulo ?? String(data.titulo ?? 'Church App');
+  const body = payload.body ?? payload.mensagem ?? String(data.mensagem ?? 'Você recebeu uma nova notificação.');
+  const targetUrl = payload.url ?? String(data.url ?? data.mobileLink ?? data.webLink ?? data.link ?? '/notifications');
+  pushEvent.waitUntil(self.registration.showNotification(title, {
+    body,
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
-    tag: payload.tag,
-    data: { ...data, url: payload.url ?? data.url ?? '/notifications' },
+    tag: payload.tag ?? String(data.tipo ?? data.type ?? ''),
+    data: { ...data, url: targetUrl },
   }));
 });
 

@@ -14,24 +14,26 @@ export type ServerNotificationEvent = {
 type SseListener = (payload: ServerNotificationEvent) => void;
 
 /** Broker de transporte em memória. A persistência continua no banco. */
-class SseBroker {
+export class SseBroker {
   private readonly listeners = new Map<string, Set<SseListener>>();
 
-  subscribe(tenantId: string, listener: SseListener) {
-    const current = this.listeners.get(tenantId) ?? new Set<SseListener>();
+  subscribe(tenantId: string, userEmail: string, listener: SseListener) {
+    const key = `${tenantId}:${userEmail.trim().toLowerCase()}`;
+    const current = this.listeners.get(key) ?? new Set<SseListener>();
     current.add(listener);
-    this.listeners.set(tenantId, current);
+    this.listeners.set(key, current);
 
     return () => {
-      const listeners = this.listeners.get(tenantId);
+      const listeners = this.listeners.get(key);
       if (!listeners) return;
       listeners.delete(listener);
-      if (listeners.size === 0) this.listeners.delete(tenantId);
+      if (listeners.size === 0) this.listeners.delete(key);
     };
   }
 
   publish(payload: ServerNotificationEvent) {
-    for (const listener of this.listeners.get(payload.tenantId) ?? []) {
+    const key = `${payload.tenantId}:${payload.userEmail.trim().toLowerCase()}`;
+    for (const listener of this.listeners.get(key) ?? []) {
       listener(payload);
     }
   }
@@ -46,9 +48,10 @@ if (process.env.NODE_ENV !== 'production') {
 
 export function subscribeToTenantEvents(
   tenantId: string,
+  userEmail: string,
   listener: SseListener,
 ) {
-  return sseBroker.subscribe(tenantId, listener);
+  return sseBroker.subscribe(tenantId, userEmail, listener);
 }
 
 export function publishTenantEvent(payload: ServerNotificationEvent) {

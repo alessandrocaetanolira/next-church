@@ -236,12 +236,14 @@ export async function createNotifications(
   notifications: NotificationInput[]
 ) {
   const now = new Date().toISOString();
+  let firstNotificationId: string | undefined;
 
   for (const notification of notifications) {
     const email = normalizeEmail(notification.userEmail);
     if (!email) continue;
 
     const id = generateId();
+    firstNotificationId ??= id;
 
     await prisma.$executeRawUnsafe(
       `
@@ -281,13 +283,26 @@ export async function createNotifications(
   try {
     const subscriptionsRepository = new PushSubscriptionsRepository(prisma);
     const subscriptions = await subscriptionsRepository.listByEmails(recipients);
+    const firstNotification = notifications[0];
+    const notificationUrl = firstNotification?.href ?? '/notifications';
     const result = await webPushService.send(
       subscriptions,
       {
-        title: notifications[0]?.title ?? 'Nova notificação',
-        body: notifications[0]?.message ?? 'Você recebeu uma nova notificação.',
-        url: notifications[0]?.href ?? '/notifications',
-        tag: notifications[0]?.type,
+        title: firstNotification?.title ?? 'Nova notificação',
+        body: firstNotification?.message ?? 'Você recebeu uma nova notificação.',
+        url: notificationUrl,
+        tag: firstNotification?.type,
+        data: {
+          type: firstNotification?.type,
+          tipo: firstNotification?.type,
+          titulo: firstNotification?.title ?? 'Nova notificação',
+          mensagem: firstNotification?.message ?? 'Você recebeu uma nova notificação.',
+          url: notificationUrl,
+          link: notificationUrl,
+          mobileLink: notificationUrl,
+          webLink: notificationUrl,
+          notificationId: firstNotificationId,
+        },
       },
     );
     if (result.expiredIds.length) await subscriptionsRepository.removeMany(result.expiredIds);

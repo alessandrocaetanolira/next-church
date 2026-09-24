@@ -55,6 +55,13 @@ AUTH_URL="http://localhost:3000"
 # NEXTAUTH_URL="https://church.bennipersonalizados.com.br"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
+
+# Web Push (opcional; gere um par VAPID para habilitar notificações com o app fechado)
+# VAPID_SUBJECT="mailto:admin@church.local"
+# VAPID_PUBLIC_KEY="..."
+# VAPID_PRIVATE_KEY="..."
+# WEB_PUSH_TTL_SECONDS="86400"
+# WEB_PUSH_TIMEOUT_MS="10000"
 ```
 
 `DATABASE_URL` aponta para o banco global e `BIBLE_DATABASE_URL` para o banco bíblico

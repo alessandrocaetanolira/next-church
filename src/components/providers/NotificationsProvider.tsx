@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { initializeNotificationCenter, upsertNotification } from '@/lib/notification-center';
+import { openNotificationStream } from '@/services/notification-stream';
 
 type NotificationEventPayload = {
   id: string;
@@ -24,29 +25,30 @@ export function NotificationsProvider() {
 
     void initializeNotificationCenter();
 
-    const eventSource = new EventSource('/api/events');
-
-    eventSource.onmessage = (event) => {
+    const refresh = () => { void initializeNotificationCenter(true); };
+    const close = openNotificationStream((data) => {
       try {
-        const data = JSON.parse(event.data) as { type: string; notification?: NotificationEventPayload };
-        if (data.type !== 'notification' || !data.notification) return;
+        const notification = data.notification as NotificationEventPayload | undefined;
+        if (data.type !== 'notification' || !notification) return;
 
-        const added = upsertNotification(data.notification);
+        const added = upsertNotification(notification);
         if (added) {
-          toast.info(data.notification.title, {
-            description: data.notification.message,
+          toast.info(notification.title, {
+            description: notification.message,
           });
         }
       } catch (error) {
         console.error('Erro ao processar SSE de notificações:', error);
       }
-    };
+    });
+    window.addEventListener('online', refresh);
+    document.addEventListener('visibilitychange', refresh);
 
-    eventSource.onerror = () => {
-      // O EventSource já tenta reconectar sozinho.
+    return () => {
+      close();
+      window.removeEventListener('online', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-
-    return () => eventSource.close();
   }, [isAuthenticated]);
 
   return null;

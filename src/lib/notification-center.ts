@@ -80,18 +80,22 @@ export function getUnreadNotificationCount() {
   return cache.filter((notification) => !notification.readAt).length;
 }
 
-export async function initializeNotificationCenter() {
-  if (initialized) return;
+export async function initializeNotificationCenter(force = false) {
+  if (initialized && !force) return;
   initialized = true;
 
   try {
     const response = await fetch('/api/notifications', { cache: 'no-store' });
-    if (!response.ok) return;
+    if (!response.ok) {
+      initialized = false;
+      return;
+    }
 
     const data = await response.json();
     cache = sortNotifications(Array.isArray(data.notifications) ? data.notifications : []);
     emit();
   } catch {
+    initialized = false;
     // Estado local segue vazio até nova tentativa ou evento SSE.
   }
 }

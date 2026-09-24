@@ -10,9 +10,13 @@ export class PushSubscriptionsService {
   constructor(private readonly repository: PushSubscriptionsRepository) {}
 
   async register(email: string, input: z.infer<typeof pushSubscriptionSchema>) {
+    console.info('[push-server] service procurando usuário', { email });
     const user = await this.repository.findUserIdByEmail(email.trim().toLowerCase());
+    console.info('[push-server] usuário encontrado', { userId: user?.id ?? null });
     if (!user) throw new Error('Usuário não encontrado.');
-    return this.repository.upsert(user.id, input.endpoint, input.keys.p256dh, input.keys.auth);
+    const result = await this.repository.upsert(user.id, input.endpoint, input.keys.p256dh, input.keys.auth);
+    console.info('[push-server] upsert concluído', { userId: user.id, affectedRows: result });
+    return result;
   }
 
   async remove(email: string, endpoint: string) {

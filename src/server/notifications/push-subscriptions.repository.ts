@@ -8,6 +8,7 @@ export class PushSubscriptionsRepository {
   }
 
   upsert(userId: string, endpoint: string, p256dh: string, auth: string) {
+    console.info('[push-server] repository executando upsert', { userId, endpoint: endpoint.slice(0, 80), p256dhLength: p256dh.length, authLength: auth.length });
     const now = new Date().toISOString();
     return this.prisma.$executeRawUnsafe(
       `INSERT INTO "PushSubscription" (id, userId, endpoint, p256dh, auth, createdAt, updatedAt)

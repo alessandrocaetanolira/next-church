@@ -230,20 +230,20 @@ route → controller → service → repository
 
 - [x] Mover o broker atual de `src/lib/server/sse-broker.ts` para
       `src/infra/sse/`.
-- [ ] Criar uma abstração de stream SSE em `src/infra/sse/`, responsável por
+- [x] Criar uma abstração de stream SSE em `src/infra/sse/`, responsável por
       encoding, heartbeat, cancelamento e limpeza da conexão.
 - [x] Refatorar `src/app/api/events/route.ts` para delegar ao controller, sem
       acessar Prisma, SQL ou repository diretamente.
 - [x] Remover o polling SQL da rota e concentrar o catch-up de notificações no
       service/repository usando cursor (`lastEventId` ou `createdAt`).
-- [ ] Identificar conexões por `tenantId + userId`, nunca somente pelo tenant.
-- [ ] Manter reconexão do cliente com backoff e evitar conexões duplicadas.
+- [x] Identificar conexões por `tenantId + userId`, nunca somente pelo tenant.
+- [x] Manter reconexão do cliente com backoff e evitar conexões duplicadas.
 - [ ] Garantir que SSE não seja tratado como armazenamento durável.
 
 ### Persistência e entrega
 
 - [x] Criar repository de notificações com listagem incremental por cursor.
-- [ ] Persistir a notificação antes de publicar o evento em tempo real.
+- [x] Persistir a notificação antes de publicar o evento em tempo real.
 - [ ] Criar `PushSubscription` no banco do tenant, com endpoint único e chaves
       `p256dh`/`auth`.
 - [x] Criar `src/infra/web-push/` para configuração VAPID e envio paralelo.
@@ -251,7 +251,7 @@ route → controller → service → repository
 - [x] Remover subscriptions expiradas quando o provedor retornar 404 ou 410.
 - [x] Criar endpoint autenticado para expor somente a chave pública VAPID.
 - [x] Orquestrar persistência, SSE e Web Push no service de notificações.
-- [ ] Definir retry, TTL, timeout e política de falha por canal.
+- [x] Definir retry, TTL, timeout e política de falha por canal.
 - [ ] Garantir idempotência da entrega e evitar notificações duplicadas no cliente.
 
 ### Service Worker e frontend
@@ -259,22 +259,22 @@ route → controller → service → repository
 - [x] Integrar o evento `push` ao Service Worker gerado pelo Serwist em
       `src/app/sw.ts`.
 - [x] Implementar `showNotification` e `notificationclick` no worker existente.
-- [ ] Não criar um segundo `public/sw.js` manual.
-- [ ] Não armazenar notificações privadas ou dados bíblicos no Cache Storage.
-- [ ] Permitir que o clique da notificação abra a rota correta do tenant.
-- [ ] Registrar/reassociar a subscription quando o usuário trocar de conta.
-- [ ] Permitir ativar e desativar Web Push nas configurações do usuário.
+- [x] Não criar um segundo `public/sw.js` manual.
+- [x] Não armazenar notificações privadas ou dados bíblicos no Cache Storage.
+- [x] Permitir que o clique da notificação abra a rota correta do tenant.
+- [x] Registrar/reassociar a subscription quando o usuário trocar de conta.
+- [x] Permitir ativar e desativar Web Push nas configurações do usuário.
 - [ ] Manter SSE somente em áreas autenticadas e quando houver suporte do
       navegador.
-- [ ] Garantir fallback para a central persistida quando SSE estiver offline.
+- [x] Garantir fallback para a central persistida quando SSE estiver offline.
 
 ### Segurança e operação
 
 - [x] Não usar `Access-Control-Allow-Origin: *` em endpoints autenticados.
 - [x] Não expor chave privada VAPID no cliente ou em logs.
-- [ ] Excluir rotas SSE, Push e APIs privadas do Cache Storage.
-- [ ] Validar tenant e usuário em todas as operações de inscrição e entrega.
-- [ ] Documentar variáveis `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY` e
+- [x] Excluir rotas SSE, Push e APIs privadas do Cache Storage.
+- [x] Validar tenant e usuário em todas as operações de inscrição e entrega.
+- [x] Documentar variáveis `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY` e
       `VAPID_PRIVATE_KEY`.
 - [ ] Documentar que o broker em memória suporta apenas uma instância; para
       múltiplas instâncias, avaliar Redis/pub-sub ou outro transporte externo.
@@ -283,8 +283,8 @@ route → controller → service → repository
 ### Testes
 
 - [ ] Testar conexão, heartbeat, cancelamento e reconexão SSE.
-- [ ] Testar isolamento entre tenants e usuários.
-- [ ] Testar catch-up após o cliente ficar desconectado.
+- [x] Testar isolamento entre tenants e usuários.
+- [x] Testar catch-up após o cliente ficar desconectado.
 - [ ] Testar registro, atualização e remoção de subscriptions.
 - [ ] Testar remoção automática de endpoints 404/410.
 - [ ] Testar payload do evento `push` no Service Worker.

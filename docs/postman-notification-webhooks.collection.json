@@ -1,0 +1,82 @@
+{
+  "info": {
+    "_postman_id": "church-app-notification-webhooks",
+    "name": "Church App - Notification Webhooks (temporário)",
+    "description": "Endpoints temporários de desenvolvimento para validar SSE e Web Push. Remover após a validação.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://church.bennipersonalizados.com.br" },
+    { "key": "tenantId", "value": "igreja-teste" },
+    { "key": "userEmail", "value": "admin@igreja-teste.com" }
+  ],
+  "item": [
+    {
+      "name": "Enviar SSE",
+      "description": "Requer ENABLE_TEST_WEBHOOKS=true no processo Next. Mantenha o app aberto e autenticado para observar o toast/sininho.",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-sse-test\",\n  \"title\": \"Teste SSE via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook SSE.\",\n  \"href\": \"/notifications\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/enviar-sse",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "enviar-sse" ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('canal SSE', function () { pm.expect(body.channel).to.eql('sse'); });",
+              "pm.test('notificação persistida', function () { pm.expect(body.notificationId).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enviar Push",
+      "description": "Requer ENABLE_TEST_WEBHOOKS=true e uma subscription Push ativa para o e-mail informado.",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-push-test\",\n  \"title\": \"Teste Push via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook Push.\",\n  \"href\": \"/notifications\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/enviar-push",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "enviar-push" ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('canal Push', function () { pm.expect(body.channel).to.eql('push'); });",
+              "pm.test('notificação persistida', function () { pm.expect(body.notificationId).to.be.a('string').and.not.empty; });",
+              "pm.test('sem falha de entrega', function () { pm.expect(body.delivery.failed).to.eql(0); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

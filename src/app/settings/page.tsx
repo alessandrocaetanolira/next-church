@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download } from 'lucide-react';
+import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
+import { usePushSubscription } from '@/hooks/use-push-subscription';
 
 function CollapsibleSection({ icon: Icon, title, children }: any) {
   const [open, setOpen] = useState(false);
@@ -81,6 +82,7 @@ export default function SettingsPage() {
   const canUpdateSettings = hasActionPermission(session?.user, 'settings', 'update');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { settings, updateSettings } = useAppSettings();
+  const push = usePushSubscription();
   const [branding, setBranding] = useState({
     name: settings.appName,
     logoUrl: settings.logoUrl ?? '',
@@ -223,6 +225,28 @@ export default function SettingsPage() {
           <BibleDownloadControl translation="ACF" />
           <BibleDownloadControl translation="NVI" />
         </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection icon={Bell} title="Notificações no dispositivo">
+        <p className="text-sm text-muted-foreground">
+          Receba alertas mesmo quando o app estiver fechado. A permissão é controlada pelo navegador.
+        </p>
+        {!push.supported ? (
+          <p className="text-sm text-muted-foreground">{push.supportIssue ?? 'Este navegador não oferece notificações Push.'}</p>
+        ) : push.subscribed ? (
+          <Button variant="outline" className="w-full" onClick={() => void push.unsubscribe()} disabled={push.loading}>
+            {push.loading ? 'Desativando...' : 'Desativar notificações Push'}
+          </Button>
+        ) : (
+          <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
+            {push.loading ? 'Ativando...' : 'Ativar notificações Push'}
+          </Button>
+        )}
+        {push.permission === 'granted' && !push.subscribed && !push.loading && (
+          <p className="text-xs text-muted-foreground">Permissão concedida, mas o registro do dispositivo ainda não foi concluído.</p>
+        )}
+        {push.error && <p className="text-xs text-destructive">{push.error}</p>}
+        {push.permission === 'denied' && !push.error && <p className="text-xs text-destructive">A permissão foi bloqueada. Reative-a nas configurações do navegador.</p>}
       </CollapsibleSection>
 
       {canUpdateSettings && (
