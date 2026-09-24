@@ -21,6 +21,8 @@ e pelos assets; o Dexie será responsável pelos dados e pela fila de sincroniza
 - [ ] Validar abertura e refresh totalmente offline em navegador/dispositivo real.
 - [x] Adicionar ícones PNG PWA 192x192 e 512x512 no `next-church`.
 - [x] Definir persistência de branding PWA por tenant com fallback para o branding padrão do app.
+- [x] Criar assets iniciais de branding A Mesa Church para TopHeader e PWA.
+- [x] Aplicar automaticamente o branding inicial ao tenant `igreja-teste` no setup.
 
 ## Fase 1 — Shell PWA offline
 
@@ -33,7 +35,7 @@ e pelos assets; o Dexie será responsável pelos dados e pela fila de sincroniza
 - [ ] Confirmar que o shell abre após fechar o navegador e desligar a rede.
 - [ ] Confirmar que `/bible` funciona após refresh offline.
 - [ ] Revisar se páginas autenticadas/RSC não estão sendo armazenadas de forma insegura.
-- [ ] Adicionar PNGs 192x192, 512x512 e `apple-touch-icon`.
+- [x] Adicionar PNGs 192x192 e 512x512; avaliar `apple-touch-icon` separadamente.
 - [ ] Verificar instalação no Chrome Android e Safari iOS.
 
 ## Fase 1.5 — Branding PWA dinâmico por tenant
@@ -81,7 +83,7 @@ faz parse, validação, normalização e serialização.
 - [x] Validar nomes, cores e tamanho/formato dos arquivos no servidor.
 - [ ] Exibir preview de nome, logo, cor primária e cor secundária no admin.
 - [ ] Permitir restaurar o branding padrão do app.
-- [ ] Registrar `updatedAt`/`brandingVersion` a cada alteração.
+- [x] Registrar `updatedAt`/`brandingVersion` a cada alteração.
 - [ ] Resolver o tenant do manifest por hostname, slug ou contexto público definido.
 - [x] Tornar `/manifest.webmanifest` dinâmico por tenant via cookie público.
 - [ ] Alterar `metadata.title`, `appleWebApp.title` e ícones do layout conforme o
@@ -89,6 +91,7 @@ faz parse, validação, normalização e serialização.
 - [x] Aplicar `primary` e `secondary` às variáveis CSS do tema sem depender de
       classes Tailwind geradas estaticamente.
 - [x] Aplicar `logoUrl` no login, sidebar e configurações do tenant.
+- [x] Aplicar `logoUrl` no TopHeader e na tela de carregamento do app.
 - [x] Aplicar `icon192Url` e `icon512Url` no manifest do PWA.
 - [x] Aplicar `primaryColor` e `secondaryColor` nas variáveis CSS do app.
 - [x] Aplicar `themeColor` e `backgroundColor` no manifest do PWA.
@@ -106,6 +109,7 @@ faz parse, validação, normalização e serialização.
 - [ ] Invalidar o cache de branding quando `brandingVersion` ou `updatedAt` mudar.
 - [ ] Garantir que o Service Worker não misture logo, manifest ou nome de tenants.
 - [x] Permitir que tenant sem imagem continue usando os ícones padrão.
+- [x] Manter branding padrão para novos tenants sem configuração personalizada.
 - [ ] Validar instalação do PWA com dois tenants no mesmo navegador/dispositivo.
 - [ ] Validar atualização do nome/logo sem reinstalar o aplicativo manualmente.
 
