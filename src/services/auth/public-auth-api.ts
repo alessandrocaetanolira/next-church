@@ -1,6 +1,6 @@
 import { apiRequest } from '@/services/api/client';
 
-export type PublicChurchBranding = { name: string; logoUrl?: string | null; themeVariant?: string | null };
+export type PublicChurchBranding = { name: string; pwaName?: string | null; logoUrl?: string | null; themeVariant?: string | null };
 
 export function getPublicChurchBranding(slug: string) {
   return apiRequest<PublicChurchBranding>(`/api/public/church-branding?igreja=${encodeURIComponent(slug)}`, { cache: 'no-store' });

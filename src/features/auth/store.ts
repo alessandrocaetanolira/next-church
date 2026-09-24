@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getAccessibleModules, type AppModule } from '@/lib/access-control';
 
 export interface User {
   id: string;
@@ -15,6 +16,12 @@ export interface User {
   role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
   permissions: string[];
   churchId: string;
+  tenantId: string;
+  linkedMemberId?: string | null;
+  isPlatformAdmin?: boolean;
+  planCode?: string;
+  planFeatures?: string[];
+  accessibleModules: AppModule[];
 }
 
 interface AuthState {
@@ -25,6 +32,7 @@ interface AuthState {
   
   // Actions
   setSession: (user: User | null, tenantId: string | null) => void;
+  updateAccess: (access: { permissions?: string[]; role?: User['role']; planFeatures?: string[] }) => void;
   logout: () => void;
   setLoading: (isLoading: boolean) => void;
 }
@@ -42,6 +50,12 @@ export const useAuthStore = create<AuthState>()(
         tenantId, 
         isAuthenticated: !!user,
         isLoading: false 
+      }),
+
+      updateAccess: (access) => set((state) => {
+        if (!state.user) return state;
+        const user = { ...state.user, ...access };
+        return { user: { ...user, accessibleModules: [...getAccessibleModules(user)] } };
       }),
 
       logout: () => set({ 

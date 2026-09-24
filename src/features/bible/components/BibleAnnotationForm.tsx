@@ -7,12 +7,14 @@ import { Textarea } from '@/components/ui/textarea';
 
 type BibleAnnotationFormProps = {
   reference: string;
+  initialNote?: string;
+  title?: string;
   onCancel: () => void;
   onSave: (note: string) => Promise<void>;
 };
 
-export function BibleAnnotationForm({ reference, onCancel, onSave }: BibleAnnotationFormProps) {
-  const [note, setNote] = useState('');
+export function BibleAnnotationForm({ reference, initialNote = '', title = 'Nova anotação', onCancel, onSave }: BibleAnnotationFormProps) {
+  const [note, setNote] = useState(initialNote);
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
@@ -28,7 +30,7 @@ export function BibleAnnotationForm({ reference, onCancel, onSave }: BibleAnnota
 
   return <>
     <DrawerHeader className="border-b text-left">
-      <DrawerTitle>Nova anotação</DrawerTitle>
+      <DrawerTitle>{title}</DrawerTitle>
       <p className="text-sm font-medium text-primary">{reference}</p>
     </DrawerHeader>
     <div className="space-y-4 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

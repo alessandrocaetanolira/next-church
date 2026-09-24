@@ -10,6 +10,27 @@ type AppUser = {
   planFeatures?: string[] | string | null;
 };
 
+export const APP_MODULE_PATHS = {
+  dashboard: '/',
+  wallet: '/carteira',
+  schedules: '/schedules',
+  groups: '/groups',
+  kids: '/kids',
+  socialProjects: '/social-projects',
+  parking: '/parking',
+  members: '/members',
+  materials: '/materials',
+  games: '/jogos-novos',
+  bible: '/bible',
+  feed: '/feed',
+  notifications: '/notifications',
+  canteen: '/cantina',
+  pastoral: '/pastoral',
+  settings: '/settings',
+} as const;
+
+export type AppModule = keyof typeof APP_MODULE_PATHS;
+
 function normalizePermissions(permissions: AppUser['permissions']) {
   return parsePermissions(permissions);
 }
@@ -56,7 +77,8 @@ export function hasActionPermission(
   if (hasPermissionKey(user.permissions, module, action)) return true;
 
   const role = user.role?.toUpperCase();
-  if (role === 'ADMIN' || role === 'PASTOR') {
+  if (role === 'ADMIN') return true;
+  if (role === 'PASTOR') {
     return action === 'view' || action === 'manage_access';
   }
 
@@ -78,7 +100,8 @@ export function canAccessCanteen(user: AppUser | null | undefined) {
 export function hasPlanFeature(user: AppUser | null | undefined, feature?: PlanFeature) {
   if (!user || !feature) return true;
   if (user.isPlatformAdmin) return true;
-  if (feature === 'settings' && ['ADMIN', 'PASTOR'].includes(user.role?.toUpperCase() ?? '')) return true;
+  if (user.role?.toUpperCase() === 'ADMIN') return true;
+  if (feature === 'settings' && user.role?.toUpperCase() === 'PASTOR') return true;
   if (user.planFeatures === undefined || user.planFeatures === null) return true;
   return normalizePlanFeatures(user.planFeatures).includes(feature);
 }
@@ -141,4 +164,15 @@ export function canAccessRoute(user: AppUser | null | undefined, pathname: strin
   }
 
   return false;
+}
+
+/** Retorna os módulos disponíveis para a sessão atual, para uso na navegação. */
+export function getAccessibleModules(user: AppUser | null | undefined) {
+  if (!user || user.isPlatformAdmin) return new Set<AppModule>();
+
+  return new Set<AppModule>(
+    (Object.entries(APP_MODULE_PATHS) as [AppModule, string][])
+      .filter(([, pathname]) => canAccessRoute(user, pathname))
+      .map(([module]) => module),
+  );
 }

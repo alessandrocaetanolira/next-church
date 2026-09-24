@@ -10,6 +10,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { useAuthStore } from '@/features/auth/store';
 
 /**
  * Interface que define a estrutura de um usuário autenticado.
@@ -41,7 +42,9 @@ export interface User {
  * const { user, isLoading, logout } = useAuth();
  */
 export function useAuth() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
+  const storedUser = useAuthStore((state) => state.user);
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
   // Mapeamento dos dados da sessão para o objeto User padronizado
   const user = session?.user ? {
@@ -58,9 +61,11 @@ export function useAuth() {
   } as User : null;
 
   return {
-    user,
+    user: user ?? (isOffline ? storedUser : null),
     isLoading: status === "loading",
     isAuthenticated: status === "authenticated",
+    /** Revalida a sessão e repassa permissões atualizadas para o Zustand. */
+    refreshSession: update,
     /** Encerra a sessão e redireciona para a tela de login */
     logout: () => signOut({ callbackUrl: "/auth/login" }),
   };

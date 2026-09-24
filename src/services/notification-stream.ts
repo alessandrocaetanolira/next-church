@@ -3,6 +3,8 @@
 export type NotificationStreamPayload = {
   type: string;
   notification?: unknown;
+  role?: string;
+  permissions?: string[];
 };
 
 type StreamHandler = (payload: NotificationStreamPayload) => void;

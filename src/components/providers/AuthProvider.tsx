@@ -3,6 +3,8 @@
 import { SessionProvider, useSession } from "next-auth/react";
 import type { Session } from "next-auth";
 import { ReactNode, useEffect, useState } from "react";
+import { getAccessibleModules } from '@/lib/access-control';
+import { useAuthStore } from '@/features/auth/store';
 
 const OFFLINE_SESSION_KEY = 'church-app-offline-session';
 
@@ -34,15 +36,35 @@ function readCachedSession(): Session | null {
 
 function SessionCacheBridge() {
   const { data: session, status } = useSession();
+  const setSession = useAuthStore((state) => state.setSession);
+  const logout = useAuthStore((state) => state.logout);
 
   useEffect(() => {
     if (status === 'unauthenticated' && navigator.onLine) {
       window.localStorage.removeItem(OFFLINE_SESSION_KEY);
+      logout();
       return;
     }
     if (status !== 'authenticated' || !session) return;
     try {
       const user = session.user as OfflineSession['user'];
+      const authUser = {
+        id: user.id ?? '',
+        name: user.name ?? '',
+        email: user.email ?? '',
+        role: (user.role ?? 'MEMBER').toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER',
+        permissions: user.permissions ?? [],
+        churchId: user.tenantId ?? '',
+        tenantId: user.tenantId ?? '',
+        linkedMemberId: user.linkedMemberId,
+        isPlatformAdmin: user.isPlatformAdmin,
+        planCode: user.planCode,
+        planFeatures: user.planFeatures,
+        accessibleModules: [...getAccessibleModules(user)],
+      };
+      // A store é atualizada sempre que o Auth.js renova ou altera a sessão,
+      // incluindo mudanças de papel e permissões sem exigir logout.
+      setSession(authUser, user.tenantId ?? null);
       const snapshot: OfflineSession = {
         expires: session.expires,
         user: {
@@ -64,7 +86,7 @@ function SessionCacheBridge() {
     } catch {
       // O cache da sessão é opcional; a sessão online continua funcionando.
     }
-  }, [session, status]);
+  }, [logout, session, setSession, status]);
 
   return null;
 }

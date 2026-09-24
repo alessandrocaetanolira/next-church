@@ -5,7 +5,7 @@ import { NavLink } from '@/components/NavLink';
 import { usePathname } from 'next/navigation';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { canAccessCanteen, hasPermission } from '@/lib/access-control';
+import { getAccessibleModules } from '@/lib/access-control';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -18,33 +18,32 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { settings } = useAppSettings();
   const { user } = useAuth();
+  const accessibleModules = getAccessibleModules(user);
   const isPlatformAdmin = user?.isPlatformAdmin === true;
-  const canAccessSchedules = hasPermission(user, 'tasks');
-  const canAccessMaterials = hasPermission(user, 'materials');
 
   const mainItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard', show: !isPlatformAdmin },
-    { to: '/carteira', icon: Wallet, label: 'Carteira', show: !isPlatformAdmin },
-    { to: '/schedules', icon: Calendar, label: 'Escalas', show: canAccessSchedules },
-    { to: '/groups', icon: Layers, label: 'Grupos', show: !isPlatformAdmin },
-    { to: '/kids', icon: Baby, label: 'Infantil', show: !isPlatformAdmin },
-    { to: '/social-projects', icon: Heart, label: 'Projetos Sociais', show: !isPlatformAdmin },
-    { to: '/parking', icon: Car, label: 'Estacionamento', show: !isPlatformAdmin },
-    { to: '/members', icon: UserPlus, label: 'Membros', show: user?.role === 'ADMIN' || user?.role === 'PASTOR' },
-    { to: '/materials', icon: Package, label: 'Materiais', show: canAccessMaterials },
-    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: !isPlatformAdmin },
-    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: !isPlatformAdmin },
-    { to: '/feed', icon: MessageCircle, label: 'Comunidade', show: !isPlatformAdmin },
-    { to: '/notifications', icon: Bell, label: 'Notificações', show: !isPlatformAdmin },
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard', show: accessibleModules.has('dashboard') },
+    { to: '/carteira', icon: Wallet, label: 'Carteira', show: accessibleModules.has('wallet') },
+    { to: '/schedules', icon: Calendar, label: 'Escalas', show: accessibleModules.has('schedules') },
+    { to: '/groups', icon: Layers, label: 'Grupos', show: accessibleModules.has('groups') },
+    { to: '/kids', icon: Baby, label: 'Infantil', show: accessibleModules.has('kids') },
+    { to: '/social-projects', icon: Heart, label: 'Projetos Sociais', show: accessibleModules.has('socialProjects') },
+    { to: '/parking', icon: Car, label: 'Estacionamento', show: accessibleModules.has('parking') },
+    { to: '/members', icon: UserPlus, label: 'Membros', show: accessibleModules.has('members') },
+    { to: '/materials', icon: Package, label: 'Materiais', show: accessibleModules.has('materials') },
+    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: accessibleModules.has('games') },
+    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: accessibleModules.has('bible') },
+    { to: '/feed', icon: MessageCircle, label: 'Comunidade', show: accessibleModules.has('feed') },
+    { to: '/notifications', icon: Bell, label: 'Notificações', show: accessibleModules.has('notifications') },
   ];
 
   const canteenItems = [
-    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: canAccessCanteen(user) },
+    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: accessibleModules.has('canteen') },
   ];
 
   const configItems = [
-    { to: '/pastoral', icon: Megaphone, label: 'Área do Pastor', show: hasPermission(user, 'pastor') },
-    { to: '/settings', icon: Settings, label: 'Configurações', show: hasPermission(user, 'settings') },
+    { to: '/pastoral', icon: Megaphone, label: 'Área do Pastor', show: accessibleModules.has('pastoral') },
+    { to: '/settings', icon: Settings, label: 'Configurações', show: accessibleModules.has('settings') },
   ];
 
   const adminItems = [

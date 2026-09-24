@@ -2,6 +2,8 @@ import { apiRequest } from '@/services/api/client';
 
 export type UserBranding = {
   name?: string | null;
+  pwaName?: string | null;
+  pwaShortName?: string | null;
   logoUrl?: string | null;
   themeVariant?: string | null;
   primaryColor?: string | null;

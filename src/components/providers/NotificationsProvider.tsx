@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { initializeNotificationCenter, upsertNotification } from '@/lib/notification-center';
 import { openNotificationStream } from '@/services/notification-stream';
+import { useAuthStore } from '@/features/auth/store';
 
 type NotificationEventPayload = {
   id: string;
@@ -18,7 +19,8 @@ type NotificationEventPayload = {
 };
 
 export function NotificationsProvider() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshSession } = useAuth();
+  const updateAccess = useAuthStore((state) => state.updateAccess);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -29,6 +31,14 @@ export function NotificationsProvider() {
     const close = openNotificationStream((data) => {
       try {
         const notification = data.notification as NotificationEventPayload | undefined;
+        if (data.type === 'permissions.updated') {
+          const access: Parameters<typeof updateAccess>[0] = {};
+          if (data.role) access.role = data.role.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+          if (Array.isArray(data.permissions)) access.permissions = data.permissions;
+          updateAccess(access);
+          void refreshSession();
+          return;
+        }
         if (data.type !== 'notification' || !notification) return;
 
         const added = upsertNotification(notification);
@@ -49,7 +59,7 @@ export function NotificationsProvider() {
       window.removeEventListener('online', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, refreshSession, updateAccess]);
 
   return null;
 }

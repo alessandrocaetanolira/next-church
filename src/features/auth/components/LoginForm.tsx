@@ -35,6 +35,7 @@ export function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [branding, setBranding] = useState<{
     name: string;
+    pwaName?: string | null;
     logoUrl?: string | null;
     themeVariant?: ThemeVariant;
   } | null>(null);
@@ -59,6 +60,7 @@ export function LoginForm() {
         const payload = await getPublicChurchBranding(normalized);
         setBranding({
           name: payload.name,
+          pwaName: payload.pwaName ?? null,
           logoUrl: payload.logoUrl ?? null,
           themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? 'default',
         });
@@ -138,7 +140,7 @@ export function LoginForm() {
             <img src={branding.logoUrl} alt={branding.name} className="h-full w-full object-contain" />
           </div>
         ) : null}
-        <CardTitle className="text-3xl font-bold text-primary">{branding?.name || 'Church App'}</CardTitle>
+        <CardTitle className="text-3xl font-bold text-primary">{branding?.pwaName || branding?.name || 'Church App'}</CardTitle>
         <CardDescription>Acesse sua conta para continuar</CardDescription>
       </CardHeader>
       

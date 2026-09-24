@@ -15,10 +15,13 @@ export async function listFeed({ user, repository, service }: Context, options: 
 export async function createFeedPost({ user, repository, service }: Context, input: unknown) {
   const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const postAsGroup = body.postAsGroup === true;
+  const isSharedContent = body.share === true;
   const groupId = typeof body.groupId === 'string' ? body.groupId.trim() : '';
   if (postAsGroup) {
     FeedPolicy.assertShare(user);
     await FeedPolicy.assertGroupPublish(user, repository, groupId);
+  } else if (isSharedContent) {
+    FeedPolicy.assertShare(user);
   } else if (body.type === 'announcement' || body.visibility !== 'public' || Number(body.pinDays ?? 0) > 0) {
     FeedPolicy.assertModerate(user);
   } else {

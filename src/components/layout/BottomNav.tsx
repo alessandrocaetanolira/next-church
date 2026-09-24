@@ -1,42 +1,40 @@
 "use client";
 
-import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { NavLink } from '@/components/NavLink';
 import { LayoutDashboard, Calendar, ShoppingCart, Wallet, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { canAccessCanteen, hasPermission } from '@/lib/access-control';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { getAccessibleModules } from '@/lib/access-control';
+import { DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 import { Separator } from '@/components/ui/separator';
 
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const canAccessSchedules = hasPermission(user, 'tasks');
-  const canAccessMaterials = hasPermission(user, 'materials');
-
+  const accessibleModules = getAccessibleModules(user);
+  const { openDrawer, closeDrawer } = useDrawer();
   const mainItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Início', show: true },
-    { to: '/schedules', icon: Calendar, label: 'Escalas', show: canAccessSchedules },
-    { to: '/feed', icon: MessageCircle, label: 'Feed', show: true },
-    { to: '/carteira', icon: Wallet, label: 'Cart.', show: true },
+    { to: '/', icon: LayoutDashboard, label: 'Início', show: accessibleModules.has('dashboard') },
+    { to: '/schedules', icon: Calendar, label: 'Escalas', show: accessibleModules.has('schedules') },
+    { to: '/feed', icon: MessageCircle, label: 'Feed', show: accessibleModules.has('feed') },
+    { to: '/carteira', icon: Wallet, label: 'Cart.', show: accessibleModules.has('wallet') },
   ].filter(item => item.show);
 
   const drawerItems = [
-    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: true },
-    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: true },
-    { to: '/groups', icon: Layers, label: 'Grupos', show: true },
-    { to: '/kids', icon: Baby, label: 'Infantil', show: true },
-    { to: '/social-projects', icon: Heart, label: 'Proj. Sociais', show: true },
-    { to: '/parking', icon: Car, label: 'Estacion.', show: true },
-    { to: '/members', icon: UsersIcon, label: 'Membros', show: user?.role === 'ADMIN' || user?.role === 'PASTOR' },
-    { to: '/materials', icon: Package, label: 'Materiais', show: canAccessMaterials },
-    { to: '/notifications', icon: Bell, label: 'Notificações', show: true },
-    { to: '/pastoral', icon: Megaphone, label: 'Área do Pastor', show: hasPermission(user, 'pastor') },
-    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: canAccessCanteen(user) },
-    { to: '/settings', icon: Settings, label: 'Configurações', show: hasPermission(user, 'settings') },
+    { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: accessibleModules.has('games') },
+    { to: '/bible', icon: BookOpen, label: 'Bíblia', show: accessibleModules.has('bible') },
+    { to: '/groups', icon: Layers, label: 'Grupos', show: accessibleModules.has('groups') },
+    { to: '/kids', icon: Baby, label: 'Infantil', show: accessibleModules.has('kids') },
+    { to: '/social-projects', icon: Heart, label: 'Proj. Sociais', show: accessibleModules.has('socialProjects') },
+    { to: '/parking', icon: Car, label: 'Estacion.', show: accessibleModules.has('parking') },
+    { to: '/members', icon: UsersIcon, label: 'Membros', show: accessibleModules.has('members') },
+    { to: '/materials', icon: Package, label: 'Materiais', show: accessibleModules.has('materials') },
+    { to: '/notifications', icon: Bell, label: 'Notificações', show: accessibleModules.has('notifications') },
+    { to: '/pastoral', icon: Megaphone, label: 'Área do Pastor', show: accessibleModules.has('pastoral') },
+    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: accessibleModules.has('canteen') },
+    { to: '/settings', icon: Settings, label: 'Configurações', show: accessibleModules.has('settings') },
   ].filter(item => item.show);
 
   return (
@@ -53,31 +51,35 @@ export function BottomNav() {
             </NavLink>
           );
         })}
-        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <SheetTrigger asChild>
-            <button className="flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-all duration-200 text-muted-foreground hover:text-foreground">
-              <Menu className="w-5 h-5" />
-              <span className="text-[10px] font-medium">Mais</span>
-            </button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh]">
-            <SheetHeader className="pb-2"><SheetTitle className="text-base">Menu</SheetTitle></SheetHeader>
-            <Separator className="mb-3" />
-            <div className="grid grid-cols-3 gap-2 overflow-y-auto pb-6">
-              {drawerItems.map((item) => {
-                const isActive = pathname === item.to;
-                return (
-                  <NavLink key={item.to} to={item.to} onClick={() => setDrawerOpen(false)}
-                    className={cn('flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all',
-                      isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')}>
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
-                  </NavLink>
-                );
-              })}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <button
+          type="button"
+          onClick={() => openDrawer({
+            contentClassName: 'max-h-[70dvh]',
+            content: <>
+              <DrawerHeader className="border-b text-left">
+                <DrawerTitle className="text-base">Menu</DrawerTitle>
+              </DrawerHeader>
+              <Separator className="mb-3" />
+              <div className="grid grid-cols-3 gap-2 overflow-y-auto p-4 pb-6">
+                {drawerItems.map((item) => {
+                  const isActive = pathname === item.to;
+                  return (
+                    <NavLink key={item.to} to={item.to} onClick={closeDrawer}
+                      className={cn('flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-all',
+                        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="text-center text-[11px] font-medium leading-tight">{item.label}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </>,
+          })}
+          className="flex h-14 w-16 flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-all duration-200 hover:text-foreground"
+        >
+          <Menu className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Mais</span>
+        </button>
       </div>
     </nav>
   );

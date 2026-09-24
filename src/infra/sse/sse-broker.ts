@@ -9,9 +9,13 @@ export type ServerNotificationEvent = {
   sourceType?: string | null;
   sourceId?: string | null;
   createdAt: string;
+  role?: string;
+  permissions?: string[];
 };
 
-type SseListener = (payload: ServerNotificationEvent) => void;
+export type ServerTenantEvent = ServerNotificationEvent;
+
+type SseListener = (payload: ServerTenantEvent) => void;
 
 /** Broker de transporte em memória. A persistência continua no banco. */
 export class SseBroker {
@@ -52,6 +56,25 @@ export function subscribeToTenantEvents(
   listener: SseListener,
 ) {
   return sseBroker.subscribe(tenantId, userEmail, listener);
+}
+
+export function publishPermissionsUpdated(
+  tenantId: string,
+  userEmail: string,
+  role: string,
+  permissions: string[],
+) {
+  sseBroker.publish({
+    id: `permissions:${userEmail}:${Date.now()}`,
+    tenantId,
+    userEmail,
+    type: 'permissions.updated',
+    title: '',
+    message: '',
+    role,
+    permissions,
+    createdAt: new Date().toISOString(),
+  });
 }
 
 export function publishTenantEvent(payload: ServerNotificationEvent) {

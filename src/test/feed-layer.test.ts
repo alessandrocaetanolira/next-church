@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FeedPolicy } from '@/server/feed/feed.policy';
 import { FeedService } from '@/server/feed/feed.service';
+import { createFeedPost } from '@/server/feed/feed.controller';
 import type { FeedRepository } from '@/server/feed/feed.repository';
 
 const publisher = { role: 'MEMBER', email: 'member@test.local', permissions: ['feed:view', 'feed:publish', 'feed:share'], planFeatures: ['feed'] };
@@ -43,5 +44,18 @@ describe('camadas do feed', () => {
 
   it('permite moderação para pastor', () => {
     expect(() => FeedPolicy.assertModerate(moderator)).not.toThrow();
+  });
+
+  it('usa feed:share para publicações compartilhadas, sem exigir feed:publish', async () => {
+    const user = { role: 'MEMBER', email: 'member@test.local', permissions: ['feed:share'], planFeatures: ['feed'] };
+    const service = { create: vi.fn().mockResolvedValue({ id: 'verse-1' }) } as unknown as FeedService;
+
+    await expect(createFeedPost({ user, repository: repositoryMock(), service }, {
+      type: 'verse',
+      share: true,
+      content: 'No princípio...',
+      reference: 'Gênesis 1:1',
+    })).resolves.toEqual({ id: 'verse-1' });
+    expect(service.create).toHaveBeenCalledWith(user, expect.objectContaining({ share: true }));
   });
 });

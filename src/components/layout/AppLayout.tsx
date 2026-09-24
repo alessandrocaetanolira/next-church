@@ -18,9 +18,10 @@ import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 interface AppLayoutProps {
   children: ReactNode;
   title?: string;
+  hideMobileHeader?: boolean;
 }
 
-export function AppLayout({ children, title: propTitle }: AppLayoutProps) {
+export function AppLayout({ children, title: propTitle, hideMobileHeader = false }: AppLayoutProps) {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings, updateSettings } = useAppSettings();
@@ -47,7 +48,7 @@ export function AppLayout({ children, title: propTitle }: AppLayoutProps) {
   if (isMobile) {
     return (
       <div className="min-h-screen-dvh bg-background">
-        <Header title={title} />
+        {!hideMobileHeader && <Header title={title} />}
         <main className="pb-20 safe-bottom">
           {children}
         </main>
@@ -64,6 +65,9 @@ export function AppLayout({ children, title: propTitle }: AppLayoutProps) {
           <header className="sticky top-0 z-40 h-14 flex items-center justify-between border-b border-border bg-card/80 backdrop-blur-lg px-4">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
+                {settings.logoUrl ? <img src={settings.logoUrl} alt={settings.appName} className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-primary-foreground">✝</span>}
+              </div>
               <h1 className="font-semibold text-foreground">{title}</h1>
             </div>
             <div className="flex items-center gap-2">

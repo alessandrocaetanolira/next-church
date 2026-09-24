@@ -6,10 +6,12 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import { NotificationsProvider } from '@/components/providers/NotificationsProvider';
+import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuth();
+  const { settings } = useAppSettings();
   const [authFallbackReady, setAuthFallbackReady] = useState(false);
 
   useEffect(() => {
@@ -23,11 +25,15 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/admin/login");
   const isFullscreenGameRoute = pathname === "/games/caca-palavras";
+  const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos');
 
   if (isLoading && !authFallbackReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse text-primary font-bold text-xl">✝ Church App...</div>
+        <div className="flex animate-pulse items-center gap-2 text-primary font-bold text-xl">
+          {settings.logoUrl ? <img src={settings.logoUrl} alt={settings.appName} className="h-8 w-8 rounded-lg object-contain" /> : '✝'}
+          <span>{settings.appName}...</span>
+        </div>
       </div>
     );
   }
@@ -52,7 +58,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppLayout>
+    <AppLayout hideMobileHeader={hideMobileHeader}>
       <NotificationsProvider />
       {children}
       <Toaster position="top-center" />

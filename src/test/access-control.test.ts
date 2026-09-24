@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canAccessCanteen, canAccessRoute, hasPermission, hasPlanFeature } from '../lib/access-control';
+import { canAccessCanteen, canAccessRoute, getAccessibleModules, hasPermission, hasPlanFeature } from '../lib/access-control';
 
 describe('permissões combinadas com recursos do plano', () => {
   const admin = {
@@ -9,15 +9,23 @@ describe('permissões combinadas com recursos do plano', () => {
     planFeatures: ['dashboard', 'members', 'groups'],
   };
 
-  it('não libera permissão administrativa quando o plano não possui o recurso', () => {
-    expect(hasPermission(admin, 'canteen')).toBe(false);
-    expect(hasPlanFeature(admin, 'canteen')).toBe(false);
+  it('libera todos os módulos para o administrador do tenant', () => {
+    expect(hasPermission(admin, 'canteen')).toBe(true);
+    expect(hasPlanFeature(admin, 'canteen')).toBe(true);
   });
 
-  it('exige recurso do plano para acessar a rota correspondente', () => {
+  it('permite ao administrador acessar todas as rotas do tenant', () => {
     expect(canAccessRoute(admin, '/members')).toBe(true);
-    expect(canAccessRoute(admin, '/cantina')).toBe(false);
-    expect(canAccessRoute(admin, '/games')).toBe(false);
+    expect(canAccessRoute(admin, '/cantina')).toBe(true);
+    expect(canAccessRoute(admin, '/games')).toBe(true);
+    expect(canAccessRoute(admin, '/bible')).toBe(true);
+  });
+
+  it('centraliza os módulos disponíveis para a navegação', () => {
+    const modules = getAccessibleModules(admin);
+    expect(modules.has('canteen')).toBe(true);
+    expect(modules.has('games')).toBe(true);
+    expect(modules.has('pastoral')).toBe(true);
   });
 
   it('mantém compatibilidade para sessões antigas sem entitlements', () => {

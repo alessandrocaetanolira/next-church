@@ -11,6 +11,13 @@ describe('matriz de acesso por perfil', () => {
     expect(hasActionPermission(user, 'groups', 'update')).toBe(true);
   });
 
+  it('admin do tenant possui todas as ações mesmo sem permissões granulares', () => {
+    const user = { role: 'ADMIN', permissions: [], planFeatures: ['dashboard'] };
+    expect(hasActionPermission(user, 'canteen', 'manage_products')).toBe(true);
+    expect(hasActionPermission(user, 'members', 'delete')).toBe(true);
+    expect(hasActionPermission(user, 'groups', 'update')).toBe(true);
+  });
+
   it('pastor possui visualização e gestão de acesso, mas não CRUD não atribuído', () => {
     const user = { role: 'PASTOR', permissions: [], planFeatures: allFeatures };
     expect(hasActionPermission(user, 'members', 'view')).toBe(true);
@@ -33,9 +40,13 @@ describe('matriz de acesso por perfil', () => {
     expect(hasActionPermission(user, 'groups', 'update')).toBe(false);
   });
 
-  it('plano sem recurso bloqueia a ação mesmo com permissão de usuário', () => {
+  it('plano sem recurso continua bloqueando perfis não administrativos', () => {
     const user = { role: 'ADMIN', permissions: ['canteen:create'], planFeatures: ['members', 'groups'] };
-    expect(hasPlanFeature(user, 'canteen')).toBe(false);
-    expect(hasActionPermission(user, 'canteen', 'create')).toBe(false);
+    expect(hasPlanFeature(user, 'canteen')).toBe(true);
+    expect(hasActionPermission(user, 'canteen', 'create')).toBe(true);
+
+    const member = { role: 'MEMBER', permissions: ['canteen:create'], planFeatures: ['members', 'groups'] };
+    expect(hasPlanFeature(member, 'canteen')).toBe(false);
+    expect(hasActionPermission(member, 'canteen', 'create')).toBe(false);
   });
 });

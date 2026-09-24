@@ -86,7 +86,7 @@ const formatDate = (value?: string | null) => {
 export default function MemberDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const memberId = typeof params?.id === 'string' ? params.id : '';
 
   const [member, setMember] = useState<ManagedMember | null>(null);
@@ -143,6 +143,10 @@ export default function MemberDetailsPage() {
           permissions: accessPermissions,
           ...(changingPassword ? { password: accessPassword } : {}),
       });
+
+      if (member.id === user?.linkedMemberId) {
+        await refreshSession();
+      }
 
       toast.success('Perfil e permissões atualizados.');
       setAccessOpen(false);

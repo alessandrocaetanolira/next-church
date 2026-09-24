@@ -125,7 +125,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         const branding = await getUserBranding();
         setSettings((current) => ({
           ...current,
-          appName: branding.name || current.appName,
+          appName: branding.pwaName || branding.name || current.appName,
           logoUrl: branding.logoUrl ?? null,
           themeVariant: (branding.themeVariant as ThemeVariant | undefined) ?? current.themeVariant,
           primaryColor: branding.primaryColor ?? null,

@@ -1,5 +1,5 @@
 import { getTenantClient } from '@/lib/prisma-factory';
-import { subscribeToTenantEvents, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
+import { subscribeToTenantEvents, type ServerTenantEvent } from '@/infra/sse/sse-broker';
 import { createSseStream } from '@/infra/sse/sse-stream';
 import { NotificationsRepository } from './notifications.repository';
 import { NotificationsService } from './notifications.service';
@@ -10,11 +10,15 @@ export async function openNotificationsStream(request: Request, tenantId: string
   const sse = createSseStream(request);
   let lastSeen = new Date(Date.now() - 5_000).toISOString();
   const deliveredIds = new Set<string>();
-  const deliver = (notification: ServerNotificationEvent) => {
-    if (notification.userEmail !== email || deliveredIds.has(notification.id)) return;
-    deliveredIds.add(notification.id);
-    lastSeen = notification.createdAt;
-    sse.write({ type: 'notification', notification });
+  const deliver = (event: ServerTenantEvent) => {
+    if (event.userEmail !== email || deliveredIds.has(event.id)) return;
+    deliveredIds.add(event.id);
+    if (event.type === 'permissions.updated' && event.role && event.permissions) {
+      sse.write({ type: event.type, role: event.role, permissions: event.permissions });
+      return;
+    }
+    lastSeen = event.createdAt;
+    sse.write({ type: 'notification', notification: event });
   };
   const unsubscribe = subscribeToTenantEvents(tenantId, email, deliver);
   const notifications = await service.listSince(email, lastSeen);

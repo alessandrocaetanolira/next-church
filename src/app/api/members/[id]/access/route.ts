@@ -19,7 +19,7 @@ async function getContext() {
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const context = await getContext();
-    return jsonOk(await updateMemberAccess(context.user, context.service, (await params).id, await request.json()));
+    return jsonOk(await updateMemberAccess(context.user, context.service, (await params).id, await request.json(), context.user.tenantId));
   } catch (error) {
     return jsonError(error);
   }

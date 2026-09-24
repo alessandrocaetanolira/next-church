@@ -21,6 +21,7 @@ function main() {
   run('npm', ['run', 'db:import:bible']);
   if (fs.existsSync(tenantFile)) console.log('[setup] Tenant igreja-teste já existe; provisionamento ignorado.');
   else run('npx', ['tsx', 'prisma/provision.ts']);
+  run('npx', ['tsx', 'prisma/scripts/seed-initial-branding.ts']);
   console.log('[setup] Ambiente inicial pronto.');
 }
 
@@ -28,4 +29,3 @@ try { main(); } catch (error) {
   console.error('[setup] Falha:', error instanceof Error ? error.message : error);
   process.exitCode = 1;
 }
-

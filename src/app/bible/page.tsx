@@ -115,6 +115,7 @@ export default function BiblePage() {
   const selectedVerseNumbers = useMemo(() => selectedVerses.map((verse) => verse + 1), [selectedVerses]);
   const selectionKey = useMemo(() => selectedVerseNumbers.join(','), [selectedVerseNumbers]);
   const favorite = favorites?.find((item) => item.translation === translation && item.bookAbbrev === selectedBook?.abbrev && item.chapter === selectedChapter && item.selectionKey === selectionKey);
+  const annotation = annotations?.find((item) => item.translation === translation && item.bookAbbrev === selectedBook?.abbrev && item.chapter === selectedChapter && item.selectionKey === selectionKey);
 
   const getVerseMarker = useCallback((verseIndex: number) => {
     const verseNumber = verseIndex + 1;
@@ -179,27 +180,32 @@ export default function BiblePage() {
     const reference = `${selectedBook.name} ${selectedChapter}:${selectedVerseNumbers.join(', ')} · ${translation}`;
     openDrawer({
       contentClassName: 'max-h-[70dvh]',
-      content: <BibleAnnotationForm reference={reference} onCancel={closeDrawer} onSave={async (note) => {
+      content: <BibleAnnotationForm reference={reference} initialNote={annotation?.note} title={annotation ? 'Editar anotação' : 'Nova anotação'} onCancel={closeDrawer} onSave={async (note) => {
         const now = new Date().toISOString();
-        await db.bibleAnnotations.add({
-          userId,
-          translation,
-          bookAbbrev: selectedBook.abbrev,
-          bookName: selectedBook.name,
-          testament: selectedBook.testament,
-          chapter: selectedChapter,
-          verseNumbers: selectedVerseNumbers,
-          selectionKey,
-          note,
-          createdAt: now,
-          updatedAt: now,
-        });
-        toast.success('Anotação salva!');
+        if (annotation?.id) {
+          await db.bibleAnnotations.update(annotation.id, { note, updatedAt: now });
+          toast.success('Anotação atualizada!');
+        } else {
+          await db.bibleAnnotations.add({
+            userId,
+            translation,
+            bookAbbrev: selectedBook.abbrev,
+            bookName: selectedBook.name,
+            testament: selectedBook.testament,
+            chapter: selectedChapter,
+            verseNumbers: selectedVerseNumbers,
+            selectionKey,
+            note,
+            createdAt: now,
+            updatedAt: now,
+          });
+          toast.success('Anotação salva!');
+        }
         setSelectedVerses([]);
         closeDrawer();
       }} />,
     });
-  }, [closeDrawer, openDrawer, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
+  }, [annotation, closeDrawer, openDrawer, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
 
   const openSavedItemsDrawer = useCallback(() => {
     if (!userEmail) {
@@ -251,8 +257,8 @@ export default function BiblePage() {
             <Button type="button" variant={favorite ? 'secondary' : 'outline'} className="justify-start gap-2" onClick={toggleFavorite}>
               {favorite ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />} {favorite ? 'Remover dos favoritos' : 'Marcar como favorito'}
             </Button>
-            <Button type="button" variant="outline" className="justify-start gap-2" onClick={openAnnotationDrawer}>
-              <NotebookPen className="h-4 w-4" /> Adicionar anotação
+            <Button type="button" variant={annotation ? 'secondary' : 'outline'} className="justify-start gap-2" onClick={openAnnotationDrawer}>
+              <NotebookPen className="h-4 w-4" /> {annotation ? 'Ver/editar anotação' : 'Adicionar anotação'}
             </Button>
             <Button type="button" variant="outline" className="justify-start gap-2" onClick={copySelectedVerses}>
               <Copy className="h-4 w-4" /> Copiar versículo

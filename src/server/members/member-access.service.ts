@@ -55,6 +55,7 @@ export class MemberAccessService {
     return {
       success: true,
       userId: user.id,
+      email: user.email,
       role: user.role,
       permissions,
       hasPassword: Boolean(passwordHash),
