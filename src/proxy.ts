@@ -17,11 +17,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (nextUrl.pathname === "/enviar-sse" || nextUrl.pathname === "/enviar-push") {
+    return NextResponse.next();
+  }
+
   const isPublicRoute =
     nextUrl.pathname.startsWith("/auth/login") ||
     nextUrl.pathname.startsWith("/admin/login") ||
     nextUrl.pathname.startsWith("/api/auth") ||
     nextUrl.pathname.startsWith("/api/public") ||
+    nextUrl.pathname === "/enviar-sse" ||
+    nextUrl.pathname === "/enviar-push" ||
     nextUrl.pathname.startsWith("/cadastro");
 
   if (isPublicRoute) {
