@@ -10,19 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { PLAN_FEATURES } from '@/lib/plan-features';
+import { createAdminPlan, deleteAdminPlan, listAdminPlans, updateAdminPlan, type AdminPlan } from '@/services/admin/plans-api';
 
-type Plan = {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  priceCents: number;
-  maxUsers: number | null;
-  maxStorageMb: number | null;
-  features: string | null;
-  active: boolean;
-  churches: number;
-};
+type Plan = AdminPlan;
 
 type FormState = {
   code: string;
@@ -63,9 +53,7 @@ export default function PlansPage() {
 
   async function loadPlans() {
     try {
-      const response = await fetch('/api/admin/plans', { cache: 'no-store' });
-      if (!response.ok) throw new Error();
-      setPlans(await response.json());
+      setPlans(await listAdminPlans());
     } catch {
       toast.error('Não foi possível carregar os planos.');
     } finally {
@@ -98,12 +86,8 @@ export default function PlansPage() {
     };
 
     try {
-      const response = await fetch(editingId ? `/api/admin/plans/${editingId}` : '/api/admin/plans', {
-        method: editingId ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) throw new Error(await response.text());
+      if (editingId) await updateAdminPlan(editingId, payload);
+      else await createAdminPlan(payload);
       toast.success(editingId ? 'Plano atualizado.' : 'Plano criado.');
       setForm(emptyForm);
       setEditingId(null);
@@ -117,13 +101,13 @@ export default function PlansPage() {
 
   async function deletePlan(plan: Plan) {
     if (!window.confirm(`Excluir o plano ${plan.name}?`)) return;
-    const response = await fetch(`/api/admin/plans/${plan.id}`, { method: 'DELETE' });
-    if (!response.ok) {
-      toast.error(await response.text());
-      return;
+    try {
+      await deleteAdminPlan(plan.id);
+      toast.success('Plano excluído.');
+      await loadPlans();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível excluir o plano.');
     }
-    toast.success('Plano excluído.');
-    await loadPlans();
   }
 
   return (

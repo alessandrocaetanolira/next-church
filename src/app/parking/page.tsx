@@ -14,27 +14,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Car, CarFront, Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
+import {
+  createParkingSpot,
+  deleteParkingSpot,
+  listParkingGroups,
+  listParkingMembers,
+  listParkingSpots,
+  notifyParkingResponsible,
+  publishParkingFeed,
+  updateParkingSpot,
+  updateParkingSpotStatus,
+  type ParkingGroup,
+  type ParkingMember,
+  type ParkingSpot,
+} from '@/services/parking/parking-api';
 
-type GroupOption = {
-  id: string;
-  name: string;
-};
-
-type SpotItem = {
-  id: string;
-  groupId: string;
-  label: string;
-  status: string;
-  occupiedByMemberId?: string | null;
-  occupiedByName?: string | null;
-  notes?: string | null;
-  occupiedAt?: string | null;
-};
-
-type MemberOption = {
-  id: string;
-  name: string;
-};
+type GroupOption = ParkingGroup;
+type SpotItem = ParkingSpot;
+type MemberOption = ParkingMember;
 
 const initialForm = {
   groupId: '',
@@ -83,17 +80,10 @@ export default function ParkingPage() {
 
   const loadBaseData = async () => {
     try {
-      const [groupsResponse, membersResponse] = await Promise.all([
-        fetch('/api/groups?type=parking', { cache: 'no-store' }),
-        fetch('/api/members', { cache: 'no-store' }),
-      ]);
-
-      if (!groupsResponse.ok || !membersResponse.ok) throw new Error();
-
-      const [groupsPayload, membersPayload] = await Promise.all([groupsResponse.json(), membersResponse.json()]);
-      const nextGroups = Array.isArray(groupsPayload) ? groupsPayload.map((group) => ({ id: group.id, name: group.name })) : [];
+      const [groupsPayload, membersPayload] = await Promise.all([listParkingGroups(), listParkingMembers()]);
+      const nextGroups = Array.isArray(groupsPayload) ? groupsPayload : [];
       setGroups(nextGroups);
-      setMembers(Array.isArray(membersPayload) ? membersPayload.map((member) => ({ id: member.id, name: member.name })) : []);
+      setMembers(Array.isArray(membersPayload) ? membersPayload : []);
       setPostForm((current) => ({
         ...current,
         groupId: current.groupId || nextGroups[0]?.id || '',
@@ -108,9 +98,7 @@ export default function ParkingPage() {
 
   const loadSpots = async (groupId: string) => {
     try {
-      const response = await fetch(`/api/parking/spots?groupId=${groupId}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error();
-      const payload = await response.json();
+      const payload = await listParkingSpots(groupId);
       setSpots(Array.isArray(payload) ? payload : []);
     } catch {
       toast.error('Erro ao carregar vagas.');
@@ -150,16 +138,9 @@ export default function ParkingPage() {
     }
 
     try {
-      const response = await fetch(editingSpot ? `/api/parking/spots/${editingSpot.id}` : '/api/parking/spots', {
-        method: editingSpot ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          occupiedAt: form.status === 'free' ? null : new Date().toISOString(),
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+      const input = { ...form, occupiedAt: form.status === 'free' ? null : new Date().toISOString() };
+      if (editingSpot) await updateParkingSpot(editingSpot.id, input);
+      else await createParkingSpot(input);
       toast.success(editingSpot ? 'Vaga atualizada.' : 'Vaga criada.');
       setDrawerOpen(false);
       setEditingSpot(null);
@@ -172,19 +153,13 @@ export default function ParkingPage() {
 
   const updateStatus = async (spot: SpotItem, status: string) => {
     try {
-      const response = await fetch(`/api/parking/spots/${spot.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status,
-          occupiedByMemberId: status === 'free' ? null : spot.occupiedByMemberId,
-          occupiedByName: status === 'free' ? null : spot.occupiedByName,
-          notes: spot.notes,
-          occupiedAt: status === 'free' ? null : new Date().toISOString(),
-        }),
+      await updateParkingSpotStatus(spot.id, {
+        status,
+        occupiedByMemberId: status === 'free' ? null : spot.occupiedByMemberId,
+        occupiedByName: status === 'free' ? null : spot.occupiedByName,
+        notes: spot.notes,
+        occupiedAt: status === 'free' ? null : new Date().toISOString(),
       });
-
-      if (!response.ok) throw new Error();
       await loadSpots(spot.groupId);
     } catch {
       toast.error('Erro ao atualizar vaga.');
@@ -194,8 +169,7 @@ export default function ParkingPage() {
   const deleteSpot = async (id: string, groupId: string) => {
     if (!confirm('Remover esta vaga?')) return;
     try {
-      const response = await fetch(`/api/parking/spots/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error();
+      await deleteParkingSpot(id);
       toast.success('Vaga removida.');
       await loadSpots(groupId);
     } catch {
@@ -212,17 +186,10 @@ export default function ParkingPage() {
 
     setSendingMessage(true);
     try {
-      const response = await fetch(`/api/parking/spots/${messageSpot.id}/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: messageForm.title.trim(),
-          message: messageForm.message.trim(),
-        }),
+      await notifyParkingResponsible(messageSpot.id, {
+        title: messageForm.title.trim(),
+        message: messageForm.message.trim(),
       });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error || 'Erro ao enviar mensagem.');
 
       toast.success('Mensagem privada enviada ao responsável pelo veículo.');
       setMessageSpot(null);
@@ -242,10 +209,7 @@ export default function ParkingPage() {
 
     setPublishingPost(true);
     try {
-      const response = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await publishParkingFeed({
           type: 'event',
           share: true,
           title: postForm.title.trim() || undefined,
@@ -254,11 +218,7 @@ export default function ParkingPage() {
           groupId: postForm.groupId,
           postAsGroup: true,
           pinDays: Number(postForm.pinDays) || 0,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error || 'Erro ao publicar aviso.');
+        });
 
       toast.success('Aviso publicado no feed do grupo de estacionamento.');
       setPostDrawerOpen(false);

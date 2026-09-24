@@ -17,6 +17,7 @@ import { Baby, Car, Heart, Layers, Plus, Search, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { hasActionPermission } from '@/lib/access-control';
+import { createGroup, listGroups, listJoinRequests, listMembers, requestGroupJoin } from '@/services/groups/groups-api';
 
 type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';
 type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
@@ -118,18 +119,10 @@ function GroupsPageContent() {
 
   const loadData = async () => {
     try {
-      const [groupsResponse, membersResponse, joinRequestsResponse] = await Promise.all([
-        fetch('/api/groups', { cache: 'no-store' }),
-        fetch('/api/members', { cache: 'no-store' }),
-        user?.linkedMemberId ? fetch('/api/teams/join-requests', { cache: 'no-store' }) : Promise.resolve(null),
-      ]);
-
-      if (!groupsResponse.ok || !membersResponse.ok || (joinRequestsResponse && !joinRequestsResponse.ok)) throw new Error();
-
       const [groupsData, membersData, joinRequestsData] = await Promise.all([
-        groupsResponse.json(),
-        membersResponse.json(),
-        joinRequestsResponse ? joinRequestsResponse.json() : Promise.resolve([]),
+        listGroups<GroupItem[]>(),
+        listMembers<MemberOption[]>(),
+        user?.linkedMemberId ? listJoinRequests<JoinRequestItem[]>() : Promise.resolve([]),
       ]);
       setGroups(Array.isArray(groupsData) ? groupsData : []);
       setMembers(
@@ -205,15 +198,7 @@ function GroupsPageContent() {
 
     setRequestingGroupId(group.id);
     try {
-      const response = await fetch('/api/teams/join-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: group.id }),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Erro ao solicitar ingresso.');
-      }
+      await requestGroupJoin(group.id);
 
       toast.success('Solicitação enviada para os responsáveis.');
       await loadData();
@@ -244,10 +229,7 @@ function GroupsPageContent() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await createGroup({
           name: form.name.trim(),
           description: form.description.trim(),
           type: form.type,
@@ -255,10 +237,7 @@ function GroupsPageContent() {
           color: form.color,
           icon: form.icon,
           members: form.members,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+        });
       toast.success('Grupo criado.');
       setDrawerOpen(false);
       resetForm();

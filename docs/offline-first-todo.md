@@ -282,6 +282,8 @@ route → controller → service → repository
 
 ### Testes
 
+- [x] Validar manualmente entrega SSE e Web Push no ambiente de desenvolvimento.
+- [x] Cobrir envio Web Push, falhas e identificação de endpoints expirados em teste automatizado.
 - [ ] Testar conexão, heartbeat, cancelamento e reconexão SSE.
 - [x] Testar isolamento entre tenants e usuários.
 - [x] Testar catch-up após o cliente ficar desconectado.

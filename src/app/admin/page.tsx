@@ -6,15 +6,9 @@ import { Activity, AlertTriangle, Archive, Building2, CheckCircle2, Clock3, Shie
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getPlatformOverview, type PlatformOverview } from '@/services/admin/tenants-api';
 
-type Overview = {
-  total: number;
-  active: number;
-  inactive: number;
-  provisioning: number;
-  failed: number;
-  archived: number;
-};
+type Overview = PlatformOverview;
 
 const initialOverview: Overview = {
   total: 0,
@@ -30,11 +24,8 @@ export default function PlatformAdminDashboard() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/overview', { cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Falha ao carregar resumo');
-        setOverview(await response.json());
-      })
+    getPlatformOverview()
+      .then(setOverview)
       .catch(() => setError(true));
   }, []);
 

@@ -1,18 +1,14 @@
 'use client';
 
 import { showBrowserNotification, getNotificationPermission } from '@/lib/pushNotifications';
+import {
+  listNotifications,
+  markAllNotificationsReadRequest,
+  markNotificationReadRequest,
+  type NotificationRecord,
+} from '@/services/notifications/notification-api';
 
-export type NotificationRecord = {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  href?: string | null;
-  sourceType?: string | null;
-  sourceId?: string | null;
-  createdAt: string;
-  readAt?: string | null;
-};
+export type { NotificationRecord } from '@/services/notifications/notification-api';
 
 export type NotificationFilter = 'all' | 'order' | 'task' | 'alert' | 'info' | 'loyalty';
 
@@ -85,14 +81,7 @@ export async function initializeNotificationCenter(force = false) {
   initialized = true;
 
   try {
-    const response = await fetch('/api/notifications', { cache: 'no-store' });
-    if (!response.ok) {
-      initialized = false;
-      return;
-    }
-
-    const data = await response.json();
-    cache = sortNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+    cache = sortNotifications(await listNotifications());
     emit();
   } catch {
     initialized = false;
@@ -129,11 +118,7 @@ export async function markNotificationRead(id: string) {
   emit();
 
   try {
-    await fetch(`/api/notifications/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'markRead' }),
-    });
+    await markNotificationReadRequest(id);
   } catch {
     // Mantém otimista local.
   }
@@ -147,11 +132,7 @@ export async function markAllNotificationsRead() {
   emit();
 
   try {
-    await fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'markAllRead' }),
-    });
+    await markAllNotificationsReadRequest();
   } catch {
     // Mantém otimista local.
   }

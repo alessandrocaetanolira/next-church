@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { hasActionPermission } from '@/lib/access-control';
 import { Heart, Send, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { listFundraising, listGroups, publishGroupPost } from '@/services/groups/groups-api';
 
 type FundraisingItem = {
   id: string;
@@ -63,9 +64,7 @@ export default function SocialProjectsPage() {
 
   const loadData = async () => {
     try {
-      const groupsResponse = await fetch('/api/groups?type=social_project', { cache: 'no-store' });
-      if (!groupsResponse.ok) throw new Error();
-      const groupsPayload = await groupsResponse.json();
+      const groupsPayload = await listGroups<GroupItem[]>('social_project');
       const nextGroups = Array.isArray(groupsPayload) ? groupsPayload : [];
       setGroups(nextGroups);
       setPostForm((current) => ({
@@ -75,9 +74,7 @@ export default function SocialProjectsPage() {
 
       const entries = await Promise.all(
         nextGroups.map(async (group: GroupItem) => {
-          const response = await fetch(`/api/groups/${group.id}/fundraising`, { cache: 'no-store' });
-          if (!response.ok) return [group.id, []] as const;
-          const payload = await response.json();
+          const payload = await listFundraising<Goal[]>(group.id);
           return [group.id, Array.isArray(payload) ? payload : []] as const;
         }),
       );
@@ -96,10 +93,7 @@ export default function SocialProjectsPage() {
 
     setPublishingPost(true);
     try {
-      const response = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await publishGroupPost({
           type: 'social_project',
           share: true,
           title: postForm.title.trim() || undefined,
@@ -108,11 +102,7 @@ export default function SocialProjectsPage() {
           groupId: postForm.groupId,
           postAsGroup: true,
           pinDays: Number(postForm.pinDays) || 0,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error || 'Erro ao publicar aviso.');
+        });
 
       toast.success('Publicação enviada para o feed do projeto social.');
       setPostDrawerOpen(false);

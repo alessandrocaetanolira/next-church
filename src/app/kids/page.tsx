@@ -14,30 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Baby, HeartPulse, Plus, Search, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
+import { createChild, deleteChild as deleteChildRequest, listKidsOptions, notifyChildResponsibles, publishKidsFeed, updateChild, type KidsChild, type KidsGroupOption, type KidsMemberOption } from '@/services/kids/kids-api';
 
-type ChildItem = {
-  id: string;
-  name: string;
-  birthDate?: string | null;
-  parentMemberIds: string[];
-  allergies?: string | null;
-  medications?: string | null;
-  healthHistory?: string | null;
-  dietaryRestrictions?: string | null;
-  canDoPhysicalActivities?: boolean;
-  notes?: string | null;
-  groupIds: string[];
-};
-
-type MemberOption = {
-  id: string;
-  name: string;
-};
-
-type GroupOption = {
-  id: string;
-  name: string;
-};
+type ChildItem = KidsChild;
+type MemberOption = KidsMemberOption;
+type GroupOption = KidsGroupOption;
 
 const initialForm = {
   name: '',
@@ -85,23 +66,11 @@ export default function KidsPage() {
 
   const loadData = async () => {
     try {
-      const [kidsResponse, membersResponse, groupsResponse] = await Promise.all([
-        fetch('/api/kids', { cache: 'no-store' }),
-        fetch('/api/members', { cache: 'no-store' }),
-        fetch('/api/groups?type=kids', { cache: 'no-store' }),
-      ]);
-
-      if (!kidsResponse.ok || !membersResponse.ok || !groupsResponse.ok) throw new Error();
-
-      const [kidsPayload, membersPayload, groupsPayload] = await Promise.all([
-        kidsResponse.json(),
-        membersResponse.json(),
-        groupsResponse.json(),
-      ]);
+      const [kidsPayload, membersPayload, groupsPayload] = await listKidsOptions();
 
       setChildrenList(Array.isArray(kidsPayload) ? kidsPayload : []);
-      setMembers(Array.isArray(membersPayload) ? membersPayload.map((member) => ({ id: member.id, name: member.name })) : []);
-      setGroups(Array.isArray(groupsPayload) ? groupsPayload.map((group) => ({ id: group.id, name: group.name })) : []);
+      setMembers(Array.isArray(membersPayload) ? membersPayload : []);
+      setGroups(Array.isArray(groupsPayload) ? groupsPayload : []);
       setPostForm((current) => ({
         ...current,
         groupId: current.groupId || (Array.isArray(groupsPayload) && groupsPayload[0]?.id ? groupsPayload[0].id : ''),
@@ -151,16 +120,12 @@ export default function KidsPage() {
     }
 
     try {
-      const response = await fetch(editingChild ? `/api/kids/${editingChild.id}` : '/api/kids', {
-        method: editingChild ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const input = {
           ...form,
           name: form.name.trim(),
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+        };
+      if (editingChild) await updateChild(editingChild.id, input);
+      else await createChild(input);
       toast.success(editingChild ? 'Cadastro infantil atualizado.' : 'Criança cadastrada.');
       setDrawerOpen(false);
       setEditingChild(null);
@@ -174,8 +139,7 @@ export default function KidsPage() {
   const deleteChild = async (id: string) => {
     if (!confirm('Remover esta criança?')) return;
     try {
-      const response = await fetch(`/api/kids/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error();
+      await deleteChildRequest(id);
       toast.success('Cadastro removido.');
       await loadData();
     } catch {
@@ -192,17 +156,10 @@ export default function KidsPage() {
 
     setSendingMessage(true);
     try {
-      const response = await fetch(`/api/kids/${messageChild.id}/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await notifyChildResponsibles(messageChild.id, {
           title: messageForm.title.trim(),
           message: messageForm.message.trim(),
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error || 'Erro ao enviar mensagem.');
+        });
 
       toast.success('Mensagem privada enviada aos responsáveis.');
       setMessageChild(null);
@@ -222,10 +179,7 @@ export default function KidsPage() {
 
     setPublishingPost(true);
     try {
-      const response = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await publishKidsFeed({
           type: 'event',
           share: true,
           title: postForm.title.trim() || undefined,
@@ -234,11 +188,7 @@ export default function KidsPage() {
           groupId: postForm.groupId,
           postAsGroup: true,
           pinDays: Number(postForm.pinDays) || 0,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.error || 'Erro ao publicar aviso.');
+        });
 
       toast.success('Aviso publicado no feed do grupo infantil.');
       setPostDrawerOpen(false);

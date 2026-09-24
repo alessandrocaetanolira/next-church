@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { SummaryCards } from '@/features/pastoral/components/SummaryCards';
 import { Clock, Megaphone, Pin, Plus, Trash2, UserCheck, UserX, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { createPastoralAnnouncement, deletePastoralAnnouncement, processPastoralJoinRequest, processPendingMember } from '@/services/pastoral/pastoral-api';
 
 interface PendingMember {
   id: string;
@@ -117,25 +118,17 @@ export function PastoralManagement({
 
     setSavingAnnouncement(true);
     try {
-      const response = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const created = await createPastoralAnnouncement({
           type: 'announcement',
           reference: form.title.trim(),
           content: form.content.trim(),
-        }),
-      });
-
-      if (!response.ok) throw new Error();
-
-      const created = await response.json();
+        });
       setAnnouncements((current) => [
         {
           id: created.id,
           title: created.reference || form.title.trim(),
           content: created.content,
-          createdByName: created.userName,
+          createdByName: created.userName ?? 'Sistema',
           createdAt: created.createdAt,
         },
         ...current,
@@ -152,8 +145,7 @@ export function PastoralManagement({
 
   const handleDeleteAnnouncement = async (id: string) => {
     try {
-      const response = await fetch(`/api/feed/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error();
+      await deletePastoralAnnouncement(id);
       setAnnouncements((current) => current.filter((item) => item.id !== id));
       toast.success('Aviso removido.');
     } catch {
@@ -164,12 +156,7 @@ export function PastoralManagement({
   const handlePendingMember = async (memberId: string, action: 'approve' | 'reject') => {
     setProcessingId(memberId);
     try {
-      const response = await fetch(`/api/pastoral/members/${memberId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (!response.ok) throw new Error();
+      await processPendingMember(memberId, action);
       setPendingMembers((current) => current.filter((member) => member.id !== memberId));
       toast.success(action === 'approve' ? 'Cadastro aprovado.' : 'Cadastro rejeitado.');
     } catch {
@@ -182,12 +169,7 @@ export function PastoralManagement({
   const handleJoinRequest = async (requestId: string, action: 'approve' | 'reject') => {
     setProcessingId(requestId);
     try {
-      const response = await fetch(`/api/teams/join-requests/${requestId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (!response.ok) throw new Error();
+      await processPastoralJoinRequest(requestId, action);
       setPendingJoinRequests((current) => current.filter((request) => request.id !== requestId));
       toast.success(action === 'approve' ? 'Solicitação aprovada.' : 'Solicitação rejeitada.');
     } catch {

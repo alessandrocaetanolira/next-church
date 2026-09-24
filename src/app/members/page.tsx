@@ -14,6 +14,7 @@ import { Eye, Plus, QrCode } from 'lucide-react';
 import { MemberForm } from '@/components/forms/MemberForm';
 import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
 import { hasActionPermission } from '@/lib/access-control';
+import { listMembers } from '@/services/members/members-api';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -68,8 +69,7 @@ export default function MembersPage() {
 
   const fetchMembers = async () => {
     try {
-      const res = await fetch('/api/members');
-      const data = await res.json();
+      const data = await listMembers<ManagedMember[]>();
       setMembers(data);
     } catch {
       toast.error('Erro ao carregar membros');

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SseBroker, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
+import { createSseStream } from '@/infra/sse/sse-stream';
 
 const tenantClient = {
   $queryRawUnsafe: vi.fn(),
@@ -88,5 +89,23 @@ describe('SseBroker', () => {
 
     abort.abort();
     await reader.cancel();
+  });
+
+  it('envia heartbeat e encerra o stream quando a requisição é abortada', async () => {
+    vi.useFakeTimers();
+    try {
+      const abort = new AbortController();
+      const stream = createSseStream(new Request('http://localhost/api/events', { signal: abort.signal }), { heartbeatMs: 20 });
+      const reader = stream.response().body!.getReader();
+      const pending = reader.read();
+      await vi.advanceTimersByTimeAsync(20);
+      const heartbeat = await pending;
+
+      expect(new TextDecoder().decode(heartbeat.value)).toContain('"type":"heartbeat"');
+      abort.abort();
+      await expect(reader.read()).resolves.toMatchObject({ done: true });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

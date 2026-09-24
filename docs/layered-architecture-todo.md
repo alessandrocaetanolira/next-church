@@ -43,9 +43,9 @@ comportamento, schema ou permissões só entram junto com testes e uma decisão 
 ### Validação atual
 
 - TypeScript e lint passam.
-- A última suíte registrou 87 testes aprovados, 1 falho e 8 ignorados; o falho é
-  da API Bíblia e três suítes de integração não conseguiram executar subprocessos
-  por `spawnSync /bin/sh EPERM` neste ambiente.
+- A suíte completa foi executada localmente com sucesso após permitir os
+  subprocessos Prisma: 36 arquivos, 113 testes considerados, 105 aprovados e 8
+  ignorados.
 - O build ainda deve ser executado e confirmado após esta rodada.
 
 ## Estratégia de evolução
@@ -108,6 +108,35 @@ src/app/api/admin/<modulo>/route.ts
 - [x] Criar `src/lib/contexts/platform-context.ts`.
 - [ ] Padronizar `requireSession`, `requireTenant` e `requirePlatformAdmin`.
 - [ ] Padronizar logs com `tenantId`, `userId`, módulo e ação.
+
+## Regra arquitetural do frontend
+
+As telas não devem concentrar chamadas HTTP, acesso ao IndexedDB, conexão SSE ou
+regras de transformação de dados. O fluxo deve seguir:
+
+```text
+page/component -> hook/provider -> service (HTTP/offline) -> API
+                              -> store/cache local
+```
+
+- [x] Separar a API HTTP de notificações do cache/estado do notification center.
+- [x] Manter a conexão SSE em service próprio, sem instanciá-la em componentes.
+- [x] Separar o fluxo HTTP do estacionamento em `src/services/parking/`.
+- [x] Separar os fluxos HTTP de grupos, feed do grupo e solicitações de ingresso em `src/services/groups/`.
+- [x] Separar o fluxo HTTP do Feed em `src/services/feed/`.
+- [x] Separar listagem, detalhe, acesso e formulário HTTP de membros em `src/services/members/`.
+- [x] Separar a listagem e alteração de status dos tenants administrativos em `src/services/admin/`.
+- [x] Separar dashboard administrativo e CRUD de planos em `src/services/admin/`.
+- [x] Separar o fluxo HTTP do módulo Infantil em `src/services/kids/`.
+- [x] Separar avisos e ações de aprovação do módulo Pastoral em `src/services/pastoral/`.
+- [x] Separar integração de engajamento e pedidos do dashboard em `src/services/`.
+- [x] Separar o fluxo HTTP de materiais em `src/services/materials/`.
+- [x] Reutilizar services de grupos e Feed no módulo de Projetos Sociais.
+- [x] Separar leitura e atualização do branding nas configurações do usuário em `src/services/settings/`.
+- [ ] Extrair os demais clients HTTP espalhados em páginas e componentes para `src/services/`.
+- [ ] Extrair regras de sincronização offline dos componentes para hooks/services.
+- [ ] Padronizar estados `loading`, `error`, `offline` e `retry` nos hooks de domínio.
+- [ ] Cobrir services frontend com testes sem renderizar páginas.
 
 ## Ordem de migração por domínio
 

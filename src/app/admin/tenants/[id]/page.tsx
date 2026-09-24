@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getAdminTenant, getAdminTenantBranding, updateAdminTenantBranding } from '@/services/admin/tenants-api';
 
 type Tenant = { id: string; name: string; slug: string; databaseKey?: string | null; plan: string; status?: string; active: boolean; createdAt: string };
 type Branding = { pwaName: string; pwaShortName: string; primaryColor: string; secondaryColor: string; themeColor: string; backgroundColor: string; logoUrl?: string | null; icon192Url?: string | null; icon512Url?: string | null };
@@ -33,16 +34,14 @@ export default function TenantDetailsPage() {
   const [logoFiles, setLogoFiles] = useState<{ logoBase64?: File; icon192Base64?: File; icon512Base64?: File }>({});
   const [savingLogos, setSavingLogos] = useState(false);
   const form = useForm<BrandingForm>({ resolver: zodResolver(brandingSchema), defaultValues: branding });
-  useEffect(() => { fetch(`/api/admin/tenants/${id}`).then((response) => response.ok ? response.json() : null).then(setTenant); }, [id]);
-  useEffect(() => { fetch(`/api/admin/tenants/${id}/branding`).then((response) => response.ok ? response.json() : null).then((value) => { if (value) { setBranding((current) => ({ ...current, ...value })); form.reset({ pwaName: value.pwaName ?? '', pwaShortName: value.pwaShortName ?? '', primaryColor: value.primaryColor ?? '', secondaryColor: value.secondaryColor ?? '', themeColor: value.themeColor ?? '', backgroundColor: value.backgroundColor ?? '' }); } }); }, [id, form]);
+  useEffect(() => { void getAdminTenant<Tenant>(id).then(setTenant).catch(() => setTenant(null)); }, [id]);
+  useEffect(() => { void getAdminTenantBranding<Branding>(id).then((value) => { setBranding((current) => ({ ...current, ...value })); form.reset({ pwaName: value.pwaName ?? '', pwaShortName: value.pwaShortName ?? '', primaryColor: value.primaryColor ?? '', secondaryColor: value.secondaryColor ?? '', themeColor: value.themeColor ?? '', backgroundColor: value.backgroundColor ?? '' }); }).catch(() => undefined); }, [id, form]);
 
   const readImage = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
   async function saveBranding(values: BrandingForm) {
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/tenants/${id}/branding`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) });
-      if (!response.ok) throw new Error('Não foi possível salvar o branding.');
-      const saved = await response.json();
+      const saved = await updateAdminTenantBranding<Branding>(id, values);
       setBranding((current) => ({ ...current, ...saved }));
       form.reset(values);
     } finally { setSaving(false); }
@@ -57,9 +56,7 @@ export default function TenantDetailsPage() {
       for (const [field, file] of entries) {
         if (file) body[field] = await readImage(file);
       }
-      const response = await fetch(`/api/admin/tenants/${id}/branding`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!response.ok) throw new Error('Não foi possível salvar as logos.');
-      const saved = await response.json();
+      const saved = await updateAdminTenantBranding<Branding>(id, body);
       setBranding((current) => ({ ...current, ...saved }));
       setLogoFiles({});
       event.currentTarget.reset();

@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { hasActionPermission, hasPermission } from '@/lib/access-control';
 import { cn } from '@/lib/utils';
+import { createFundraisingGoal, getGroup, listFundraising, listGroupFeed, listJoinRequests, listMembers, processJoinRequest, publishGroupPost as publishGroupPostRequest, updateGroup } from '@/services/groups/groups-api';
 
 type GroupMember = {
   id: string;
@@ -147,28 +148,12 @@ export default function GroupDetailPage() {
     if (!groupId) return;
 
     try {
-      const requestsFetch = isTeam || !group
-        ? fetch('/api/teams/join-requests', { cache: 'no-store' })
-        : Promise.resolve(null);
-
-      const [groupResponse, postsResponse, goalsResponse, membersResponse, requestsResponse] = await Promise.all([
-        fetch(`/api/groups/${groupId}`, { cache: 'no-store' }),
-        fetch(`/api/feed?groupId=${groupId}`, { cache: 'no-store' }),
-        fetch(`/api/groups/${groupId}/fundraising`, { cache: 'no-store' }),
-        fetch('/api/members', { cache: 'no-store' }),
-        requestsFetch,
-      ]);
-
-      if (!groupResponse.ok || !postsResponse.ok || !goalsResponse.ok || !membersResponse.ok || (requestsResponse && !requestsResponse.ok)) {
-        throw new Error();
-      }
-
       const [groupPayload, postsPayload, goalsPayload, membersPayload, requestsPayload] = await Promise.all([
-        groupResponse.json(),
-        postsResponse.json(),
-        goalsResponse.json(),
-        membersResponse.json(),
-        requestsResponse ? requestsResponse.json() : Promise.resolve([]),
+        getGroup<GroupDetail>(groupId),
+        listGroupFeed<{ items?: FeedPost[] }>(groupId),
+        listFundraising<FundraisingGoal[]>(groupId),
+        listMembers<MemberOption[]>(),
+        isTeam || !group ? listJoinRequests<JoinRequestItem[]>() : Promise.resolve([]),
       ]);
 
       setGroup(groupPayload);
@@ -245,19 +230,13 @@ export default function GroupDetailPage() {
 
     setSavingGoal(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}/fundraising`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await createFundraisingGoal(groupId, {
           title: goalForm.title.trim(),
           description: goalForm.description.trim(),
           targetAmount: Number(goalForm.targetAmount) || 0,
           items: goalForm.items,
           deadline: goalForm.deadline || null,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+        });
       toast.success('Meta criada.');
       setGoalDrawerOpen(false);
       setGoalForm({ title: '', description: '', targetAmount: '', deadline: '', items: [] });
@@ -301,10 +280,7 @@ export default function GroupDetailPage() {
 
     setSavingGroup(true);
     try {
-      const response = await fetch(`/api/groups/${groupId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await updateGroup(groupId, {
           name: groupForm.name.trim(),
           description: groupForm.description.trim(),
           type: group.type,
@@ -312,10 +288,7 @@ export default function GroupDetailPage() {
           icon: groupForm.icon,
           capabilities: group.capabilities,
           members: groupForm.members,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
+        });
       toast.success('Grupo atualizado.');
       setGroupDrawerOpen(false);
       await loadData();
@@ -329,16 +302,7 @@ export default function GroupDetailPage() {
   const processJoinRequest = async (requestId: string, action: 'approve' | 'reject') => {
     setProcessingRequestId(requestId);
     try {
-      const response = await fetch(`/api/teams/join-requests/${requestId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Erro ao processar solicitação.');
-      }
+      await processJoinRequest(requestId, action);
 
       toast.success(action === 'approve' ? 'Solicitação aprovada.' : 'Solicitação recusada.');
       await loadData();
@@ -358,10 +322,7 @@ export default function GroupDetailPage() {
 
     setSavingPost(true);
     try {
-      const response = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await publishGroupPostRequest({
           type: group.type === 'social_project' ? 'social_project' : 'event',
           share: true,
           title: postForm.title.trim() || undefined,
@@ -370,13 +331,7 @@ export default function GroupDetailPage() {
           groupId,
           postAsGroup: true,
           pinDays: Number(postForm.pinDays) || 0,
-        }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Erro ao publicar no feed.');
-      }
+        });
 
       toast.success('Publicação enviada em nome do grupo.');
       setPostDrawerOpen(false);

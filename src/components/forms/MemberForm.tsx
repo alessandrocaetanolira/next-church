@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { createMember, updateMember } from '@/services/members/members-api';
 
 interface MemberFormProps {
   onSuccess: () => void;
@@ -61,19 +62,16 @@ export function MemberForm({ onSuccess, member }: MemberFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch(member ? `/api/members/${member.id}` : '/api/members', {
-      method: member ? 'PUT' : 'POST',
-      body: JSON.stringify({
+    try {
+      const input = {
         ...formData,
         approved: formData.approved === 'true',
-      }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (res.ok) {
+      };
+      if (member) await updateMember(member.id, input);
+      else await createMember(input);
       toast.success(member ? 'Membro atualizado!' : 'Membro cadastrado!');
       onSuccess();
-    } else {
+    } catch {
       toast.error(member ? 'Erro ao atualizar membro' : 'Erro ao cadastrar membro');
     }
   };

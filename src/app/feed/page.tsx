@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { hasActionPermission } from '@/lib/access-control';
+import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -31,17 +32,8 @@ const POST_TYPE_CONFIG = {
 
 const PAGE_SIZE = 10;
 
-type GroupOption = {
-  id: string;
-  name: string;
-  type: string;
-};
-
-type MemberOption = {
-  id: string;
-  name: string;
-  email?: string;
-};
+type GroupOption = FeedGroupOption;
+type MemberOption = FeedMemberOption;
 
 function sortFeedPosts(items: FeedPost[]) {
   const now = Date.now();
@@ -97,14 +89,7 @@ export default function FeedPage() {
 
     const loadOptions = async () => {
       try {
-        const [groupsResponse, membersResponse] = await Promise.all([
-          fetch('/api/groups', { cache: 'no-store' }),
-          fetch('/api/members', { cache: 'no-store' }),
-        ]);
-
-        if (!groupsResponse.ok || !membersResponse.ok) throw new Error();
-
-        const [groupsPayload, membersPayload] = await Promise.all([groupsResponse.json(), membersResponse.json()]);
+        const [groupsPayload, membersPayload] = await listFeedOptions();
         if (!active) return;
 
         setGroups(Array.isArray(groupsPayload) ? groupsPayload : []);
@@ -124,16 +109,7 @@ export default function FeedPage() {
   }, []);
 
   const loadPosts = useCallback(async (targetPage: number, append: boolean) => {
-    const params = new URLSearchParams({
-      page: String(targetPage),
-      limit: String(PAGE_SIZE),
-      type: filterType,
-    });
-
-    const response = await fetch(`/api/feed?${params.toString()}`);
-    if (!response.ok) throw new Error('Falha ao carregar feed');
-
-    const payload = await response.json();
+    const payload = await listFeedPosts(targetPage, PAGE_SIZE, filterType);
     const items = Array.isArray(payload.items) ? payload.items : [];
 
     setPosts((current) => sortFeedPosts(append ? [...current, ...items] : items));
@@ -177,10 +153,8 @@ export default function FeedPage() {
   const handlePost = async () => {
     if (!user?.email || !newPostContent.trim()) return;
 
-    const response = await fetch('/api/feed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      const created = await createFeedPost({
         type: newPostType,
         title: newPostTitle.trim() || undefined,
         content: newPostContent.trim(),
@@ -190,16 +164,12 @@ export default function FeedPage() {
         groupId: canTargetFeed && newVisibility === 'group' ? newGroupId : undefined,
         targetUserIds: canTargetFeed && newVisibility === 'individual' && newTargetUserId ? [newTargetUserId] : [],
         notifyResponsibles: canTargetFeed && newVisibility === 'group' ? notifyResponsibles : false,
-      }),
-    });
-
-    if (!response.ok) {
+      });
+      setPosts((current) => sortFeedPosts([created, ...current]));
+    } catch {
       toast.error('Não foi possível publicar.');
       return;
     }
-
-    const created = await response.json();
-    setPosts((current) => sortFeedPosts([created, ...current]));
     setNewPostTitle('');
     setNewPostContent('');
     setNewMediaUrl('');
@@ -215,40 +185,25 @@ export default function FeedPage() {
   const handleLike = async (post: FeedPost) => {
     if (!user?.email || !post.id) return;
 
-    const response = await fetch(`/api/feed/${post.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'toggle-like' }),
-    });
-
-    if (!response.ok) {
+    try {
+      const updated = await toggleFeedLike(post.id);
+      setPosts((current) => sortFeedPosts(current.map((item) => item.id === updated.id ? updated : item)));
+    } catch {
       toast.error('Não foi possível registrar a curtida.');
       return;
     }
-
-    const updated = await response.json();
-    setPosts((current) => sortFeedPosts(current.map((item) => item.id === updated.id ? updated : item)));
   };
 
   const handleComment = async (post: FeedPost) => {
     if (!user?.email || !post.id || !commentText.trim()) return;
 
-    const response = await fetch(`/api/feed/${post.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'add-comment',
-        content: commentText.trim(),
-      }),
-    });
-
-    if (!response.ok) {
+    try {
+      const updated = await addFeedComment(post.id, commentText.trim());
+      setPosts((current) => sortFeedPosts(current.map((item) => item.id === updated.id ? updated : item)));
+    } catch {
       toast.error('Não foi possível comentar.');
       return;
     }
-
-    const updated = await response.json();
-    setPosts((current) => sortFeedPosts(current.map((item) => item.id === updated.id ? updated : item)));
     setCommentText('');
     setCommentingOn(null);
   };

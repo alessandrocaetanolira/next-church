@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MemberForm } from '@/components/forms/MemberForm';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
+import { deleteMember, getMember, updateMemberAccess } from '@/services/members/members-api';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -111,9 +112,7 @@ export default function MemberDetailsPage() {
   const loadMember = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/members/${memberId}`);
-      if (!response.ok) throw new Error();
-      const data: ManagedMember = await response.json();
+      const data = await getMember<ManagedMember>(memberId);
       setMember(data);
       setAccessRole(data.role ?? 'MEMBER');
       setAccessPermissions(data.permissions ?? []);
@@ -139,20 +138,11 @@ export default function MemberDetailsPage() {
     setSavingAccess(true);
 
     try {
-      const response = await fetch(`/api/members/${member.id}/access`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await updateMemberAccess(member.id, {
           role: accessRole,
           permissions: accessPermissions,
           ...(changingPassword ? { password: accessPassword } : {}),
-        }),
       });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? 'Erro ao salvar acesso.');
-      }
 
       toast.success('Perfil e permissões atualizados.');
       setAccessOpen(false);
@@ -169,8 +159,7 @@ export default function MemberDetailsPage() {
     if (!member) return;
 
     try {
-      const response = await fetch(`/api/members/${member.id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error();
+      await deleteMember(member.id);
       toast.success('Membro excluído.');
       router.push('/members');
     } catch {

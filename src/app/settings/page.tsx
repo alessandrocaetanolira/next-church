@@ -19,6 +19,7 @@ import { RegistrationShareCard } from '@/features/pastoral/components/Registrati
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
+import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
 
 function CollapsibleSection({ icon: Icon, title, children }: any) {
   const [open, setOpen] = useState(false);
@@ -96,9 +97,7 @@ export default function SettingsPage() {
     const loadBranding = async () => {
       if (!session?.user) return;
       try {
-        const response = await fetch('/api/settings/branding', { cache: 'no-store' });
-        if (!response.ok) throw new Error();
-        const payload = await response.json();
+        const payload = await getUserBranding();
         setBranding({
           name: payload.name ?? settings.appName,
           logoUrl: payload.logoUrl ?? '',
@@ -130,20 +129,13 @@ export default function SettingsPage() {
     setSavingBranding(true);
     try {
       const isNewLogo = branding.logoUrl.startsWith('data:');
-      const response = await fetch('/api/settings/branding', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const payload = await updateUserBranding({
           name: branding.name,
           logoBase64: isNewLogo ? branding.logoUrl : undefined,
           themeVariant: branding.themeVariant,
-        }),
-      });
-
-      if (!response.ok) throw new Error();
-      const payload = await response.json();
+        });
       updateSettings({
-        appName: payload.name,
+        appName: payload.name ?? branding.name,
         logoUrl: payload.logoUrl ?? null,
         themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? settings.themeVariant,
       });

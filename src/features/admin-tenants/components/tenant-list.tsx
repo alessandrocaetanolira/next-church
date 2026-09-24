@@ -23,18 +23,9 @@ import { toast } from 'sonner';
 import { getAppBaseUrl } from '@/lib/app-base-url';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { listAdminTenants, updateAdminTenantStatus, type AdminTenant } from '@/services/admin/tenants-api';
 
-interface Tenant {
-  id: string;
-  slug: string;
-  name: string;
-  plan: string;
-  active: boolean;
-  createdAt: string;
-  databaseKey?: string | null;
-  status?: string;
-  _count?: { users: number };
-}
+type Tenant = AdminTenant;
 
 export function TenantList() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -44,9 +35,7 @@ export function TenantList() {
 
   const fetchTenants = async () => {
     try {
-      const res = await fetch('/api/admin/tenants');
-      if (!res.ok) throw new Error('Falha ao carregar tenants');
-      const data = await res.ok ? await res.json() : [];
+      const data = await listAdminTenants();
       setTenants(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error('Erro ao carregar lista de igrejas');
@@ -61,14 +50,9 @@ export function TenantList() {
 
   const toggleStatus = async (tenant: Tenant) => {
     try {
-      const res = await fetch(`/api/admin/tenants/${tenant.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ active: !tenant.active }),
-      });
-      if (res.ok) {
-        toast.success('Status atualizado!');
-        fetchTenants();
-      }
+      await updateAdminTenantStatus(tenant.id, !tenant.active);
+      toast.success('Status atualizado!');
+      await fetchTenants();
     } catch (error) {
       toast.error('Erro ao atualizar status');
     }

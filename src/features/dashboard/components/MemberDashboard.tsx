@@ -51,6 +51,8 @@ import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
 import { generateId } from '@/lib/id';
 import { hasActionPermission } from '@/lib/access-control';
+import { getEngagementProfile, updateEngagementProfile } from '@/services/engagement/engagement-api';
+import { createMemberSale } from '@/services/canteen/member-sales-api';
 
 export function MemberDashboard() {
   const router = useRouter();
@@ -120,9 +122,7 @@ export function MemberDashboard() {
   useEffect(() => {
     const loadEngagement = async () => {
       try {
-        const response = await fetch('/api/engagement/profile', { cache: 'no-store' });
-        if (!response.ok) throw new Error();
-        const data = await response.json();
+        const data = await getEngagementProfile();
         setStreak(Number(data.devotionalStreak) || 0);
         setPoints(Number(data.points) || 0);
         setRank(typeof data.rank === 'number' ? data.rank : null);
@@ -176,13 +176,7 @@ export function MemberDashboard() {
   const handleReadDevotional = () => {
     const persist = async () => {
       try {
-        const response = await fetch('/api/engagement/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'markDevotionalRead' }),
-        });
-        if (!response.ok) throw new Error();
-        const data = await response.json();
+        const data = await updateEngagementProfile({ action: 'markDevotionalRead' });
         setStreak(Number(data.devotionalStreak) || 0);
         setPoints(Number(data.points) || 0);
         setRank(typeof data.rank === 'number' ? data.rank : null);
@@ -204,13 +198,7 @@ export function MemberDashboard() {
 
     const persist = async () => {
       try {
-        const response = await fetch('/api/engagement/profile', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'completeChallenge', devotionalId: devotional.id }),
-        });
-        if (!response.ok) throw new Error();
-        const data = await response.json();
+        const data = await updateEngagementProfile({ action: 'completeChallenge', devotionalId: devotional.id });
         setPoints(Number(data.points) || 0);
       } catch {
         markChallengeCompleted(devotional.id);
@@ -307,10 +295,8 @@ export function MemberDashboard() {
         _status: 'pending',
       };
 
-      const response = await fetch('/api/canteen/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        await createMemberSale({
           id: saleId,
           items: sale.items,
           total: sale.total,
@@ -319,16 +305,13 @@ export function MemberDashboard() {
           memberName: sale.memberName,
           createdBy: sale.createdBy,
           createdAt,
-        }),
-      });
-
-      if (response.ok) {
+        });
         await db.sales.put({
           ...sale,
           _status: 'synced',
         });
         toast.success('Pedido enviado para aprovação da cantina!');
-      } else {
+      } catch {
         await db.sales.add(sale);
         await db.syncOutbox.add({
           module: 'sales',

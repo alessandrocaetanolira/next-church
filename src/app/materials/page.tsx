@@ -15,15 +15,9 @@ import { cn } from '@/lib/utils';
 import { ConfirmDeleteDialog, Notice, PageHeader, PageShell, SearchField } from '@/components/common';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
+import { createMaterial, deleteMaterial, listMaterials, updateMaterial, updateMaterialQuantity, type Material } from '@/services/materials/materials-api';
 
-type MaterialItem = {
-  id: string;
-  name: string;
-  category: string;
-  quantity: number;
-  minQuantity: number;
-  unit: string;
-};
+type MaterialItem = Material;
 
 const categories = ['Limpeza', 'Cantina', 'Louvor', 'Escritório', 'Outros'];
 const units = ['unidades', 'litros', 'kg', 'metros', 'caixas', 'pacotes', 'rolos', 'jogos'];
@@ -42,21 +36,19 @@ export default function MaterialsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', category: 'Outros', quantity: '0', minQuantity: '0', unit: 'unidades' });
 
-  useEffect(() => {
-    setPageTitle('Materiais');
-    void fetchMaterials();
-  }, [setPageTitle]);
-
   const fetchMaterials = async () => {
     try {
-      const response = await fetch('/api/materials');
-      if (!response.ok) throw new Error();
-      const data = await response.json();
+      const data = await listMaterials();
       setMaterials(Array.isArray(data) ? data : []);
     } catch {
       toast.error('Erro ao carregar materiais.');
     }
   };
+
+  useEffect(() => {
+    setPageTitle('Materiais');
+    void fetchMaterials();
+  }, [setPageTitle]);
 
   const filteredMaterials = useMemo(
     () => materials.filter((material) => material.name.toLowerCase().includes(search.toLowerCase()) || material.category.toLowerCase().includes(search.toLowerCase())),
@@ -73,12 +65,7 @@ export default function MaterialsPage() {
   const updateQuantity = async (material: MaterialItem, delta: number) => {
     const quantity = Math.max(0, material.quantity + delta);
     try {
-      const response = await fetch(`/api/materials/${material.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity }),
-      });
-      if (!response.ok) throw new Error();
+      await updateMaterialQuantity(material.id, quantity);
       await fetchMaterials();
       toast.success('Quantidade atualizada.');
     } catch {
@@ -105,18 +92,15 @@ export default function MaterialsPage() {
     }
 
     try {
-      const response = await fetch(editingMaterial ? `/api/materials/${editingMaterial.id}` : '/api/materials', {
-        method: editingMaterial ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const input = {
           name: form.name.trim(),
           category: form.category,
           quantity: Number(form.quantity) || 0,
           minQuantity: Number(form.minQuantity) || 0,
           unit: form.unit,
-        }),
-      });
-      if (!response.ok) throw new Error();
+        };
+      if (editingMaterial) await updateMaterial(editingMaterial.id, input);
+      else await createMaterial(input);
       setDialogOpen(false);
       setEditingMaterial(null);
       await fetchMaterials();
@@ -129,8 +113,7 @@ export default function MaterialsPage() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const response = await fetch(`/api/materials/${deleteId}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error();
+      await deleteMaterial(deleteId);
       setDeleteId(null);
       await fetchMaterials();
       toast.success('Material removido.');
