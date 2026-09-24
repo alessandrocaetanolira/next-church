@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, CheckCircle2, Clock, Trash2, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { updateCanteenSale } from "@/services/canteen/operations-api";
 
 export function PreparoView() {
   const [filter, setFilter] = useState<'all' | 'preparing' | 'ready' | 'cancelled'>('all');
@@ -25,17 +26,9 @@ export function PreparoView() {
 
   const handleStatusChange = async (orderId: string, orderStatus: 'preparing' | 'ready' | 'cancelled') => {
     try {
-      const response = await fetch(`/api/canteen/sales/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', orderStatus }),
-      });
-
-      if (!response.ok) throw new Error();
-
-      const updatedOrder = await response.json();
+      const updatedOrder = await updateCanteenSale<{ orderStatus: string | null }>(orderId, { action: 'status', orderStatus });
       await db.sales.update(orderId, {
-        orderStatus: updatedOrder.orderStatus,
+        orderStatus: updatedOrder.orderStatus as never,
         _status: 'synced',
       });
 
@@ -52,13 +45,7 @@ export function PreparoView() {
 
   const handleRemoveFromQueue = async (orderId: string) => {
     try {
-      const response = await fetch(`/api/canteen/sales/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'status', orderStatus: null }),
-      });
-
-      if (!response.ok) throw new Error();
+      await updateCanteenSale(orderId, { action: 'status', orderStatus: null });
 
       await db.sales.update(orderId, {
         orderStatus: undefined,

@@ -23,6 +23,7 @@ import { db } from '@/lib/db';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
 import { generateId } from '@/lib/id';
+import { createCanteenSale } from '@/services/canteen/sales-api';
 
 // Mapeamento de Ícones por Categoria
 const CATEGORY_ICONS: Record<string, any> = {
@@ -173,19 +174,14 @@ export function PDV() {
     };
 
     try {
-      const response = await fetch('/api/canteen/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
+      try {
+        await createCanteenSale(payload);
         await db.sales.put({
           ...payload,
           orderStatus: sendToPrep ? 'preparing' : undefined,
           _status: 'synced',
         });
-      } else {
+      } catch {
         await db.sales.add({
           ...payload,
           orderStatus: sendToPrep ? 'preparing' : undefined,

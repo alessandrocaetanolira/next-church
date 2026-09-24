@@ -16,6 +16,10 @@ export function listAdminTenants() {
   return apiRequest<AdminTenant[]>('/api/admin/tenants');
 }
 
+export function createAdminTenant(input: unknown) {
+  return apiRequest<AdminTenant>('/api/admin/tenants', { method: 'POST', body: JSON.stringify(input) });
+}
+
 export function updateAdminTenantStatus(id: string, active: boolean) {
   return apiRequest<AdminTenant>(`/api/admin/tenants/${id}`, {
     method: 'PATCH',

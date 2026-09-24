@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
+import { deleteMember, listMembers } from '@/services/members/members-api';
 
 interface RemoteMember {
   id: string;
@@ -42,9 +43,7 @@ export function MembersList() {
 
   const loadMembers = async () => {
     try {
-      const response = await fetch("/api/members", { cache: "no-store" });
-      if (!response.ok) throw new Error();
-      const payload = await response.json();
+      const payload = await listMembers<RemoteMember[]>();
       setMembers(Array.isArray(payload) ? payload : []);
     } catch {
       toast.error("Erro ao carregar membros.");
@@ -68,8 +67,7 @@ export function MembersList() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const response = await fetch(`/api/members/${deleteId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error();
+      await deleteMember(deleteId);
       toast.success("Membro excluído!");
       setDeleteId(null);
       await loadMembers();

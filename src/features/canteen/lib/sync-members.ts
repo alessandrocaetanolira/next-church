@@ -1,4 +1,5 @@
 import { db, type LocalMember } from '@/lib/db';
+import { fetchCanteenMembers } from '@/services/sync/sync-api';
 
 type RemoteMember = {
   id: string;
@@ -30,12 +31,12 @@ function toLocalMember(member: RemoteMember, existing?: LocalMember): LocalMembe
 }
 
 export async function syncCanteenMembersFromServer() {
-  const response = await fetch('/api/members', { cache: 'no-store' });
+  const response = await fetchCanteenMembers<RemoteMember[]>();
   if (!response.ok) {
     throw new Error('Falha ao buscar membros da cantina');
   }
 
-  const members = (await response.json()) as RemoteMember[];
+  const members = response.data ?? [];
   const existingMembers = await db.members.toArray();
   const existingMap = new Map(existingMembers.map((member) => [member.id, member]));
   const normalized = Array.isArray(members)

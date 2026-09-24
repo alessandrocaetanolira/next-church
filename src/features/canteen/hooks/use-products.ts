@@ -11,8 +11,9 @@
 
 import { useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { db, type LocalProduct } from '@/lib/db';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { listCanteenProducts } from '@/services/canteen/products-api';
 
 export function useProducts(enabled = true) {
   const { user } = useAuth();
@@ -23,10 +24,7 @@ export function useProducts(enabled = true) {
     const loadProducts = async () => {
       if (!enabled) return;
       try {
-        const response = await fetch('/api/canteen/products');
-        if (!response.ok) return;
-
-        const products = await response.json();
+        const products = await listCanteenProducts<LocalProduct[]>();
         if (!active || !Array.isArray(products)) return;
 
         await db.products.bulkPut(

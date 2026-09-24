@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
+import { getUserBranding } from '@/services/settings/settings-api';
 
 export type ThemeVariant = 'default' | 'amber' | 'emerald' | 'violet' | 'rose' | 'slate';
 export type ThemeMode = 'system' | 'light' | 'dark';
@@ -121,9 +122,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
     const loadBranding = async () => {
       try {
-        const response = await fetch('/api/settings/branding', { cache: 'no-store' });
-        if (!response.ok) throw new Error();
-        const branding = await response.json();
+        const branding = await getUserBranding();
         setSettings((current) => ({
           ...current,
           appName: branding.name || current.appName,

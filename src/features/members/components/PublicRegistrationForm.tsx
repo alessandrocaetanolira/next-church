@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle2, Church, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MaritalStatus } from '@/features/members/lib/member-registration';
+import { registerPublicMember } from '@/services/auth/public-auth-api';
 
 interface RegistrationState {
   name: string;
@@ -77,10 +78,7 @@ export function PublicRegistrationForm() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/public/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await registerPublicMember({
           churchSlug,
           name: form.name,
           email: form.email,
@@ -92,14 +90,7 @@ export function PublicRegistrationForm() {
           previousChurch: form.previousChurch,
           aboutMe: form.aboutMe,
           maritalStatus: form.maritalStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        toast.error(data?.error ?? 'Não foi possível concluir o cadastro.');
-        return;
-      }
+        });
 
       setSubmitted(true);
       toast.success('Cadastro enviado para aprovação.');

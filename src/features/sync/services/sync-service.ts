@@ -6,30 +6,7 @@
  */
 
 import { db, LocalMember, LocalProduct, LocalSale, LocalTask, SyncOutbox } from "@/lib/db";
-
-interface SyncResponse<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-}
-
-async function safeJson<T>(response: Response): Promise<T | undefined> {
-  try {
-    return await response.json();
-  } catch {
-    return undefined;
-  }
-}
-
-async function performRequest<T>(input: RequestInfo | URL, init?: RequestInit): Promise<SyncResponse<T>> {
-  const response = await fetch(input, init);
-  const data = await safeJson<T>(response);
-  return {
-    ok: response.ok,
-    status: response.status,
-    data,
-  };
-}
+import { syncRequest } from '@/services/sync/sync-api';
 
 function backoffDelay(retryCount: number) {
   return Math.min(30_000, 500 * (2 ** Math.min(retryCount, 6)));
@@ -64,7 +41,7 @@ export async function pushChanges() {
     const retrying = pending.filter((item) => (item.retryCount ?? 0) > 0);
     if (retrying.length > 0) await wait(Math.max(...retrying.map((item) => backoffDelay(item.retryCount ?? 0))));
     await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'processing' as const })));
-    const response = await performRequest<{ results?: Array<{ id: number; status: string }> }>('/api/sync/push', {
+    const response = await syncRequest<{ results?: Array<{ id: number; status: string }> }>('/api/sync/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ changes: pending }),
@@ -108,7 +85,7 @@ export async function pullChanges() {
   const lastSync = localStorage.getItem('lastSync') || new Date(0).toISOString();
 
   try {
-    const response = await performRequest<{
+    const response = await syncRequest<{
       sales?: LocalSale[];
       products?: LocalProduct[];
       members?: LocalMember[];

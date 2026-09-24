@@ -13,6 +13,7 @@ import { db, seedOfflineData } from '@/lib/db';
 import { Trophy, Star, CheckCircle2, XCircle, RotateCcw, Gamepad2, Type, Grid3X3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createQuizAttempt } from '@/services/quiz/quiz-api';
 
 // ===== VERDADEIRO OU FALSO =====
 const TRUE_FALSE_QUESTIONS = [
@@ -119,13 +120,7 @@ export default function GamesPage() {
     completedAt: string;
   }) => {
     try {
-      const response = await fetch('/api/quiz/attempts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(attempt),
-      });
-
-      if (!response.ok) throw new Error();
+      await createQuizAttempt(attempt);
     } catch {
       await db.quizAttempts.add(attempt);
     }

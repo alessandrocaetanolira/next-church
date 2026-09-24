@@ -27,6 +27,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getMemberFinancials } from '@/services/members/member-account-api';
+import { createMemberSale } from '@/services/canteen/member-sales-api';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
@@ -86,10 +88,7 @@ function MyAccountPageContent() {
       if (!session) return;
 
       try {
-        const response = await fetch('/api/members/me/financials', { cache: 'no-store' });
-        if (!response.ok) return;
-
-        const payload = await response.json();
+        const payload = await getMemberFinancials<{ member?: FinancialMember; sales?: LocalSale[] }>();
         if (!active) return;
 
         setFinancialMember(payload.member ?? null);
@@ -303,10 +302,8 @@ function MyAccountPageContent() {
         _status: 'pending'
       };
 
-      const response = await fetch('/api/canteen/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      try {
+        await createMemberSale({
           id: saleId,
           items: sale.items,
           total: sale.total,
@@ -315,16 +312,13 @@ function MyAccountPageContent() {
           memberName: sale.memberName,
           createdBy: sale.createdBy,
           createdAt,
-        }),
-      });
-
-      if (response.ok) {
+        });
         await db.sales.put({
           ...sale,
           _status: 'synced',
         });
         toast.success('Pedido enviado para aprovação da cantina!');
-      } else {
+      } catch {
         await db.sales.add(sale);
         await db.syncOutbox.add({
           module: 'sales',

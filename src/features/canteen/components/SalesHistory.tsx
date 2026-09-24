@@ -20,6 +20,7 @@ import { Banknote, CreditCard, DollarSign, FileSpreadsheet, FileText, MessageSqu
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+import { getMemberLedger, registerMemberPayment } from "@/services/canteen/operations-api";
 import { exportDebtExcel, exportDebtPDF, exportSalesExcel, exportSalesPDF, sendWhatsApp } from "../services/export";
 import { toast } from "sonner";
 import { useAppSettings } from "@/components/providers/AppSettingsProvider";
@@ -168,15 +169,7 @@ export function SalesHistory() {
     const nextBalance = Math.max(0, (selectedMember.creditBalance ?? 0) - amount);
 
     try {
-      const response = await fetch(`/api/canteen/members/${selectedMember.id}/payments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
-      });
-
-      if (!response.ok) throw new Error();
-
-      const payload = await response.json();
+      const payload = await registerMemberPayment<{ member: { creditBalance?: number } }>(selectedMember.id, amount);
       await db.members.update(selectedMember.id, {
         creditBalance: payload.member.creditBalance ?? nextBalance,
         updatedAt: new Date().toISOString(),
@@ -209,11 +202,7 @@ export function SalesHistory() {
     setLedgerMemberId(memberId);
     setLedgerLoading(true);
     try {
-      const response = await fetch(`/api/canteen/members/${memberId}/ledger`, {
-        cache: "no-store",
-      });
-      if (!response.ok) throw new Error();
-      const payload = await response.json();
+      const payload = await getMemberLedger<MemberLedger>(memberId);
       setLedger(payload);
     } catch {
       toast.error("Erro ao carregar histórico do fiado.");

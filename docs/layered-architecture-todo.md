@@ -46,7 +46,7 @@ comportamento, schema ou permissões só entram junto com testes e uma decisão 
 - A suíte completa foi executada localmente com sucesso após permitir os
   subprocessos Prisma: 36 arquivos, 113 testes considerados, 105 aprovados e 8
   ignorados.
-- O build ainda deve ser executado e confirmado após esta rodada.
+- O build de produção foi executado com sucesso após esta rodada.
 
 ## Estratégia de evolução
 
@@ -131,12 +131,29 @@ page/component -> hook/provider -> service (HTTP/offline) -> API
 - [x] Separar avisos e ações de aprovação do módulo Pastoral em `src/services/pastoral/`.
 - [x] Separar integração de engajamento e pedidos do dashboard em `src/services/`.
 - [x] Separar o fluxo HTTP de materiais em `src/services/materials/`.
+- [x] Separar leitura e persistência de tentativas do Quiz em `src/services/quiz/`.
+- [x] Reutilizar o service de tentativas do Quiz nos Games, preservando fallback local.
+- [x] Reutilizar o service de Feed no compartilhamento de versículos da Bíblia.
+
+Referência específica: [TODO de Jogos Bíblicos](./games-todo.md).
 - [x] Reutilizar services de grupos e Feed no módulo de Projetos Sociais.
 - [x] Separar leitura e atualização do branding nas configurações do usuário em `src/services/settings/`.
-- [ ] Extrair os demais clients HTTP espalhados em páginas e componentes para `src/services/`.
+- [x] Consolidar API de produtos da Cantina em `src/services/canteen/products-api.ts`.
+- [x] Consolidar criação de vendas da Cantina em `src/services/canteen/sales-api.ts`.
+- [x] Consolidar operações de pedidos, preparo, fiado, membros e status da Cantina em `src/services/canteen/operations-api.ts`.
+- [x] Centralizar transporte HTTP dos helpers de sincronização em `src/services/sync/sync-api.ts`.
+- [x] Separar branding público, cadastro e criação de tenant em services de autenticação/admin.
+- [x] Extrair os clients HTTP espalhados em páginas e componentes para `src/services/`.
 - [ ] Extrair regras de sincronização offline dos componentes para hooks/services.
 - [ ] Padronizar estados `loading`, `error`, `offline` e `retry` nos hooks de domínio.
 - [ ] Cobrir services frontend com testes sem renderizar páginas.
+
+### Validação da rodada de services frontend
+
+- [x] TypeScript executado com sucesso.
+- [x] ESLint executado com sucesso, sem erros bloqueantes.
+- [x] Suíte de testes executada com sucesso.
+- [x] Build de produção executado com sucesso.
 
 ## Ordem de migração por domínio
 

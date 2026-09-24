@@ -13,10 +13,12 @@ import { db, seedQuizQuestions, type QuizQuestion } from '@/lib/db';
 import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Award, Flame, TrendingUp, Swords } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createQuizAttempt, listQuizAttempts, type QuizAttempt } from '@/services/quiz/quiz-api';
 
 export default function QuizPage() {
   const { data: session } = useSession();
   const user = session?.user;
+  const userEmail = user?.email;
   const setPageTitle = useUIStore((state) => state.setPageTitle);
 
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'result'>('menu');
@@ -34,15 +36,7 @@ export default function QuizPage() {
   // Disabled Challenge Mode for now as we need API to fetch users
   // const [challengeOpponent, setChallengeOpponent] = useState<string>('');
   const [showChallenge, setShowChallenge] = useState(false);
-  const [attempts, setAttempts] = useState<Array<{
-    id: string;
-    userId: string;
-    userName: string;
-    score: number;
-    totalQuestions: number;
-    correctAnswers: number;
-    completedAt: string;
-  }>>([]);
+  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
 
   useEffect(() => {
     setPageTitle('Quiz Bíblico');
@@ -51,9 +45,7 @@ export default function QuizPage() {
 
   const loadAttempts = useCallback(async () => {
     try {
-      const response = await fetch('/api/quiz/attempts', { cache: 'no-store' });
-      if (!response.ok) throw new Error();
-      const data = await response.json();
+      const data = await listQuizAttempts();
       setAttempts(Array.isArray(data) ? data : []);
     } catch {
       setAttempts([]);
@@ -65,8 +57,8 @@ export default function QuizPage() {
   }, [loadAttempts]);
 
   const userAttempts = useMemo(
-    () => (user?.email ? attempts.filter((attempt) => attempt.userId === user.email) : []),
-    [attempts, user?.email]
+    () => (userEmail ? attempts.filter((attempt) => attempt.userId === userEmail) : []),
+    [attempts, userEmail]
   );
 
   const userStats = useMemo(() => {
@@ -108,17 +100,7 @@ export default function QuizPage() {
     correctAnswers: number;
     completedAt: string;
   }) => {
-    const response = await fetch('/api/quiz/attempts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(attempt),
-    });
-
-    if (!response.ok) {
-      throw new Error('Erro ao salvar tentativa.');
-    }
-
-    const saved = await response.json();
+    const saved = await createQuizAttempt(attempt);
     setAttempts((current) => [saved, ...current]);
   }, []);
 

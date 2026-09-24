@@ -1,4 +1,5 @@
 import { db, type LocalMember, type LocalSale } from '@/lib/db';
+import { fetchMemberFinancials } from '@/services/sync/sync-api';
 
 type FinancialPayload = {
   member?: {
@@ -47,12 +48,12 @@ function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number]): Loca
 }
 
 export async function syncMemberSalesFromServer() {
-  const response = await fetch('/api/members/me/financials', { cache: 'no-store' });
+  const response = await fetchMemberFinancials<FinancialPayload>();
   if (!response.ok) {
     throw new Error('Falha ao buscar movimentações do membro');
   }
 
-  const payload = (await response.json()) as FinancialPayload;
+  const payload = response.data ?? {};
   const sales = Array.isArray(payload.sales) ? payload.sales.map(toLocalSale) : [];
   await db.sales.bulkPut(sales);
 

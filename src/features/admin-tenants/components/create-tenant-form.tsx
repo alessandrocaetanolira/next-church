@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { createAdminTenant } from '@/services/admin/tenants-api';
 
 function normalizeSlug(value: string) {
   return value
@@ -32,16 +33,7 @@ export function CreateTenantForm({ onCreated }: { onCreated: () => void }) {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/tenants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Erro ao criar igreja');
-      }
+      await createAdminTenant(data);
 
       toast.success('Igreja criada e banco provisionado com sucesso!');
       reset();

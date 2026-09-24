@@ -25,6 +25,7 @@ import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
+import { getCanteenStatus, setCanteenStatus as setCanteenStatusRequest } from '@/services/canteen/operations-api';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncCanteenSalesFromServer } from '@/features/canteen/lib/sync-sales';
 import { syncCanteenMembersFromServer } from '@/features/canteen/lib/sync-members';
@@ -97,8 +98,7 @@ export function CanteenContainer() {
 
   useEffect(() => {
     if (!canCatalog && !canViewSales && !canOperate) return;
-    void fetch('/api/canteen/status', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() : null)
+    void getCanteenStatus()
       .then((status) => {
         if (status) setCanteenStatus({ isOpen: Boolean(status.isOpen), openedAt: status.openedAt ?? null });
       })
@@ -109,13 +109,7 @@ export function CanteenContainer() {
     if (!canOperate || updatingStatus) return;
     setUpdatingStatus(true);
     try {
-      const response = await fetch('/api/canteen/status', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isOpen: !canteenStatus.isOpen }),
-      });
-      const status = await response.json().catch(() => null);
-      if (!response.ok || !status) throw new Error(status?.error ?? 'Não foi possível atualizar a cantina.');
+      const status = await setCanteenStatusRequest(!canteenStatus.isOpen);
       setCanteenStatus({ isOpen: Boolean(status.isOpen), openedAt: status.openedAt ?? null });
     } finally {
       setUpdatingStatus(false);

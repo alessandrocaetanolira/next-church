@@ -19,6 +19,7 @@ import { BibleAnnotationForm } from '@/features/bible/components/BibleAnnotation
 import { BibleSavedItemsDrawer } from '@/features/bible/components/BibleSavedItemsDrawer';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
+import { createFeedPost } from '@/services/feed/feed-api';
 
 export default function BiblePage() {
   const { data: session } = useSession();
@@ -150,18 +151,14 @@ export default function BiblePage() {
   const shareToFeed = useCallback(async () => {
     if (!userEmail || selectedVerses.length === 0 || !selectedBook) return;
     const verseText = selectedVerses.map(i => verses[i]).join(' ');
-    const response = await fetch('/api/feed', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await createFeedPost({
         type: 'verse',
         share: true,
         content: verseText,
         reference: `${selectedBook.name} ${selectedChapter}:${selectedVerses.map(v => v + 1).join(',')}`,
-      }),
-    });
-
-    if (!response.ok) {
+      });
+    } catch {
       toast.error('Não foi possível compartilhar os versículos.');
       return;
     }

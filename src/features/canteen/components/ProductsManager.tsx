@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
+import { deleteCanteenProduct, updateCanteenProduct } from '@/services/canteen/products-api';
 
 export function ProductsManager() {
   const { user } = useAuth();
@@ -39,13 +40,7 @@ export function ProductsManager() {
     setSavingId(productId);
 
     try {
-      const response = await fetch(`/api/canteen/products/${productId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ availableToday }),
-      });
-
-      if (!response.ok) throw new Error();
+      await updateCanteenProduct(productId, { availableToday });
 
       await db.products.update(productId, {
         availableToday,
@@ -76,11 +71,7 @@ export function ProductsManager() {
     if (!deleteId) return;
 
     try {
-      const response = await fetch(`/api/canteen/products/${deleteId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error();
+      await deleteCanteenProduct(deleteId);
 
       await db.products.update(deleteId, {
         deletedAt: new Date().toISOString(),

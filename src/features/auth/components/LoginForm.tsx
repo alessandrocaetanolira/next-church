@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThemeVariant } from "@/components/providers/AppSettingsProvider";
+import { getPublicChurchBranding } from '@/services/auth/public-auth-api';
 
 /**
  * LoginForm Component
@@ -55,20 +56,11 @@ export function LoginForm() {
 
     const timeout = window.setTimeout(async () => {
       try {
-        const response = await fetch(`/api/public/church-branding?igreja=${encodeURIComponent(normalized)}`, {
-          cache: 'no-store',
-        });
-
-        if (!response.ok) {
-          setBranding(null);
-          return;
-        }
-
-        const payload = await response.json();
+        const payload = await getPublicChurchBranding(normalized);
         setBranding({
           name: payload.name,
           logoUrl: payload.logoUrl ?? null,
-          themeVariant: payload.themeVariant ?? 'default',
+          themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? 'default',
         });
       } catch {
         setBranding(null);

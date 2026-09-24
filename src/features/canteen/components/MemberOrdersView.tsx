@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CreditCard, Smartphone, Banknote, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
+import { updateCanteenSale } from '@/services/canteen/operations-api';
 
 type PaymentChoice = 'cash' | 'pix' | 'credit' | 'fiado';
 
@@ -29,15 +30,7 @@ export function MemberOrdersView() {
     setProcessing(true);
 
     try {
-      const response = await fetch(`/api/canteen/sales/${selectedOrder.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, paymentMethod }),
-      });
-
-      if (!response.ok) throw new Error();
-
-      const updated = await response.json();
+      const updated = await updateCanteenSale<{ paymentMethod: string; orderStatus: string | null }>(selectedOrder.id, { action, paymentMethod });
       await db.sales.update(selectedOrder.id, {
         paymentMethod: updated.paymentMethod,
         orderStatus: updated.orderStatus,

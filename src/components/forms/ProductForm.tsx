@@ -12,6 +12,7 @@ import { ImagePlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { createCanteenProduct, updateCanteenProduct } from '@/services/canteen/products-api';
 
 interface ProductFormProps {
   onSuccess: () => void;
@@ -92,15 +93,9 @@ export function ProductForm({ onSuccess, product }: ProductFormProps) {
     };
 
     try {
-      const res = await fetch(product ? `/api/canteen/products/${product.id}` : '/api/canteen/products', {
-        method: product ? 'PUT' : 'POST',
-        body: JSON.stringify(payload),
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!res.ok) throw new Error();
-
-      const savedProduct = await res.json();
+      const savedProduct = product
+        ? await updateCanteenProduct<LocalProduct>(product.id, payload)
+        : await createCanteenProduct<LocalProduct>(payload);
       await db.products.put({
         ...savedProduct,
         tenantId,

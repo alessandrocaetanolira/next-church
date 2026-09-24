@@ -1,4 +1,5 @@
 import { db, type LocalSale } from '@/lib/db';
+import { fetchCanteenSales } from '@/services/sync/sync-api';
 
 type RemoteSale = {
   id: string;
@@ -38,12 +39,12 @@ function toLocalSale(sale: RemoteSale): LocalSale {
 }
 
 export async function syncCanteenSalesFromServer() {
-  const response = await fetch('/api/canteen/sales', { cache: 'no-store' });
+  const response = await fetchCanteenSales<RemoteSale[]>();
   if (!response.ok) {
     throw new Error('Falha ao buscar vendas da cantina');
   }
 
-  const sales = (await response.json()) as RemoteSale[];
+  const sales = response.data ?? [];
   const normalized = Array.isArray(sales) ? sales.map(toLocalSale) : [];
 
   await db.sales.bulkPut(normalized);

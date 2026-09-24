@@ -4,6 +4,8 @@ export type UserBranding = {
   name?: string | null;
   logoUrl?: string | null;
   themeVariant?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 };
 
 export function getUserBranding() {
