@@ -579,8 +579,8 @@ function MyAccountPageContent() {
           <Card className="border-border">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center shrink-0">
-                  <Wallet className="w-6 h-6 text-yellow-500" />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+                  <Wallet className="h-6 w-6 text-warning" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Saldo em Aberto</p>
@@ -614,10 +614,10 @@ function MyAccountPageContent() {
             </div>
             <CardContent className="p-5">
               {loyaltyProgress.hasReward ? (
-                <div className="bg-green-500/10 rounded-xl p-4 text-center border border-green-500/20">
-                  <Gift className="w-8 h-8 text-green-600 mx-auto mb-2 animate-bounce" />
-                  <p className="font-bold text-green-700">Recompensa Disponível!</p>
-                  <p className="text-xs text-green-600/80 mt-1">Você ganhou {loyaltyConfig.discountPercent}% de desconto na próxima compra.</p>
+                <div className="rounded-xl border border-success/20 bg-success/10 p-4 text-center">
+                  <Gift className="mx-auto mb-2 h-8 w-8 animate-bounce text-success" />
+                  <p className="font-bold text-success">Recompensa Disponível!</p>
+                  <p className="mt-1 text-xs text-success/80">Você ganhou {loyaltyConfig.discountPercent}% de desconto na próxima compra.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -669,7 +669,7 @@ function MyAccountPageContent() {
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold",
-                          transaction.paymentMethod === 'fiado' ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
+                          transaction.paymentMethod === 'fiado' ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
                         )}>
                           {transaction.paymentMethod === 'fiado' ? '-' : '+'}
                         </div>

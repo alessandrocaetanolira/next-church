@@ -430,9 +430,9 @@ export default function BiblePage() {
             (() => {
               const marker = getVerseMarker(i);
               const markerBackground = marker.isFavorite && marker.hasAnnotation
-                ? 'bg-amber-500/15 ring-1 ring-inset ring-violet-500/40'
+                ? 'bg-warning/15 ring-1 ring-inset ring-primary/40'
                 : marker.isFavorite
-                  ? 'bg-amber-500/15'
+                  ? 'bg-warning/15'
                   : marker.hasAnnotation
                     ? 'bg-violet-500/15'
                     : '';
@@ -442,7 +442,7 @@ export default function BiblePage() {
                 <span className="min-w-0 flex-1">{v}</span>
                 {(marker.isFavorite || marker.hasAnnotation) && <span className="flex shrink-0 items-center gap-1 pt-1 text-muted-foreground" aria-label={[marker.isFavorite && 'Favorito', marker.hasAnnotation && 'Com anotação'].filter(Boolean).join(' e ')}>
                   {marker.hasAnnotation && <ScrollText className="h-4 w-4 text-violet-600" />}
-                  {marker.isFavorite && <BookmarkCheck className="h-4 w-4 text-amber-600" />}
+                  {marker.isFavorite && <BookmarkCheck className="h-4 w-4 text-warning" />}
                 </span>}
               </p>;
             })()

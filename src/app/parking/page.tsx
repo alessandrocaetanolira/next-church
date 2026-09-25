@@ -264,8 +264,8 @@ export default function ParkingPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold">{groupedStats.total}</p></CardContent></Card>
-        <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Livres</p><p className="text-2xl font-bold text-emerald-600">{groupedStats.free}</p></CardContent></Card>
-        <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Ocupadas</p><p className="text-2xl font-bold text-amber-600">{groupedStats.occupied}</p></CardContent></Card>
+        <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Livres</p><p className="text-2xl font-bold text-success">{groupedStats.free}</p></CardContent></Card>
+        <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Ocupadas</p><p className="text-2xl font-bold text-warning">{groupedStats.occupied}</p></CardContent></Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

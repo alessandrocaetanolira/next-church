@@ -46,7 +46,7 @@ export function LeaderDashboard() {
           <span className="text-sm font-medium">Abrir Cantina</span>
         </Button> : null}
         <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/schedules/new')}>
-          <Plus className="w-6 h-6 text-green-500" />
+          <Plus className="w-6 h-6 text-success" />
           <span className="text-sm font-medium">Nova Tarefa</span>
         </Button>
       </div>

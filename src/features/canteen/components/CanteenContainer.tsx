@@ -209,10 +209,10 @@ export function CanteenContainer() {
           ) : null}
         </TabsTrigger> : null}
         {canOperate ? <TabsTrigger value="prep" className="relative min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
-          <ChefHat className={cn('w-4 h-4', preparingOrders > 0 && 'animate-pulse text-amber-500')} />
+          <ChefHat className={cn('w-4 h-4', preparingOrders > 0 && 'animate-pulse text-warning')} />
           <span className="hidden sm:inline">Preparo</span>
           {preparingOrders > 0 ? (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-bold text-warning-foreground">
               {preparingOrders}
             </span>
           ) : null}

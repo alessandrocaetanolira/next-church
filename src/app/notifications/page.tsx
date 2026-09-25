@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import {
@@ -50,9 +51,9 @@ function getNotifIcon(type: string, size = 'w-4 h-4') {
 
   switch (normalized) {
     case 'order':
-      return <ShoppingCart className={cn(size, 'text-green-600')} />;
+      return <ShoppingCart className={cn(size, 'text-success')} />;
     case 'task':
-      return <ClipboardList className={cn(size, 'text-amber-500')} />;
+      return <ClipboardList className={cn(size, 'text-warning')} />;
     case 'alert':
       return <AlertTriangle className={cn(size, 'text-destructive')} />;
     case 'loyalty':
@@ -191,12 +192,10 @@ export default function NotificationsPage() {
 
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {types.map((type) => (
-            <Button
+            <FilterChip
               key={type}
-              variant={filter === type ? 'default' : 'outline'}
-              size="sm"
+              active={filter === type}
               onClick={() => setFilter(type)}
-              className="whitespace-nowrap shrink-0 gap-1.5"
             >
               {type !== 'all' ? getNotifIcon(type, 'w-3.5 h-3.5') : null}
               {type === 'all' ? 'Todas' : getTypeLabel(type)}
@@ -205,7 +204,7 @@ export default function NotificationsPage() {
                   ({notifications.filter((notification) => normalizeType(notification.type) === type).length})
                 </span>
               ) : null}
-            </Button>
+            </FilterChip>
           ))}
         </div>
 

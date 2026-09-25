@@ -126,13 +126,13 @@ export function SalesHistory() {
   const getPaymentIcon = (method: string) => {
     switch (method) {
       case "cash":
-        return <Banknote className="w-4 h-4 text-green-600" />;
+        return <Banknote className="w-4 h-4 text-success" />;
       case "pix":
         return <Smartphone className="w-4 h-4 text-primary" />;
       case "credit":
         return <CreditCard className="w-4 h-4 text-sky-600" />;
       case "fiado":
-        return <User className="w-4 h-4 text-amber-500" />;
+        return <User className="w-4 h-4 text-warning" />;
       default:
         return <Receipt className="w-4 h-4 text-muted-foreground" />;
     }
@@ -272,8 +272,8 @@ export function SalesHistory() {
           <div className="flex items-center gap-3 justify-between flex-wrap">
             <div className="flex gap-3">
               <div className="bg-card rounded-xl p-3 border border-border flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-green-600" />
+                <div className="w-9 h-9 rounded-lg bg-success/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-success" />
                 </div>
                 <div>
                   <p className="font-bold">{formatCurrency(todayTotal)}</p>
@@ -345,11 +345,11 @@ export function SalesHistory() {
         <TabsContent value="credit" className="mt-4 space-y-4">
           <div className="flex items-center gap-3 justify-between flex-wrap">
             <div className="bg-card rounded-xl p-3 border border-border flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                <User className="w-4 h-4 text-amber-500" />
+            <div className="w-9 h-9 rounded-lg bg-warning/10 flex items-center justify-center">
+              <User className="w-4 h-4 text-warning" />
               </div>
               <div>
-                <p className="font-bold text-amber-500">{formatCurrency(totalDebt)}</p>
+              <p className="font-bold text-warning">{formatCurrency(totalDebt)}</p>
                 <p className="text-xs text-muted-foreground">Total Fiado</p>
               </div>
             </div>
@@ -372,7 +372,7 @@ export function SalesHistory() {
                     <p className="text-sm text-muted-foreground">{member.phone || member.email || "Sem contato"}</p>
                   </div>
                   <div className="text-right space-y-1">
-                    <p className="font-bold text-amber-500">{formatCurrency(member.creditBalance ?? 0)}</p>
+                    <p className="font-bold text-warning">{formatCurrency(member.creditBalance ?? 0)}</p>
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -539,11 +539,11 @@ export function SalesHistory() {
                 <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-muted-foreground">Débitos</p>
-                    <p className="font-bold text-amber-500">{formatCurrency(ledger.summary.debits)}</p>
+                    <p className="font-bold text-warning">{formatCurrency(ledger.summary.debits)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Pagamentos</p>
-                    <p className="font-bold text-green-600">{formatCurrency(ledger.summary.payments)}</p>
+                    <p className="font-bold text-success">{formatCurrency(ledger.summary.payments)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Saldo</p>
@@ -571,7 +571,7 @@ export function SalesHistory() {
                           {entry.createdBy ? ` • ${entry.createdBy}` : ""}
                         </p>
                       </div>
-                      <p className={entry.type === "debit" ? "font-bold text-amber-500" : "font-bold text-green-600"}>
+                      <p className={entry.type === "debit" ? "font-bold text-warning" : "font-bold text-success"}>
                         {entry.type === "debit" ? "+" : "-"}
                         {formatCurrency(entry.amount)}
                       </p>

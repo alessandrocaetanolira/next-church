@@ -113,7 +113,7 @@ export function AppSidebar() {
         )}
         {isPlatformAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-red-500 font-bold uppercase tracking-wider text-[10px]">Global Admin</SidebarGroupLabel>
+            <SidebarGroupLabel className="font-bold uppercase tracking-wider text-[10px] text-destructive">Global Admin</SidebarGroupLabel>
             <SidebarGroupContent>
               {renderNavItems([
                 ...adminItems

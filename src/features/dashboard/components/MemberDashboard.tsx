@@ -391,9 +391,9 @@ export function MemberDashboard() {
             <h3 className="font-semibold text-sm">Devocional do Dia</h3>
           </div>
           {streak > 0 && (
-            <div className="flex items-center gap-1 bg-yellow-500/10 px-2.5 py-1 rounded-full">
-              <Flame className="w-3.5 h-3.5 text-yellow-500" />
-              <span className="text-xs font-bold text-yellow-500">{streak} dias</span>
+            <div className="flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1">
+              <Flame className="h-3.5 w-3.5 text-warning" />
+              <span className="text-xs font-bold text-warning">{streak} dias</span>
             </div>
           )}
         </div>
@@ -412,8 +412,8 @@ export function MemberDashboard() {
             </>
           ) : (
             <div className="mt-2 space-y-3">
-              <div className="rounded-lg bg-green-500/10 p-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+              <div className="rounded-lg bg-success/10 p-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-success">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>Devocional lido hoje</span>
                 </div>
@@ -422,7 +422,7 @@ export function MemberDashboard() {
               {!challengeDone ? (
                 <div className="rounded-lg border border-border bg-background/60 p-3">
                   <div className="mb-1 flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-yellow-500" />
+                    <Trophy className="h-4 w-4 text-warning" />
                     <span className="text-sm font-semibold">Desafio do dia</span>
                     {devotional.challengePoints ? (
                       <Badge variant="secondary" className="h-5 text-[10px]">
@@ -449,7 +449,7 @@ export function MemberDashboard() {
           <span className="text-xs font-medium">Fazer Pedido</span>
         </Button> : null}
         <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/quiz')}>
-          <Trophy className="w-6 h-6 text-yellow-500" />
+          <Trophy className="h-6 w-6 text-warning" />
           <span className="text-xs font-medium">Quiz Bíblico</span>
         </Button>
         <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/jogos-novos')}>

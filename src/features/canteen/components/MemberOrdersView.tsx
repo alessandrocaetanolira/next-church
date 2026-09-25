@@ -103,7 +103,7 @@ export function MemberOrdersView() {
 
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" className="h-20 flex-col gap-2" disabled={processing} onClick={() => applyOrderDecision('approve', 'cash')}>
-                <Banknote className="w-5 h-5 text-green-600" />
+                <Banknote className="w-5 h-5 text-success" />
                 <span>Dinheiro</span>
               </Button>
               <Button variant="outline" className="h-20 flex-col gap-2" disabled={processing} onClick={() => applyOrderDecision('approve', 'pix')}>
@@ -115,7 +115,7 @@ export function MemberOrdersView() {
                 <span>Cartão</span>
               </Button>
               <Button variant="outline" className="h-20 flex-col gap-2" disabled={processing} onClick={() => applyOrderDecision('approve', 'fiado')}>
-                <User className="w-5 h-5 text-amber-600" />
+                <User className="w-5 h-5 text-warning" />
                 <span>Fiado</span>
               </Button>
             </div>

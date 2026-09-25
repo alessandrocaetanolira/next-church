@@ -137,7 +137,7 @@ export function MembersList() {
                 </div>
                 <div className="text-right space-y-2">
                   {(member.creditBalance ?? 0) > 0 ? (
-                    <p className="font-bold text-amber-500">{formatCurrency(member.creditBalance ?? 0)}</p>
+                    <p className="font-bold text-warning">{formatCurrency(member.creditBalance ?? 0)}</p>
                   ) : (
                     <Badge variant="success">Em dia</Badge>
                   )}

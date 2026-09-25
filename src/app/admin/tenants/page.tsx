@@ -21,9 +21,9 @@ export default function AdminTenantsPage() {
         <CreateTenantForm onCreated={handleRefresh} />
       </div>
 
-      <Card className="border-red-200 bg-red-50/30 dark:bg-red-950/10">
+      <Card className="border-destructive/20 bg-destructive/5">
         <CardHeader className="py-3 px-4 flex flex-row items-center gap-3">
-          <ShieldAlert className="h-5 w-5 text-red-500" />
+          <ShieldAlert className="h-5 w-5 text-destructive" />
           <div>
             <CardTitle className="text-sm">Acesso Restrito</CardTitle>
             <CardDescription className="text-xs">Apenas administradores globais podem acessar esta área.</CardDescription>

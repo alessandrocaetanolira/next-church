@@ -31,9 +31,9 @@ export default function PlatformAdminDashboard() {
 
   const cards = [
     { label: 'Total de igrejas', value: overview.total, icon: Building2 },
-    { label: 'Ativas', value: overview.active, icon: CheckCircle2, tone: 'text-emerald-600' },
-    { label: 'Em provisionamento', value: overview.provisioning, icon: Clock3, tone: 'text-amber-600' },
-    { label: 'Com falha', value: overview.failed, icon: AlertTriangle, tone: 'text-red-600' },
+    { label: 'Ativas', value: overview.active, icon: CheckCircle2, tone: 'text-success' },
+    { label: 'Em provisionamento', value: overview.provisioning, icon: Clock3, tone: 'text-warning' },
+    { label: 'Com falha', value: overview.failed, icon: AlertTriangle, tone: 'text-destructive' },
     { label: 'Arquivadas', value: overview.archived, icon: Archive, tone: 'text-slate-500' },
   ];
 

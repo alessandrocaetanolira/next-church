@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
+import { FilterChip } from '@/components/ui/filter-chip';
 import { Button } from "@/components/ui/button";
 import { ChefHat, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -73,11 +74,11 @@ export function PreparoView() {
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card rounded-xl p-3 border border-border text-center">
-          <p className="text-2xl font-bold text-amber-500">{preparingCount}</p>
+        <p className="text-2xl font-bold text-warning">{preparingCount}</p>
           <p className="text-xs text-muted-foreground">Preparando</p>
         </div>
         <div className="bg-card rounded-xl p-3 border border-border text-center">
-          <p className="text-2xl font-bold text-green-500">{readyCount}</p>
+        <p className="text-2xl font-bold text-success">{readyCount}</p>
           <p className="text-xs text-muted-foreground">Prontos</p>
         </div>
         <div className="bg-card rounded-xl p-3 border border-border text-center">
@@ -88,18 +89,16 @@ export function PreparoView() {
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {(['all', 'preparing', 'ready', 'cancelled'] as const).map((value) => (
-          <Button
+          <FilterChip
             key={value}
-            variant={filter === value ? 'default' : 'outline'}
-            size="sm"
-            className="whitespace-nowrap shrink-0"
+            active={filter === value}
             onClick={() => setFilter(value)}
           >
             {value === 'all' ? 'Todos' : value === 'preparing' ? 'Preparando' : value === 'ready' ? 'Pronto' : 'Cancelado'}
             {value === 'preparing' && preparingCount > 0 ? (
               <Badge variant="secondary" className="ml-1 text-[10px]">{preparingCount}</Badge>
             ) : null}
-          </Button>
+          </FilterChip>
         ))}
       </div>
 
@@ -116,19 +115,19 @@ export function PreparoView() {
           return (
             <div key={order.id} className={cn(
               'bg-card rounded-xl border border-border overflow-hidden',
-              status === 'preparing' && 'border-amber-500/40',
-              status === 'ready' && 'border-green-500/40'
+              status === 'preparing' && 'border-warning/40',
+              status === 'ready' && 'border-success/40'
             )}>
               <div className="p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <div className={cn(
                       'w-9 h-9 rounded-lg flex items-center justify-center',
-                      status === 'preparing' ? 'bg-amber-500/10' : status === 'ready' ? 'bg-green-500/10' : 'bg-destructive/10'
+                      status === 'preparing' ? 'bg-warning/10' : status === 'ready' ? 'bg-success/10' : 'bg-destructive/10'
                     )}>
                       <Icon className={cn(
                         'w-5 h-5',
-                        status === 'preparing' ? 'text-amber-500' : status === 'ready' ? 'text-green-500' : 'text-destructive'
+                        status === 'preparing' ? 'text-warning' : status === 'ready' ? 'text-success' : 'text-destructive'
                       )} />
                     </div>
                     <div>
@@ -156,7 +155,7 @@ export function PreparoView() {
                 <div className="flex gap-2 border-t border-border pt-3">
                   {status === 'preparing' ? (
                     <>
-                      <Button size="sm" className="flex-1 gap-1 bg-green-600 hover:bg-green-600/90" onClick={() => handleStatusChange(order.id, 'ready')}>
+                      <Button size="sm" className="flex-1 gap-1 bg-success text-success-foreground hover:bg-success/90" onClick={() => handleStatusChange(order.id, 'ready')}>
                         <CheckCircle2 className="w-4 h-4" /> Pronto
                       </Button>
                       <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => handleStatusChange(order.id, 'cancelled')}>

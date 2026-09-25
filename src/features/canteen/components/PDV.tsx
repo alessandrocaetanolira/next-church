@@ -384,7 +384,7 @@ export function PDV() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('cash')}>
-                      <Banknote className="w-6 h-6 text-green-600" /><span>Dinheiro</span>
+                      <Banknote className="w-6 h-6 text-success" /><span>Dinheiro</span>
                     </Button>
                     <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('pix')}>
                       <Smartphone className="w-6 h-6 text-primary" /><span>PIX</span>
@@ -393,7 +393,7 @@ export function PDV() {
                       <CreditCard className="w-6 h-6 text-sky-600" /><span>Cartão</span>
                     </Button>
                     <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('fiado')}>
-                      <User className="w-6 h-6 text-amber-600" /><span>Fiado</span>
+                      <User className="w-6 h-6 text-warning" /><span>Fiado</span>
                     </Button>
                 </div>
                 <div className="space-y-2">

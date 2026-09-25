@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -257,11 +258,11 @@ function GroupsPageContent() {
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar grupo..." className="pl-9" />
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Badge variant={filter === 'all' ? 'default' : 'outline'} className="cursor-pointer whitespace-nowrap shrink-0" onClick={() => setFilterAndUrl('all')}>Todos</Badge>
+          <FilterChip active={filter === 'all'} onClick={() => setFilterAndUrl('all')}>Todos</FilterChip>
           {groupTypes.map((type) => (
-            <Badge key={type.value} variant={filter === type.value ? 'default' : 'outline'} className="cursor-pointer whitespace-nowrap shrink-0" onClick={() => setFilterAndUrl(type.value)}>
+            <FilterChip key={type.value} active={filter === type.value} onClick={() => setFilterAndUrl(type.value)}>
               {type.label}
-            </Badge>
+            </FilterChip>
           ))}
         </div>
         {canManage ? (

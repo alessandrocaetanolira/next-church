@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
@@ -22,11 +23,11 @@ import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleF
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
   verse: { label: 'Versículo', icon: BookOpen, color: 'text-primary' },
-  devotional: { label: 'Devocional', icon: Flame, color: 'text-orange-500' },
+  devotional: { label: 'Devocional', icon: Flame, color: 'text-warning' },
   testimony: { label: 'Testemunho', icon: Heart, color: 'text-pink-500' },
-  prayer: { label: 'Pedido de Oração', icon: PenLine, color: 'text-blue-500' },
-  quiz_score: { label: 'Quiz', icon: Trophy, color: 'text-yellow-500' },
-  event: { label: 'Evento', icon: Calendar, color: 'text-emerald-500' },
+  prayer: { label: 'Pedido de Oração', icon: PenLine, color: 'text-info' },
+  quiz_score: { label: 'Quiz', icon: Trophy, color: 'text-warning' },
+  event: { label: 'Evento', icon: Calendar, color: 'text-success' },
   social_project: { label: 'Projeto Social', icon: Target, color: 'text-pink-500' },
 };
 
@@ -371,14 +372,13 @@ export default function FeedPage() {
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
         {['all', 'announcement', 'event', 'social_project', 'verse', 'devotional', 'testimony', 'prayer', 'quiz_score'].map((type) => (
-          <Badge
+          <FilterChip
             key={type}
-            variant={filterType === type ? 'default' : 'outline'}
-            className="cursor-pointer whitespace-nowrap text-xs"
+            active={filterType === type}
             onClick={() => setFilterType(type)}
           >
             {type === 'all' ? 'Todos' : POST_TYPE_CONFIG[type as keyof typeof POST_TYPE_CONFIG]?.label}
-          </Badge>
+          </FilterChip>
         ))}
       </div>
 
