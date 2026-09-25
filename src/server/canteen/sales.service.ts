@@ -1,4 +1,4 @@
-import { notifyCanteenNewOrder } from '@/lib/server/notification-service';
+import { notifyCanteenNewOrder, notifyMemberCreditUpdate } from '@/lib/server/notification-service';
 import { ValidationError, ConflictError } from '@/lib/http/errors';
 import { ForbiddenError } from '@/lib/http/errors';
 import { hasActionPermission } from '@/lib/access-control';
@@ -63,6 +63,16 @@ export class CanteenSalesService {
 
     if (paymentMethod === 'pending') {
       await notifyCanteenNewOrder(this.prisma, this.tenantId, { id: result.id, memberName: result.memberName, total: result.total });
+    }
+    if (paymentMethod === 'fiado' && result.memberId) {
+      await notifyMemberCreditUpdate(this.prisma, this.tenantId, {
+        memberId: result.memberId,
+        type: 'canteen-credit-debit',
+        title: 'Nova cobrança na cantina',
+        message: `Foi lançada uma cobrança de R$ ${result.total.toFixed(2)} no seu saldo da cantina.`,
+        sender: { name: result.createdBy },
+        sourceId: result.id,
+      });
     }
     return result;
   }

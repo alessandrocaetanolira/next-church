@@ -1,5 +1,7 @@
 export type NotificationRecord = {
   id: string;
+  senderEmail?: string | null;
+  senderName?: string | null;
   type: string;
   title: string;
   message: string;

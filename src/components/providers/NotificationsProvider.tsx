@@ -9,6 +9,8 @@ import { useAuthStore } from '@/features/auth/store';
 
 type NotificationEventPayload = {
   id: string;
+  senderEmail?: string | null;
+  senderName?: string | null;
   type: string;
   title: string;
   message: string;

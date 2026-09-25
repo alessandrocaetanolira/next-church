@@ -13,12 +13,22 @@ import { generateId } from '@/lib/id';
  */
 export type NotificationInput = {
   userEmail: string;
+  senderEmail?: string | null;
+  senderName?: string | null;
   type: string;
   title: string;
   message: string;
   href?: string | null;
   sourceType?: string | null;
   sourceId?: string | null;
+};
+
+export type NotificationContent = Omit<NotificationInput, 'userEmail' | 'senderEmail' | 'senderName'>;
+
+export type NotificationCommand = {
+  recipients: string[];
+  sender?: { email?: string | null; name?: string | null };
+  content: NotificationContent;
 };
 
 function normalizeEmail(email: string) {
@@ -201,7 +211,12 @@ async function getMemberEmail(prisma: PrismaClient, memberId: string) {
     memberId
   );
 
-  return member?.email ? normalizeEmail(member.email) : null;
+  if (member?.email) return normalizeEmail(member.email);
+  const [linkedUser] = await prisma.$queryRawUnsafe<Array<{ email: string | null }>>(
+    `SELECT email FROM "User" WHERE linkedMemberId = ? AND active = 1 AND deletedAt IS NULL LIMIT 1`,
+    memberId,
+  );
+  return linkedUser?.email ? normalizeEmail(linkedUser.email) : null;
 }
 
 async function getMemberEmails(prisma: PrismaClient, memberIds: string[]) {
@@ -259,12 +274,14 @@ export async function createNotifications(
     await prisma.$executeRawUnsafe(
       `
         INSERT INTO "Notification" (
-          id, userEmail, type, title, message, href, sourceType, sourceId, createdAt, updatedAt
+          id, userEmail, senderEmail, senderName, type, title, message, href, sourceType, sourceId, createdAt, updatedAt
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       id,
       email,
+      notification.senderEmail ? normalizeEmail(notification.senderEmail) : null,
+      notification.senderName?.trim() || null,
       notification.type,
       notification.title,
       notification.message,
@@ -279,6 +296,8 @@ export async function createNotifications(
       id,
       tenantId,
       userEmail: email,
+      senderEmail: notification.senderEmail ? normalizeEmail(notification.senderEmail) : null,
+      senderName: notification.senderName?.trim() || null,
       type: notification.type,
       title: notification.title,
       message: notification.message,
@@ -308,6 +327,8 @@ export async function createNotifications(
           tipo: firstNotification?.type,
           titulo: firstNotification?.title ?? 'Nova notificação',
           mensagem: firstNotification?.message ?? 'Você recebeu uma nova notificação.',
+          senderEmail: firstNotification?.senderEmail ?? null,
+          senderName: firstNotification?.senderName ?? null,
           url: notificationUrl,
           link: notificationUrl,
           mobileLink: notificationUrl,
@@ -322,6 +343,24 @@ export async function createNotifications(
   }
 }
 
+/**
+ * Envia uma mensagem para vários usuários sem expor detalhes de transporte.
+ * Módulos de negócio devem fornecer apenas destinatários, remetente e conteúdo.
+ */
+export async function sendNotification(
+  prisma: PrismaClient,
+  tenantId: string,
+  command: NotificationCommand,
+) {
+  const senderEmail = command.sender?.email ? normalizeEmail(command.sender.email) : null;
+  const senderName = command.sender?.name?.trim() || null;
+  return createNotifications(
+    prisma,
+    tenantId,
+    command.recipients.map((userEmail) => ({ ...command.content, userEmail, senderEmail, senderName })),
+  );
+}
+
 export async function notifyCanteenNewOrder(
   prisma: PrismaClient,
   tenantId: string,
@@ -334,19 +373,17 @@ export async function notifyCanteenNewOrder(
   const recipients = await getCanteenRecipientEmails(prisma);
   if (!recipients.length) return;
 
-  await createNotifications(
-    prisma,
-    tenantId,
-    recipients.map((userEmail) => ({
-      userEmail,
+  await sendNotification(prisma, tenantId, {
+    recipients,
+    content: {
       type: 'canteen-order-new',
       title: 'Novo pedido na cantina',
       message: `${sale.memberName || 'Pedido sem identificação'} enviou um pedido de R$ ${sale.total.toFixed(2)}.`,
       href: '/cantina?tab=orders',
       sourceType: 'sale',
       sourceId: sale.id,
-    }))
-  );
+    },
+  });
 }
 
 export async function notifyMemberOrderUpdate(
@@ -359,6 +396,7 @@ export async function notifyMemberOrderUpdate(
     message: string;
     href?: string;
     type: string;
+    sender?: { email?: string | null; name?: string | null };
   }
 ) {
   if (!payload.memberId) return;
@@ -366,9 +404,10 @@ export async function notifyMemberOrderUpdate(
   const email = await getMemberEmail(prisma, payload.memberId);
   if (!email) return;
 
-  await createNotifications(prisma, tenantId, [
-    {
-      userEmail: email,
+  await sendNotification(prisma, tenantId, {
+    recipients: [email],
+    sender: payload.sender,
+    content: {
       type: payload.type,
       title: payload.title,
       message: payload.message,
@@ -376,7 +415,37 @@ export async function notifyMemberOrderUpdate(
       sourceType: 'sale',
       sourceId: payload.saleId,
     },
-  ]);
+  });
+}
+
+/** Notifica o membro sobre uma alteração no saldo da cantina. */
+export async function notifyMemberCreditUpdate(
+  prisma: PrismaClient,
+  tenantId: string,
+  payload: {
+    memberId: string;
+    type: string;
+    title: string;
+    message: string;
+    sender?: { email?: string | null; name?: string | null };
+    sourceId?: string | null;
+  },
+) {
+  const email = await getMemberEmail(prisma, payload.memberId);
+  if (!email) return;
+
+  await sendNotification(prisma, tenantId, {
+    recipients: [email],
+    sender: payload.sender,
+    content: {
+      type: payload.type,
+      title: payload.title,
+      message: payload.message,
+      href: '/carteira?view=debt',
+      sourceType: 'canteen-credit',
+      sourceId: payload.sourceId ?? null,
+    },
+  });
 }
 
 export async function notifyFeedLike(

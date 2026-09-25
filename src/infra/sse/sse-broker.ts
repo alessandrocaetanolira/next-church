@@ -8,6 +8,8 @@ export type ServerNotificationEvent = {
   id: string;
   tenantId: string;
   userEmail: string;
+  senderEmail?: string | null;
+  senderName?: string | null;
   type: string;
   title: string;
   message: string;

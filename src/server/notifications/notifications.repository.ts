@@ -1,17 +1,17 @@
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 
-export type NotificationRow = { id: string; userEmail: string; type: string; title: string; message: string; href: string | null; sourceType: string | null; sourceId: string | null; readAt: Date | null; createdAt: Date };
+export type NotificationRow = { id: string; userEmail: string; senderEmail: string | null; senderName: string | null; type: string; title: string; message: string; href: string | null; sourceType: string | null; sourceId: string | null; readAt: Date | null; createdAt: Date };
 
 export class NotificationsRepository {
   constructor(private readonly prisma: TenantPrismaClient) {}
 
   list(userEmail: string) {
-    return this.prisma.$queryRawUnsafe<NotificationRow[]>(`SELECT id, userEmail, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 100`, userEmail);
+    return this.prisma.$queryRawUnsafe<NotificationRow[]>(`SELECT id, userEmail, senderEmail, senderName, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 100`, userEmail);
   }
 
   listSince(userEmail: string, createdAfter: string) {
     return this.prisma.$queryRawUnsafe<NotificationRow[]>(
-      `SELECT id, userEmail, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL AND datetime(createdAt) > datetime(?) ORDER BY datetime(createdAt) ASC, id ASC LIMIT 50`,
+      `SELECT id, userEmail, senderEmail, senderName, type, title, message, href, sourceType, sourceId, readAt, createdAt FROM "Notification" WHERE userEmail = ? AND deletedAt IS NULL AND datetime(createdAt) > datetime(?) ORDER BY datetime(createdAt) ASC, id ASC LIMIT 50`,
       userEmail,
       createdAfter,
     );

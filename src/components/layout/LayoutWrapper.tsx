@@ -41,7 +41,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   if (isAuthPage || !isAuthenticated) {
     return (
       <main className="min-h-screen bg-background">
-        {authFallbackReady && <div className="border-b bg-amber-500/10 px-4 py-2 text-center text-xs text-muted-foreground">Modo offline: exibindo dados salvos neste dispositivo.</div>}
+        {authFallbackReady && <div className="border-b border-warning/20 bg-warning/10 px-4 py-2 text-center text-xs text-muted-foreground">Modo offline: exibindo dados salvos neste dispositivo.</div>}
         {children}
         <Toaster position="top-center" />
       </main>

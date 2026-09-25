@@ -10,7 +10,7 @@ async function getContext() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
-  return { session, service: new CanteenLedgerService(new CanteenLedgerRepository(prisma)) };
+  return { session, service: new CanteenLedgerService(new CanteenLedgerRepository(prisma), prisma, session.user.tenantId) };
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {

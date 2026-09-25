@@ -1,8 +1,10 @@
 import { ValidationError, NotFoundError } from '@/lib/http/errors';
 import { CanteenLedgerRepository } from './ledger.repository';
+import { notifyMemberCreditUpdate } from '@/lib/server/notification-service';
+import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 
 export class CanteenLedgerService {
-  constructor(private readonly repository: CanteenLedgerRepository) {}
+  constructor(private readonly repository: CanteenLedgerRepository, private readonly prisma?: TenantPrismaClient, private readonly tenantId?: string) {}
 
   async get(memberId: string) {
     const result = await this.repository.findMemberLedger(memberId);
@@ -28,6 +30,15 @@ export class CanteenLedgerService {
     if (amount > (current.member.creditBalance ?? 0)) throw new ValidationError('Valor maior que a dívida.');
     const member = await this.repository.registerPayment(memberId, amount, createdBy);
     if (!member) throw new NotFoundError('Membro não encontrado.');
+    if (this.prisma && this.tenantId) {
+      await notifyMemberCreditUpdate(this.prisma, this.tenantId, {
+        memberId,
+        type: 'canteen-credit-payment',
+        title: 'Pagamento registrado',
+        message: `Foi registrado um pagamento de R$ ${amount.toFixed(2)}. Saldo pendente: R$ ${(member.creditBalance ?? 0).toFixed(2)}.`,
+        sender: { name: createdBy },
+      });
+    }
     return { member: { ...member, createdAt: member.createdAt.toISOString(), updatedAt: member.updatedAt.toISOString(), deletedAt: null } };
   }
 }
