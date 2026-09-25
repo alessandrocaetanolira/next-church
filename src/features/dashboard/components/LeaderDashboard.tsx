@@ -34,18 +34,18 @@ export function LeaderDashboard() {
   return (
     <div className="space-y-4 pb-20 sm:space-y-6">
       {/* Welcome Header */}
-      <Card className="border-border bg-card p-4 sm:p-6">
+      <Card className="animate__animated animate__zoomIn border-border bg-card p-4 sm:p-6">
         <h2 className="text-lg font-semibold">Olá, {user?.name?.split(' ')[0]} 👋</h2>
         <p className="text-muted-foreground text-sm mt-1">Aqui está o resumo das atividades da igreja.</p>
       </Card>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        {canOpenCanteen ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/cantina')}>
+        {canOpenCanteen ? <Button variant="outline" className="animate__animated animate__zoomIn h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/cantina')}>
           <ShoppingCart className="w-6 h-6 text-primary" />
           <span className="text-sm font-medium">Abrir Cantina</span>
         </Button> : null}
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/schedules/new')}>
+        <Button variant="outline" className="animate__animated animate__zoomIn h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/schedules/new')}>
           <Plus className="w-6 h-6 text-success" />
           <span className="text-sm font-medium">Nova Tarefa</span>
         </Button>
@@ -88,7 +88,7 @@ export function LeaderDashboard() {
           </Button>
         </div>
         
-        <Card className="border-border border-dashed p-6 text-center text-muted-foreground sm:p-8">
+        <Card className="animate__animated animate__zoomIn border-border border-dashed p-6 text-center text-muted-foreground sm:p-8">
           <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
           <p>Nenhuma tarefa pendente para hoje!</p>
         </Card>

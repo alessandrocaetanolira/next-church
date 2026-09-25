@@ -56,7 +56,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        'bg-card rounded-xl border border-border p-3 shadow-card transition-all duration-200 hover:shadow-card-hover sm:p-4',
+        'animate__animated animate__zoomIn bg-card rounded-xl border border-border p-3 shadow-card transition-all duration-200 hover:shadow-card-hover sm:p-4',
         className
       )}
     >

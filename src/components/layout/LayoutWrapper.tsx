@@ -13,6 +13,11 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const { settings } = useAppSettings();
   const [authFallbackReady, setAuthFallbackReady] = useState(false);
+  const [loadingLogoFailed, setLoadingLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setLoadingLogoFailed(false);
+  }, [settings.logoUrl]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -30,9 +35,14 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   if (isLoading && !authFallbackReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex animate-pulse items-center gap-2 text-primary font-bold text-xl">
-          {settings.logoUrl ? <img src={settings.logoUrl} alt={settings.appName} className="h-8 w-8 rounded-lg object-contain" /> : '✝'}
-          <span>{settings.appName}...</span>
+        <div className="animate-pulse rounded-2xl bg-primary/10 p-4">
+          <img
+            src={settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+            alt=""
+            aria-hidden="true"
+            className="h-16 w-48 rounded-xl object-contain"
+            onError={() => setLoadingLogoFailed(true)}
+          />
         </div>
       </div>
     );

@@ -97,6 +97,7 @@ export function Header({ title }: HeaderProps) {
   const { settings, updateSettings } = useAppSettings();
   const [showAbout, setShowAbout] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
   const push = usePushSubscription();
 
   useEffect(() => {
@@ -107,6 +108,10 @@ export function Header({ title }: HeaderProps) {
   useEffect(() => {
     if (push.error) toast.error(push.error);
   }, [push.error]);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [settings.logoUrl]);
 
   const handleRequestNotifications = async () => {
     const enabled = await push.subscribe();
@@ -145,11 +150,7 @@ export function Header({ title }: HeaderProps) {
         <div className="flex items-center justify-between h-14 px-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              {settings.logoUrl ? (
-                <img src={settings.logoUrl} alt={settings.appName} className="h-full w-full rounded-lg object-contain" />
-              ) : (
-                <span className="text-primary-foreground font-bold text-sm">✝</span>
-              )}
+              <img src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
             </div>
             <h1 className="font-semibold text-foreground">{displayTitle}</h1>
           </div>
@@ -231,11 +232,7 @@ export function Header({ title }: HeaderProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                {settings.logoUrl ? (
-                  <img src={settings.logoUrl} alt={settings.appName} className="h-full w-full rounded-lg object-contain" />
-                ) : (
-                  <span className="text-primary-foreground font-bold text-sm">✝</span>
-                )}
+                <img src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
               </div>
               {settings.appName}
             </DialogTitle>

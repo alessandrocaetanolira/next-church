@@ -1,5 +1,8 @@
 # Roadmap
 
+> Este documento mantém o contexto histórico e as prioridades macro. O índice
+> operacional atual está em [TODO.md](./TODO.md).
+
 ## Prioridade 1: Estabilizacao
 
 - [ ] Confirmar `npm run build` após a rodada atual de módulos.
@@ -65,7 +68,16 @@ Ordem recomendada:
 - [ ] Ampliar eventos persistidos na central de notificacoes.
 - [ ] Definir se Web Push entra no MVP ou fica para fase posterior.
 
-## Prioridade 7: Validacao Final
+## Prioridade 7: E-mail transacional
+
+- [ ] Implementar a porta de e-mail e escolher o provider.
+- [ ] Criar templates, fila com retry e idempotência.
+- [ ] Integrar confirmação de cadastro, recuperação de senha e eventos da Cantina.
+- [ ] Configurar domínio e autenticação do remetente antes de produção.
+
+O plano detalhado está em [`docs/email-todo.md`](./email-todo.md).
+
+## Prioridade 8: Validacao Final
 
 - [ ] Reduzir warnings relevantes de lint.
 - [ ] Ampliar testes de rotas criticas.

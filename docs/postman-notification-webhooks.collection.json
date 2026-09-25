@@ -1,92 +1,48 @@
 {
   "info": {
-    "_postman_id": "church-app-notification-webhooks",
-    "name": "Church App - Notification Webhooks (temporário)",
-    "description": "Endpoints temporários de desenvolvimento para validar SSE e Web Push. Remover após a validação.",
+    "name": "Church App - Notification Webhooks",
+    "description": "Requests manuais de desenvolvimento para testar SSE e Web Push. Use apenas com ENABLE_TEST_WEBHOOKS=true e servidor local.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" },
-    { "key": "tenantId", "value": "igreja-teste" },
-    { "key": "userEmail", "value": "admin@igreja-teste.com" }
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "tenantId", "value": "igreja-teste", "type": "string" },
+    { "key": "userEmail", "value": "admin@teste.com", "type": "string" }
   ],
   "item": [
     {
       "name": "Enviar SSE",
-      "description": "Requer ENABLE_TEST_WEBHOOKS=true no processo Next. Mantenha o app aberto e autenticado para observar o toast/sininho.",
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          },
-          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-sse-test\",\n  \"title\": \"Teste SSE via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook SSE.\",\n  \"href\": \"/notifications\"\n}"
+          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-sse-test\",\n  \"title\": \"Teste SSE via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook SSE.\",\n  \"href\": \"/notifications\"\n}",
+          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{baseUrl}}/enviar-sse",
-          "host": [ "{{baseUrl}}" ],
-          "path": [ "enviar-sse" ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-              "const body = pm.response.json();",
-              "pm.test('canal SSE', function () { pm.expect(body.channel).to.eql('sse'); });",
-              "pm.test('notificação persistida', function () { pm.expect(body.notificationId).to.be.a('string').and.not.empty; });"
-            ]
-          }
-        }
-      ]
+        "url": "{{baseUrl}}/enviar-sse",
+        "description": "Publica a notificação no broker SSE e retorna JSON. Não é um endpoint de stream."
+      }
     },
     {
       "name": "Enviar Push",
-      "description": "Requer ENABLE_TEST_WEBHOOKS=true e uma subscription Push ativa para o e-mail informado.",
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          },
-          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-push-test\",\n  \"title\": \"Teste Push via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook Push.\",\n  \"href\": \"/notifications\"\n}"
+          "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"userEmail\": \"{{userEmail}}\",\n  \"type\": \"postman-push-test\",\n  \"title\": \"Teste Push via Postman\",\n  \"message\": \"Mensagem enviada pelo webhook Push.\",\n  \"href\": \"/notifications\"\n}",
+          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{baseUrl}}/enviar-push",
-          "host": [ "{{baseUrl}}" ],
-          "path": [ "enviar-push" ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
-              "const body = pm.response.json();",
-              "pm.test('canal Push', function () { pm.expect(body.channel).to.eql('push'); });",
-              "pm.test('notificação persistida', function () { pm.expect(body.notificationId).to.be.a('string').and.not.empty; });",
-              "pm.test('sem falha de entrega', function () { pm.expect(body.delivery.failed).to.eql(0); });"
-            ]
-          }
-        }
-      ]
+        "url": "{{baseUrl}}/enviar-push",
+        "description": "Envia Push para uma subscription ativa e retorna JSON com o resultado."
+      }
     }
   ]
 }

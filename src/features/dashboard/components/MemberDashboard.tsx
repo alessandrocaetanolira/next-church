@@ -366,7 +366,7 @@ export function MemberDashboard() {
 
   return (
     <div className="mx-auto max-w-lg space-y-4 pb-20 sm:space-y-6">
-      <Card className="border-border bg-card p-3 sm:p-4">
+      <Card className="animate__animated animate__zoomIn border-border bg-card p-3 sm:p-4">
         <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
           <div className="text-center">
             <p className="text-lg font-bold text-foreground">{points}</p>
@@ -384,7 +384,7 @@ export function MemberDashboard() {
       </Card>
 
       {/* Devotional Card */}
-      <Card className="overflow-hidden border-border">
+      <Card className="animate__animated animate__zoomIn overflow-hidden border-border">
           <div className="flex items-center justify-between bg-primary/5 p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />

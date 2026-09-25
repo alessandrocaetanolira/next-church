@@ -4,13 +4,13 @@ const INITIAL_TENANT = 'igreja-teste';
 const BRANDING = {
   pwaName: 'A Mesa Church',
   pwaShortName: 'A Mesa',
-  logoUrl: '/branding/a-mesa-church/header.png',
+  logoUrl: '/branding/a-mesa-church/variants/logo-light-transparent.png',
   icon192Url: '/branding/a-mesa-church/icon-192.png',
   icon512Url: '/branding/a-mesa-church/icon-512.png',
-  primaryColor: '#f5b800',
-  secondaryColor: '#111111',
-  themeColor: '#111111',
-  backgroundColor: '#111111',
+  primaryColor: '#ffc608',
+  secondaryColor: '#444243',
+  themeColor: '#444243',
+  backgroundColor: '#444243',
 };
 
 async function main() {

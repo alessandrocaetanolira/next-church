@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Header } from './Header';
@@ -27,8 +27,13 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings, updateSettings } = useAppSettings();
+  const [logoFailed, setLogoFailed] = useState(false);
   const pageTitle = useUIStore((state) => state.pageTitle);
   const title = propTitle || pageTitle;
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [settings.logoUrl]);
 
   const isMember = user?.role === 'MEMBER';
   const handleCycleThemeMode = () => {
@@ -52,7 +57,7 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
       <div className="min-h-screen-dvh bg-background">
         {!hideMobileHeader && <Header title={title} />}
         <main className="pb-20 safe-bottom">
-          <div key={pathname} className="animate__animated animate__flipInY">
+          <div key={pathname} className="animate__animated animate__bounceIn">
             {children}
           </div>
         </main>
@@ -70,7 +75,7 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-primary">
-                {settings.logoUrl ? <img src={settings.logoUrl} alt={settings.appName} className="h-full w-full object-contain" /> : <span className="text-sm font-bold text-primary-foreground">✝</span>}
+                <img src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} className="h-full w-full object-contain" onError={() => setLogoFailed(true)} />
               </div>
               <h1 className="font-semibold text-foreground">{title}</h1>
             </div>
@@ -88,7 +93,7 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
             </div>
           </header>
           <main className="flex-1 overflow-auto">
-            <div key={pathname} className="animate__animated animate__flipInY">
+            <div key={pathname} className="animate__animated animate__bounceIn">
               {children}
             </div>
           </main>

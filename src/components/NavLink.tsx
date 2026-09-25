@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { forwardRef, ReactNode } from "react";
+import { CSSProperties, forwardRef, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface NavLinkProps {
@@ -12,6 +12,7 @@ interface NavLinkProps {
   activeClassName?: string;
   end?: boolean;
   onClick?: () => void;
+  style?: CSSProperties;
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(

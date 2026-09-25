@@ -211,6 +211,7 @@ Abra `http://localhost:3000/auth/login` para usuários da igreja ou
 - [Overview](docs/overview.md)
 - [Arquitetura](docs/architecture.md)
 - [Design system](docs/design-system.md)
+- [TODO principal](docs/TODO.md)
 - [Roadmap](docs/roadmap.md)
 - [Operacoes](docs/operations.md)
 - [TODO de arquitetura em camadas](docs/layered-architecture-todo.md)
@@ -232,8 +233,8 @@ As validações devem ser executadas na raiz do projeto:
 - `npm run build` deve ser executado antes de deploy e ainda precisa ser revalidado
   quando houver mudanças em módulos, Prisma ou configuração do Next.
 
-O projeto está em refatoração incremental. O estado detalhado do trabalho pendente
-fica em [docs/layered-architecture-todo.md](docs/layered-architecture-todo.md).
+O projeto está em refatoração incremental. A ordem de execução fica em
+[docs/TODO.md](docs/TODO.md); os documentos de domínio mantêm o detalhamento técnico.
 
 ## Referencia Legada
 
