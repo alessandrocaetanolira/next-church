@@ -36,12 +36,28 @@ npm run db:backup
 npm run db:setup:initial
 ```
 
-## Ambiente local
+## Instalação de um ambiente novo
 
-Crie `.env.local` na raiz deste projeto (`church-hub-next/.env.local`). Não coloque o
-arquivo dentro de `src/app`, pois o Next.js carrega as variáveis a partir da raiz.
+Siga esta ordem em um ambiente obtido por `git clone` ou `git pull`.
 
-Configuração mínima:
+### 1. Instalar dependências
+
+```bash
+npm install
+```
+
+O `postinstall` gera os clients Prisma. Se necessário, a geração pode ser repetida:
+
+```bash
+npm run prisma:generate
+```
+
+### 2. Criar o `.env`
+
+Crie o arquivo `.env` na raiz do projeto. Não coloque variáveis de banco dentro de
+`src/app`. Os scripts Prisma usam o `.env` da raiz.
+
+Configuração mínima local:
 
 ```bash
 DATABASE_URL="file:../databases/global.db"
@@ -74,17 +90,64 @@ absolutos em volume persistente.
 Os bancos de tenant e o global são locais e ignorados pelo Git. O `bible.db` é uma
 exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação.
 
-### Instalação limpa — comando inicial
+### 3. Executar o setup inicial
 
-Use o comando único para preparar o ambiente na ordem correta:
+Execute o único script de inicialização:
 
 ```bash
 npm run db:setup:initial
 ```
 
-Ele executa geração dos clients, migration global, planos, administrador global,
-migration/importação da Bíblia e provisionamento do tenant de desenvolvimento. Se o
-tenant já existir, o provisionamento é ignorado; a Bíblia existente é preservada.
+O script executa, nesta ordem:
+
+1. geração dos clients Prisma;
+2. migrations do banco global;
+3. seed dos planos;
+4. seed do administrador global;
+5. migration da Bíblia e importação idempotente de AA, ACF e NVI;
+6. provisionamento do tenant `igreja-teste`;
+7. seed do branding inicial.
+
+O `bible.db` existente é preservado. O script não deve ser usado para apagar um
+ambiente em produção; ele prepara um ambiente novo e ignora o provisionamento se o
+tenant já existir.
+
+### 4. Acessar o ambiente inicial
+
+Administrador global, sem informar slug:
+
+```text
+Email: admin@church.local
+Senha: admin@church
+```
+
+Administrador da igreja:
+
+```text
+Igreja: igreja-teste
+Email: admin@igreja-teste.com
+Senha: 123456
+```
+
+### 5. Iniciar e validar
+
+```bash
+npm run dev
+npm run lint
+npm test
+npm run build
+```
+
+Para conferir os bancos e migrations aplicadas:
+
+```bash
+npm run db:inventory
+```
+
+### Instalação manual — somente diagnóstico
+
+Use a sequência abaixo apenas para investigar uma etapa específica. Não misture essa
+sequência com `db:setup:initial` no mesmo ambiente:
 
 Execução manual equivalente, apenas para diagnóstico:
 
@@ -100,7 +163,8 @@ npx tsx prisma/provision.ts
 
 O `provision.ts` cria a igreja `igreja-teste`, aplica as migrations do tenant e cria o
 usuário inicial da igreja. O seed de administrador global vem antes porque esse usuário
-pertence ao banco global. Não rode `db:tenant:migrate:all` nessa instalação inicial.
+pertence ao banco global. Não rode `db:tenant:migrate:all` logo depois de provisionar
+um tenant novo; esse comando é para atualizar tenants já existentes.
 
 Se os bancos dos tenants já existirem e apenas as migrations precisarem ser aplicadas:
 

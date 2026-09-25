@@ -57,7 +57,7 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
       <div className="min-h-screen-dvh bg-background">
         {!hideMobileHeader && <Header title={title} />}
         <main className="pb-20 safe-bottom">
-          <div key={pathname} className="animate__animated animate__bounceIn">
+          <div key={pathname}>
             {children}
           </div>
         </main>
@@ -93,7 +93,7 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
             </div>
           </header>
           <main className="flex-1 overflow-auto">
-            <div key={pathname} className="animate__animated animate__bounceIn">
+            <div key={pathname}>
               {children}
             </div>
           </main>
