@@ -34,14 +34,14 @@ describe('permissões combinadas com recursos do plano', () => {
     expect(canAccessRoute(legacyAdmin, '/cantina')).toBe(true);
   });
 
-  it('não permite acessar a cantina apenas com permissão de pedido', () => {
+  it('permite acessar a cantina apenas com permissão de pedido', () => {
     const orderOnlyMember = {
       role: 'MEMBER',
       permissions: ['canteen:order'],
       planFeatures: ['canteen'],
     };
 
-    expect(canAccessCanteen(orderOnlyMember)).toBe(false);
-    expect(canAccessRoute(orderOnlyMember, '/cantina')).toBe(false);
+    expect(canAccessCanteen(orderOnlyMember)).toBe(true);
+    expect(canAccessRoute(orderOnlyMember, '/cantina')).toBe(true);
   });
 });

@@ -6,9 +6,7 @@ import { LayoutDashboard, Calendar, ShoppingCart, Wallet, Settings, Menu, BookOp
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { getAccessibleModules } from '@/lib/access-control';
-import { DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useDrawer } from '@/components/providers/DrawerProvider';
-import { Separator } from '@/components/ui/separator';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -56,17 +54,13 @@ export function BottomNav() {
           onClick={() => openDrawer({
             contentClassName: 'max-h-[70dvh]',
             content: <>
-              <DrawerHeader className="border-b text-left">
-                <DrawerTitle className="text-base">Menu</DrawerTitle>
-              </DrawerHeader>
-              <Separator className="mb-3" />
-              <div className="grid grid-cols-3 gap-2 overflow-y-auto p-4 pb-6">
+              <div className="grid grid-cols-3 gap-3 overflow-y-auto p-4 pb-6 pt-8">
                 {drawerItems.map((item) => {
                   const isActive = pathname === item.to;
                   return (
                     <NavLink key={item.to} to={item.to} onClick={closeDrawer}
-                      className={cn('flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-all',
-                        isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')}>
+                      className={cn('flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl bg-muted/40 p-4 text-center transition-all dark:bg-muted/30',
+                        isActive ? 'bg-primary/10 text-primary dark:bg-primary/15' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground')}>
                       <item.icon className="h-5 w-5" />
                       <span className="text-center text-[11px] font-medium leading-tight">{item.label}</span>
                     </NavLink>

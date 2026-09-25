@@ -139,7 +139,7 @@ export function MembersList() {
                   {(member.creditBalance ?? 0) > 0 ? (
                     <p className="font-bold text-amber-500">{formatCurrency(member.creditBalance ?? 0)}</p>
                   ) : (
-                    <Badge variant="outline" className="border-green-600 text-green-600">Em dia</Badge>
+                    <Badge variant="success">Em dia</Badge>
                   )}
                   <div className="flex gap-2">
                     {canUpdate ? <Button size="sm" variant="outline" onClick={() => { setSelectedMember(member); setDialogOpen(true); }}>

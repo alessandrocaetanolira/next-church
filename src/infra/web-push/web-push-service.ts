@@ -1,5 +1,6 @@
 import webpush, { type PushSubscription } from 'web-push';
 
+/** Conteúdo mínimo transportado pelo Service Worker para uma notificação Push. */
 export type WebPushPayload = {
   title: string;
   body: string;
@@ -29,6 +30,10 @@ export class WebPushService {
     return true;
   }
 
+  /**
+   * Entrega o mesmo conteúdo para as inscrições do destinatário.
+   * A infraestrutura não resolve destinatários nem conhece o módulo de origem.
+   */
   async send(subscriptions: WebPushSubscription[], payload: WebPushPayload) {
     if (!this.configure() || subscriptions.length === 0) {
       return { sent: 0, expiredIds: [], failed: 0 };

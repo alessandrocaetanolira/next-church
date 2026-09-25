@@ -97,6 +97,11 @@ export class CanteenSalesRepository {
     return this.findById(id);
   }
 
+  async archive(id: string) {
+    await this.prisma.$executeRawUnsafe(`UPDATE "Sale" SET "deletedAt" = ?, "updatedAt" = ? WHERE id = ?`, new Date().toISOString(), new Date().toISOString(), id);
+    return this.findById(id);
+  }
+
   async approve(id: string, paymentMethod: string, createdBy: string) {
     const sale = await this.findById(id);
     if (!sale) return null;

@@ -21,7 +21,7 @@ export default function Dashboard() {
   const isLeader = ['ADMIN', 'PASTOR', 'LEADER'].includes(userRole);
 
   return (
-    <div className="p-4 space-y-6 max-w-4xl mx-auto">
+    <div className="mx-auto max-w-4xl space-y-6 p-4">
       <PageTitle title={isLeader ? "Dashboard" : "Início"} />
       
       {isLeader ? <LeaderDashboard /> : <MemberDashboard />}

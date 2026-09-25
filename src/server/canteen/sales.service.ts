@@ -7,7 +7,7 @@ import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tena
 import { getCanteenStatus } from '@/lib/server/canteen-operation';
 import { CanteenSalesRepository, type SaleItem } from './sales.repository';
 
-type User = { email?: string | null; name?: string | null; role?: string | null; permissions?: string[] | string | null; planFeatures?: string[] | string | null };
+type User = { email?: string | null; name?: string | null; role?: string | null; permissions?: string[] | string | null; planFeatures?: string[] | string | null; linkedMemberId?: string | null };
 
 export class CanteenSalesService {
   constructor(
@@ -45,6 +45,9 @@ export class CanteenSalesService {
     if (!canSell && (paymentMethod !== 'pending' || orderStatus !== 'pending')) {
       throw new ForbiddenError('Membros devem enviar pedidos para aprovação da cantina.');
     }
+    if (!canSell && !user.linkedMemberId) {
+      throw new ForbiddenError('Seu usuário ainda não está vinculado a um membro da igreja.');
+    }
 
     const result = await this.repository.create({
       id: typeof body.id === 'string' && body.id ? body.id : undefined,
@@ -52,8 +55,8 @@ export class CanteenSalesService {
       paymentMethod,
       orderStatus,
       items: normalizedItems,
-      memberId: typeof body.memberId === 'string' ? body.memberId : null,
-      memberName: typeof body.memberName === 'string' ? body.memberName : null,
+      memberId: canSell ? (typeof body.memberId === 'string' ? body.memberId : null) : (user.linkedMemberId ?? null),
+      memberName: canSell ? (typeof body.memberName === 'string' ? body.memberName : null) : user.name ?? user.email ?? null,
       createdBy: typeof body.createdBy === 'string' && body.createdBy ? body.createdBy : user.name ?? user.email ?? 'Sistema',
       createdAt: typeof body.createdAt === 'string' ? new Date(body.createdAt) : undefined,
     });

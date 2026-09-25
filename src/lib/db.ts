@@ -39,7 +39,7 @@ export interface LocalSale {
   total: number;
   paymentMethod: string;
   items: CartItem[];
-  orderStatus?: 'preparing' | 'ready' | 'cancelled';
+  orderStatus?: 'pending' | 'preparing' | 'ready' | 'cancelled';
   memberId?: string;
   memberName?: string;
   createdBy: string;

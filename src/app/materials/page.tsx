@@ -18,6 +18,7 @@ import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-contro
 import { createMaterial, deleteMaterial, listMaterials, updateMaterial, updateMaterialQuantity, type Material } from '@/services/materials/materials-api';
 
 type MaterialItem = Material;
+type StockStatus = 'destructive' | 'warning' | 'success';
 
 const categories = ['Limpeza', 'Cantina', 'Louvor', 'Escritório', 'Outros'];
 const units = ['unidades', 'litros', 'kg', 'metros', 'caixas', 'pacotes', 'rolos', 'jogos'];
@@ -55,7 +56,7 @@ export default function MaterialsPage() {
     [materials, search]
   );
 
-  const getStockStatus = (material: MaterialItem) => {
+  const getStockStatus = (material: MaterialItem): { color: StockStatus; label: string } => {
     const ratio = material.minQuantity > 0 ? material.quantity / material.minQuantity : material.quantity;
     if (ratio <= 1) return { color: 'destructive', label: 'Baixo' };
     if (ratio <= 2) return { color: 'warning', label: 'Atenção' };
@@ -141,7 +142,7 @@ export default function MaterialsPage() {
       header: 'Status',
       render: (material) => {
         const status = getStockStatus(material);
-        return <Badge variant={status.color === 'success' ? 'default' : 'destructive'} className={cn(status.color === 'warning' && 'bg-amber-500 text-white', status.color === 'success' && 'bg-green-600 text-white')}>{status.label}</Badge>;
+        return <Badge variant={status.color}>{status.label}</Badge>;
       },
     },
   ];

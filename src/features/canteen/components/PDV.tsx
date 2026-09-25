@@ -340,7 +340,7 @@ export function PDV() {
         {items.length > 0 && (
             <Drawer open={cartOpen} onOpenChange={setCartOpen}>
                 <DrawerTrigger asChild>
-                    <button className="fixed bottom-20 left-4 right-4 z-40 flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground shadow-lg transition-transform active:scale-[0.98]">
+                    <button className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-4 right-4 z-[55] flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground shadow-lg transition-transform active:scale-[0.98]">
                         <div className="flex items-center gap-3">
                             <ShoppingCart className="w-5 h-5" />
                             <span className="font-semibold">{cartCount} item(s)</span>

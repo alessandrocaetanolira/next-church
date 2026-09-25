@@ -365,9 +365,9 @@ export function MemberDashboard() {
   if (!devotional) return <div>Carregando...</div>;
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto pb-20">
-      <Card className="border-border bg-card p-4">
-        <div className="grid grid-cols-3 gap-3 text-center">
+    <div className="mx-auto max-w-lg space-y-4 pb-20 sm:space-y-6">
+      <Card className="border-border bg-card p-3 sm:p-4">
+        <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
           <div className="text-center">
             <p className="text-lg font-bold text-foreground">{points}</p>
             <p className="text-[10px] text-muted-foreground">Pontos</p>
@@ -385,7 +385,7 @@ export function MemberDashboard() {
 
       {/* Devotional Card */}
       <Card className="overflow-hidden border-border">
-        <div className="bg-primary/5 p-4 flex items-center justify-between">
+          <div className="flex items-center justify-between bg-primary/5 p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-primary" />
             <h3 className="font-semibold text-sm">Devocional do Dia</h3>
@@ -397,7 +397,7 @@ export function MemberDashboard() {
             </div>
           )}
         </div>
-        <div className="p-4 space-y-3">
+        <div className="space-y-3 p-3 sm:p-4">
           <blockquote className="border-l-4 border-primary pl-3 italic text-sm text-foreground/90">
             "{devotional.verse}"
           </blockquote>
@@ -443,28 +443,28 @@ export function MemberDashboard() {
       </Card>
 
       {/* Quick Actions Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {canOrder ? <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/carteira?view=order')}>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {canOrder ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/carteira?view=order')}>
           <ShoppingBag className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Fazer Pedido</span>
         </Button> : null}
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/quiz')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/quiz')}>
           <Trophy className="w-6 h-6 text-yellow-500" />
           <span className="text-xs font-medium">Quiz Bíblico</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/jogos-novos')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/jogos-novos')}>
           <Gamepad2 className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Jogos</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/bible')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/bible')}>
           <BookOpen className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Ler Bíblia</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/feed')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/feed')}>
           <MessageCircle className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Comunidade</span>
         </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/groups?type=team')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/groups?type=team')}>
           <UserPlus className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Entrar em Grupo</span>
         </Button>
@@ -524,10 +524,10 @@ export function MemberDashboard() {
                       <button
                         key={product.id}
                         onClick={() => addToCart(product)}
-                        className="rounded-xl border bg-card p-3 text-left transition-all hover:border-primary/30 hover:shadow-sm"
+                        className="rounded-xl border border-border bg-card p-3 text-left transition-all hover:border-primary/30 hover:shadow-sm"
                         disabled={product.stock <= 0}
                       >
-                        <div className="relative overflow-hidden rounded-lg border bg-muted/30">
+                        <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30">
                           <div className="aspect-[4/3] w-full">
                             {product.imageUrl ? (
                               <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
@@ -560,7 +560,7 @@ export function MemberDashboard() {
               {pendingOrders.length > 0 ? (
                 <div className="space-y-2">
                   {pendingOrders.map((order) => (
-                    <div key={order.id} className="rounded-lg border p-3">
+                    <div key={order.id} className="rounded-lg border border-border p-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-medium">Pedido #{order.id.slice(-4)}</p>
@@ -605,7 +605,7 @@ export function MemberDashboard() {
                     <DrawerTitle>Seu Carrinho</DrawerTitle>
                   </DrawerHeader>
                   <div className="space-y-4 overflow-y-auto px-4 pb-6">
-                    <div className="rounded-xl border bg-card p-4 space-y-3">
+                    <div className="space-y-3 rounded-xl border border-border bg-card p-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-sm">Itens</h3>
                         <span className="text-sm font-bold">R$ {cartTotal.toFixed(2)}</span>
@@ -613,7 +613,7 @@ export function MemberDashboard() {
 
                       <div className="space-y-2">
                         {cart.map((item) => (
-                          <div key={item.productId} className="flex items-center gap-2 rounded-lg border p-2">
+                          <div key={item.productId} className="flex items-center gap-2 rounded-lg border border-border p-2">
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate">{item.productName}</p>
                               <p className="text-xs text-muted-foreground">R$ {item.unitPrice.toFixed(2)} un.</p>

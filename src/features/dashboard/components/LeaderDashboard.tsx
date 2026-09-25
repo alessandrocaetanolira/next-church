@@ -32,27 +32,27 @@ export function LeaderDashboard() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-4 pb-20 sm:space-y-6">
       {/* Welcome Header */}
-      <Card className="p-6 bg-card border-border">
+      <Card className="border-border bg-card p-4 sm:p-6">
         <h2 className="text-lg font-semibold">Olá, {user?.name?.split(' ')[0]} 👋</h2>
         <p className="text-muted-foreground text-sm mt-1">Aqui está o resumo das atividades da igreja.</p>
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
-        {canOpenCanteen ? <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/cantina')}>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        {canOpenCanteen ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/cantina')}>
           <ShoppingCart className="w-6 h-6 text-primary" />
           <span className="text-sm font-medium">Abrir Cantina</span>
         </Button> : null}
-        <Button variant="outline" className="h-20 flex-col gap-2 bg-card hover:bg-muted/50 border-border" onClick={() => router.push('/schedules/new')}>
+        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/schedules/new')}>
           <Plus className="w-6 h-6 text-green-500" />
           <span className="text-sm font-medium">Nova Tarefa</span>
         </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <StatCard 
           title="Concluídas" 
           value={stats.completedTasks} 
@@ -81,14 +81,14 @@ export function LeaderDashboard() {
 
       {/* Recent Activity / Tasks (Placeholder) */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-2 flex items-center justify-between sm:mb-4">
           <h3 className="font-semibold text-foreground">Próximas tarefas</h3>
           <Button variant="ghost" size="sm" className="text-primary" onClick={() => router.push('/schedules')}>
             Ver todas
           </Button>
         </div>
         
-        <Card className="p-8 text-center text-muted-foreground border-border border-dashed">
+        <Card className="border-border border-dashed p-6 text-center text-muted-foreground sm:p-8">
           <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-20" />
           <p>Nenhuma tarefa pendente para hoje!</p>
         </Card>

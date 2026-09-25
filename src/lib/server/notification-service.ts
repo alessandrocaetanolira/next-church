@@ -4,7 +4,14 @@ import { webPushService } from '@/infra/web-push/web-push-service';
 import { PushSubscriptionsRepository } from '@/server/notifications/push-subscriptions.repository';
 import { generateId } from '@/lib/id';
 
-type NotificationInput = {
+/**
+ * Mensagem normalizada produzida por qualquer módulo de negócio.
+ *
+ * `userEmail` é o destinatário. O remetente deve ser contextualizado pelo
+ * módulo na mensagem (por exemplo, o nome de quem publicou ou operou). O
+ * dispatcher não depende de entidades específicas da cantina, feed ou grupos.
+ */
+export type NotificationInput = {
   userEmail: string;
   type: string;
   title: string;
@@ -230,6 +237,10 @@ async function getFeedPostAuthorEmail(prisma: PrismaClient, postId: string) {
   return post?.userId ? normalizeEmail(post.userId) : null;
 }
 
+/**
+ * Dispatcher compartilhado: persiste, publica via SSE e tenta entregar Push.
+ * Falhas de Push não impedem a persistência nem o SSE.
+ */
 export async function createNotifications(
   prisma: PrismaClient,
   tenantId: string,

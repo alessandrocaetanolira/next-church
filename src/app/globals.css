@@ -81,7 +81,7 @@
 
   :root[data-theme="amber"] {
     --primary: 38 92% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
     --primary-light: 38 92% 96%;
     --primary-dark: 38 92% 40%;
     --ring: 38 92% 50%;

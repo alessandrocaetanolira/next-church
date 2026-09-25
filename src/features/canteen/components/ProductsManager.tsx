@@ -1,16 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { ProductForm } from '@/components/forms/ProductForm';
+import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useProducts } from '@/features/canteen/hooks/use-products';
-import { db, type LocalProduct } from '@/lib/db';
+import { db } from '@/lib/db';
 import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -20,15 +19,14 @@ import { deleteCanteenProduct, updateCanteenProduct } from '@/services/canteen/p
 
 export function ProductsManager() {
   const { user } = useAuth();
+  const router = useRouter();
   const canManageProducts = hasActionPermission(user, 'canteen', 'manage_products');
   const canCreate = canManageProducts;
   const canUpdate = canManageProducts;
   const canDelete = canManageProducts;
   const products = useProducts();
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<LocalProduct | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const filteredProducts = products.filter((product) =>
@@ -111,33 +109,9 @@ export function ProductsManager() {
             />
           </div>
 
-          {canCreate || canUpdate ? <Drawer
-            open={dialogOpen}
-            onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) setSelectedProduct(null);
-            }}
-          >
-            {canCreate ? <DrawerTrigger asChild>
-              <Button onClick={() => setSelectedProduct(null)}>
+          {canCreate ? <Button onClick={() => router.push('/cantina/products/new')}>
                 <Plus className="mr-2 h-4 w-4" /> Novo
-              </Button>
-            </DrawerTrigger> : null}
-            <DrawerContent className="max-h-[90vh]">
-              <DrawerHeader>
-                <DrawerTitle>{selectedProduct ? 'Editar Produto' : 'Cadastrar Produto'}</DrawerTitle>
-              </DrawerHeader>
-              <div className="overflow-y-auto px-4 pb-6">
-              <ProductForm
-                product={selectedProduct ?? undefined}
-                onSuccess={() => {
-                  setDialogOpen(false);
-                  setSelectedProduct(null);
-                }}
-              />
-              </div>
-            </DrawerContent>
-          </Drawer> : null}
+              </Button> : null}
         </div>
 
         <div className="space-y-3">
@@ -145,7 +119,7 @@ export function ProductsManager() {
             <div key={product.id} className="bg-card rounded-xl p-4 border border-border">
               <div className="flex items-start justify-between">
                 <div className="flex flex-1 gap-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-muted/30">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30">
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
                     ) : (
@@ -184,8 +158,7 @@ export function ProductsManager() {
                     variant="ghost"
                     className="h-8 w-8"
                     onClick={() => {
-                      setSelectedProduct(product);
-                      setDialogOpen(true);
+                      router.push(`/cantina/products/${product.id}/edit`);
                     }}
                   >
                     <Pencil className="w-4 h-4" />

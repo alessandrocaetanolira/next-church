@@ -34,6 +34,13 @@ export class CanteenSalesDetailService {
       return parseSale(result);
     }
 
+    if (action === 'archive') {
+      if (sale.orderStatus !== 'ready') throw new ValidationError('Somente pedidos prontos podem ser retirados da fila.');
+      const result = await this.repository.archive(id);
+      if (!result) throw new NotFoundError('Pedido não encontrado.');
+      return parseSale(result);
+    }
+
     if (action === 'approve') {
       const paymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
       if (!paymentMethod || paymentMethod === 'pending') throw new ValidationError('Forma de pagamento inválida.');

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from 'sonner';
 import { PLAN_FEATURES } from '@/lib/plan-features';
 import { createAdminPlan, deleteAdminPlan, listAdminPlans, updateAdminPlan, type AdminPlan } from '@/services/admin/plans-api';
@@ -127,12 +128,12 @@ export default function PlansPage() {
             <div className="space-y-2"><Label htmlFor="plan-code">Código</Label><Input id="plan-code" value={form.code} disabled={Boolean(editingId)} onChange={(event) => updateForm('code', event.target.value)} required /></div>
             <div className="space-y-2"><Label htmlFor="plan-name">Nome</Label><Input id="plan-name" value={form.name} onChange={(event) => updateForm('name', event.target.value)} required /></div>
             <div className="space-y-2 md:col-span-2"><Label htmlFor="plan-description">Descrição</Label><Textarea id="plan-description" value={form.description} onChange={(event) => updateForm('description', event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="plan-price">Preço em centavos</Label><Input id="plan-price" type="number" min="0" value={form.priceCents} onChange={(event) => updateForm('priceCents', event.target.value)} /></div>
+            <div className="space-y-2"><Label htmlFor="plan-price">Preço mensal</Label><CurrencyInput id="plan-price" value={Number(form.priceCents) / 100} onValueChange={(value) => updateForm('priceCents', String(Math.round(value * 100)))} /></div>
             <div className="space-y-2"><Label htmlFor="plan-users">Máximo de usuários</Label><Input id="plan-users" type="number" min="0" placeholder="Ilimitado" value={form.maxUsers} onChange={(event) => updateForm('maxUsers', event.target.value)} /></div>
             <div className="space-y-2"><Label htmlFor="plan-storage">Armazenamento em MB</Label><Input id="plan-storage" type="number" min="0" placeholder="Ilimitado" value={form.maxStorageMb} onChange={(event) => updateForm('maxStorageMb', event.target.value)} /></div>
             <div className="space-y-2 md:col-span-2">
               <Label>Recursos liberados pelo plano</Label>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 rounded-lg border p-3">
+              <div className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-2 lg:grid-cols-3">
                 {PLAN_FEATURES.map((feature) => {
                   const checked = form.features.split(',').map((item) => item.trim()).includes(feature.key);
                   return <label key={feature.key} className="flex items-start gap-2 text-sm"><input type="checkbox" checked={checked} onChange={() => toggleFeature(feature.key)} /><span><span className="font-medium">{feature.label}</span><span className="block text-xs text-muted-foreground">{feature.description}</span></span></label>;
@@ -152,7 +153,7 @@ export default function PlansPage() {
         <CardHeader><CardTitle>Planos cadastrados</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : plans.map((plan) => (
-            <div key={plan.id} className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
+            <div key={plan.id} className="flex flex-col gap-3 rounded-lg border border-border p-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2"><h2 className="font-semibold">{plan.name}</h2><Badge variant="outline">{plan.code}</Badge><Badge variant={plan.active ? 'success' : 'destructive'}>{plan.active ? 'Ativo' : 'Inativo'}</Badge></div>
                 <p className="text-sm text-muted-foreground">{plan.description || 'Sem descrição.'}</p>

@@ -446,7 +446,7 @@ function MyAccountPageContent() {
                         </span>
                       )}
                       <div className="flex flex-col h-full justify-between gap-2">
-                        <div className="overflow-hidden rounded-lg border bg-muted/30">
+                        <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
                           <div className="aspect-[4/3] w-full">
                             {product.imageUrl ? (
                               <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
@@ -479,7 +479,7 @@ function MyAccountPageContent() {
             {pendingOrders.length > 0 ? (
               <div className="space-y-2">
                 {pendingOrders.map((order) => (
-                  <div key={order.id} className="rounded-lg border p-3">
+                  <div key={order.id} className="rounded-lg border border-border p-3">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium">Pedido #{order.id.slice(-4)}</p>
@@ -506,7 +506,7 @@ function MyAccountPageContent() {
         {cart.length > 0 && (
           <Sheet open={cartOpen} onOpenChange={setCartOpen}>
             <SheetTrigger asChild>
-              <button className="fixed bottom-20 left-4 right-4 z-40 bg-primary text-primary-foreground rounded-xl p-4 flex items-center justify-between shadow-lg active:scale-[0.98] transition-transform md:max-w-md md:mx-auto">
+              <button className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-4 right-4 z-[55] flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground shadow-lg active:scale-[0.98] transition-transform md:mx-auto md:max-w-md">
                 <div className="flex items-center gap-3">
                   <div className="bg-white/20 p-2 rounded-lg">
                     <ShoppingCart className="w-5 h-5" />
@@ -520,7 +520,7 @@ function MyAccountPageContent() {
               </button>
             </SheetTrigger>
             <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl px-0 pb-0">
-              <SheetHeader className="px-6 pb-4 border-b">
+              <SheetHeader className="border-b border-border px-6 pb-4">
                 <SheetTitle>Seu Pedido</SheetTitle>
               </SheetHeader>
               <ScrollArea className="flex-1 px-6 py-4 h-full">
@@ -531,7 +531,7 @@ function MyAccountPageContent() {
                         <p className="font-medium text-sm truncate">{item.productName}</p>
                         <p className="text-xs text-muted-foreground">R$ {item.unitPrice.toFixed(2)} un.</p>
                       </div>
-                      <div className="flex items-center gap-2 bg-background rounded-md border p-1 shadow-sm">
+                      <div className="flex items-center gap-2 rounded-md border border-border bg-background p-1 shadow-sm">
                         <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm" onClick={() => updateQuantity(item.productId, -1)}>
                           <Minus className="w-3 h-3" />
                         </Button>

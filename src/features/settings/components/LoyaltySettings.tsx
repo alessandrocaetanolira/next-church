@@ -9,6 +9,8 @@
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Controller } from "react-hook-form";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -35,7 +37,7 @@ export function LoyaltySettings() {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="text-sm font-medium">Valor mínimo para fidelidade (R$)</label>
-            <Input type="number" {...form.register("minPurchase")} />
+            <Controller control={form.control} name="minPurchase" render={({ field }) => <CurrencyInput value={Number(field.value) || 0} onValueChange={field.onChange} onBlur={field.onBlur} />} />
           </div>
           <div>
             <label className="text-sm font-medium">% de Desconto</label>

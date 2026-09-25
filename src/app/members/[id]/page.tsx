@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { MemberForm } from '@/components/forms/MemberForm';
+import { MemberFormEdit } from '@/components/forms/MemberFormEdit';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { deleteMember, getMember, updateMemberAccess } from '@/services/members/members-api';
@@ -55,11 +55,20 @@ const permissionOptions = [
   { id: 'materials:update', label: 'Materiais: editar' },
   { id: 'materials:manage', label: 'Materiais: administrar' },
   { id: 'canteen:view', label: 'Cantina: ver' },
+  { id: 'canteen:catalog', label: 'Cantina: catálogo' },
+  { id: 'canteen:order', label: 'Cantina: pedir' },
   { id: 'canteen:manage', label: 'Cantina: administrar' },
   { id: 'canteen:create', label: 'Cantina: criar' },
   { id: 'canteen:operate', label: 'Cantina: operar' },
   { id: 'canteen:sell', label: 'Cantina: vender' },
   { id: 'canteen:manage_products', label: 'Cantina: produtos' },
+  { id: 'feed:view', label: 'Feed: ver' },
+  { id: 'feed:create', label: 'Feed: publicar' },
+  { id: 'feed:publish', label: 'Feed: publicar avisos' },
+  { id: 'feed:share', label: 'Feed: compartilhar' },
+  { id: 'feed:comment', label: 'Feed: comentar' },
+  { id: 'feed:update', label: 'Feed: editar' },
+  { id: 'bible:view', label: 'Bíblia: ver' },
   { id: 'pastoral:view', label: 'Pastoral: ver' },
   { id: 'settings:update', label: 'Configurações: editar' },
 ] as const;
@@ -82,6 +91,34 @@ const formatDate = (value?: string | null) => {
   if (!value) return '-';
   return new Date(value).toLocaleDateString('pt-BR');
 };
+
+const normalizeWhatsAppPhone = (value?: string | null) => {
+  const digits = (value ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.startsWith('55') ? digits : `55${digits}`;
+};
+
+const formatPhone = (value?: string | null) => {
+  const digits = (value ?? '').replace(/\D/g, '');
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return value || '-';
+};
+
+function WhatsAppPhone({ phone }: { phone?: string | null }) {
+  const normalized = normalizeWhatsAppPhone(phone);
+  if (!normalized) return <span>-</span>;
+
+  return (
+    <a
+      href={`https://wa.me/${normalized}`}
+      className="text-primary underline-offset-4 hover:underline"
+      rel="noreferrer"
+    >
+      {formatPhone(phone)}
+    </a>
+  );
+}
 
 export default function MemberDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -189,7 +226,7 @@ export default function MemberDetailsPage() {
           </Button>
           <div>
             <h2 className="text-xl font-bold">{member.name}</h2>
-            <p className="text-sm text-muted-foreground">{member.email} • {member.phone}</p>
+            <p className="text-sm text-muted-foreground">{member.email} • <WhatsAppPhone phone={member.phone} /></p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant={member.approved ? 'success' : 'secondary'}>
@@ -226,7 +263,7 @@ export default function MemberDetailsPage() {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-xs text-muted-foreground">Telefone do responsável</p>
-              <p className="text-sm">{member.parentPhone || '-'}</p>
+              <p className="text-sm"><WhatsAppPhone phone={member.parentPhone} /></p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Estado civil</p>
@@ -290,7 +327,7 @@ export default function MemberDetailsPage() {
             <DrawerTitle>Editar Membro</DrawerTitle>
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
-            <MemberForm
+            <MemberFormEdit
               member={member}
               onSuccess={() => {
                 setEditOpen(false);

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { hasActionPermission } from '@/lib/access-control';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
 
 const POST_TYPE_CONFIG = {
@@ -49,8 +49,7 @@ function sortFeedPosts(items: FeedPost[]) {
 }
 
 export default function FeedPage() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { user } = useAuth();
   const role = user?.role?.toUpperCase() ?? 'MEMBER';
   const canPostAnnouncement = ['ADMIN', 'PASTOR'].includes(role);
   const canTargetFeed = ['ADMIN', 'PASTOR'].includes(role);
@@ -270,7 +269,7 @@ export default function FeedPage() {
                 ) : (
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">Visibilidade</p>
-                    <div className="flex h-9 items-center gap-2 rounded-md border px-3 text-xs text-muted-foreground">
+                    <div className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs text-muted-foreground">
                       <Globe className="h-3.5 w-3.5" />
                       <span>Pública</span>
                     </div>
@@ -457,7 +456,7 @@ export default function FeedPage() {
                       )}
                       <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{post.content}</p>
                       {post.mediaUrl ? (
-                        <div className="mt-3 overflow-hidden rounded-xl border bg-muted/20">
+                        <div className="mt-3 overflow-hidden rounded-xl border border-border bg-muted/20">
                           {post.mediaType === 'video' ? (
                             <video src={post.mediaUrl} controls className="max-h-80 w-full bg-black object-cover" />
                           ) : (

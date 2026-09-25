@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SerwistProvider } from "@serwist/turbopack/react";
+import "animate.css";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { PWAProvider } from "@/components/providers/PWAProvider";

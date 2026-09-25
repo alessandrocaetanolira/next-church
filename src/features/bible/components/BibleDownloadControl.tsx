@@ -44,7 +44,7 @@ export function BibleDownloadControl({ translation }: BibleDownloadControlProps)
     toast.success(`Conteúdo offline de ${translation} removido.`);
   };
 
-  return <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
+  return <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
     <div className="flex items-center justify-between gap-2">
       <div>
         <p className="text-sm font-medium">Leitura offline</p>

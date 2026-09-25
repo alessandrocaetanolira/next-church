@@ -95,7 +95,7 @@ export function MemberOrdersView() {
             <DialogTitle>Aprovar pedido</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="rounded-xl border bg-muted/20 p-3">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
               <p className="font-medium">{selectedOrder?.memberName || 'Pedido sem identificação'}</p>
               <p className="text-sm text-muted-foreground">{selectedOrder?.items.map((item) => `${item.quantity}x ${item.name}`).join(', ')}</p>
               <p className="mt-2 font-bold text-primary">{formatCurrency(selectedOrder?.total ?? 0)}</p>

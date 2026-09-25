@@ -62,7 +62,7 @@ export function TenantList() {
 
   return (
     <>
-    <div className="overflow-x-auto rounded-md border">
+    <div className="overflow-x-auto rounded-md border border-border">
       <Table>
         <TableHeader>
           <TableRow>

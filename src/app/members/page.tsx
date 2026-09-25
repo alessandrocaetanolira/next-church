@@ -6,12 +6,12 @@ import { useUIStore } from '@/features/ui/store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/DataTable';
+import { SharedFlatList } from '@/components/SharedFlatList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from 'sonner';
 import { Eye, Plus, QrCode } from 'lucide-react';
-import { MemberForm } from '@/components/forms/MemberForm';
 import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
 import { hasActionPermission } from '@/lib/access-control';
 import { listMembers } from '@/services/members/members-api';
@@ -59,7 +59,6 @@ export default function MembersPage() {
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [memberDrawerOpen, setMemberDrawerOpen] = useState(false);
   const [inviteDrawerOpen, setInviteDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -130,7 +129,7 @@ export default function MembersPage() {
             <QrCode className="mr-2 h-4 w-4" />
             Convidar
           </Button> : null}
-          {canCreate ? <Button onClick={() => setMemberDrawerOpen(true)}>
+          {canCreate ? <Button onClick={() => router.push('/members/new')}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Membro
           </Button> : null}
@@ -148,14 +147,21 @@ export default function MembersPage() {
         <LoadingState />
       ) : (
         <>
-          <div className="grid gap-3 lg:hidden">
-            {filteredMembers.map((member) => (
+          <div className="lg:hidden">
+            <SharedFlatList
+              data={filteredMembers}
+              keyExtractor={(member) => member.id}
+              emptyComponent={<EmptyState title="Nenhum membro encontrado." />}
+              renderItem={(member) => (
               <Card key={member.id}>
                 <CardContent className="space-y-3 p-4">
-                  <div>
-                    <p className="font-medium">{member.name}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+                      {member.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0"><p className="truncate font-medium">{member.name}</p>
                     <p className="text-sm text-muted-foreground">{member.email}</p>
-                    <p className="text-sm text-muted-foreground">{member.phone}</p>
+                    <p className="text-sm text-muted-foreground">{member.phone}</p></div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {member.parentPhone ? <Badge variant="outline">Resp.: {member.parentPhone}</Badge> : null}
@@ -172,10 +178,8 @@ export default function MembersPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
-            {filteredMembers.length === 0 ? (
-              <EmptyState title="Nenhum membro encontrado." />
-            ) : null}
+              )}
+            />
           </div>
 
           <div className="hidden lg:block">
@@ -192,22 +196,6 @@ export default function MembersPage() {
           </div>
         </>
       )}
-
-      <Drawer open={memberDrawerOpen} onOpenChange={setMemberDrawerOpen}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>Adicionar Membro</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-6">
-            <MemberForm
-              onSuccess={() => {
-                setMemberDrawerOpen(false);
-                void fetchMembers();
-              }}
-            />
-          </div>
-        </DrawerContent>
-      </Drawer>
 
       <Drawer open={inviteDrawerOpen} onOpenChange={setInviteDrawerOpen}>
         <DrawerContent className="max-h-[90vh]">

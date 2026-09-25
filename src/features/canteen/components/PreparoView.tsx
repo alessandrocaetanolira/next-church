@@ -12,7 +12,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChefHat, CheckCircle2, Clock, Trash2, XCircle } from "lucide-react";
+import { ChefHat, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateCanteenSale } from "@/services/canteen/operations-api";
@@ -45,16 +45,11 @@ export function PreparoView() {
 
   const handleRemoveFromQueue = async (orderId: string) => {
     try {
-      await updateCanteenSale(orderId, { action: 'status', orderStatus: null });
-
-      await db.sales.update(orderId, {
-        orderStatus: undefined,
-        _status: 'synced',
-      });
-
-      toast.success('Pedido removido da fila.');
+      await updateCanteenSale(orderId, { action: 'archive' });
+      await db.sales.delete(orderId);
+      toast.success('Pedido retirado da fila.');
     } catch {
-      toast.error('Erro ao remover pedido da fila.');
+      toast.error('Erro ao retirar pedido da fila.');
     }
   };
 
@@ -64,6 +59,7 @@ export function PreparoView() {
       (order) =>
         order.paymentMethod !== 'pending' &&
         order.paymentMethod !== 'cancelled' &&
+        order.orderStatus !== 'pending' &&
         typeof order.orderStatus === 'string'
     );
     if (filter === 'all') return eligible;
@@ -109,11 +105,11 @@ export function PreparoView() {
 
       <div className="space-y-3">
         {prepOrders.map((order) => {
-          const status = order.orderStatus ?? 'preparing';
+          const status = order.orderStatus === 'pending' ? 'preparing' : (order.orderStatus ?? 'preparing');
           const statusConfig = {
-            preparing: { label: 'Preparando', icon: Clock, badge: 'bg-amber-500/10 text-amber-500 border-amber-500/20' },
-            ready: { label: 'Pronto', icon: CheckCircle2, badge: 'bg-green-500/10 text-green-500 border-green-500/20' },
-            cancelled: { label: 'Cancelado', icon: XCircle, badge: 'bg-destructive/10 text-destructive border-destructive/20' },
+            preparing: { label: 'Preparando', icon: Clock, badge: 'warning' },
+            ready: { label: 'Pronto', icon: CheckCircle2, badge: 'success' },
+            cancelled: { label: 'Cancelado', icon: XCircle, badge: 'destructive' },
           } as const;
           const Icon = statusConfig[status].icon;
 
@@ -137,7 +133,7 @@ export function PreparoView() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={statusConfig[status].badge}>{statusConfig[status].label}</Badge>
+                        <Badge variant={statusConfig[status].badge}>{statusConfig[status].label}</Badge>
                         <span className="text-sm font-medium">Pedido #{order.id.slice(-4)}</span>
                       </div>
                       {order.memberName ? <p className="mt-0.5 text-sm text-muted-foreground">{order.memberName}</p> : null}
@@ -167,9 +163,11 @@ export function PreparoView() {
                         <XCircle className="w-4 h-4" /> Cancelar
                       </Button>
                     </>
+                  ) : status === 'cancelled' ? (
+                    <p className="w-full text-center text-xs text-muted-foreground">Pedido cancelado e mantido no histórico.</p>
                   ) : (
-                    <Button size="sm" variant={status === 'cancelled' ? 'ghost' : 'outline'} className="flex-1 gap-1" onClick={() => handleRemoveFromQueue(order.id)}>
-                      <Trash2 className="w-4 h-4" /> {status === 'ready' ? 'Retirar da fila' : 'Remover'}
+                    <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => void handleRemoveFromQueue(order.id)}>
+                      Retirar da fila
                     </Button>
                   )}
                 </div>

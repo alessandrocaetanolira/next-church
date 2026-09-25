@@ -79,14 +79,14 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="secondary">Cadastro</Badge>
               <Badge variant="outline">/cadastro?igreja={tenantSlug}</Badge>
             </div>
-            <div className="rounded-xl border bg-card p-3">
+              <div className="rounded-xl border border-border bg-card p-3">
               <img
                 src={registrationQrCodeUrl}
                 alt={`QR Code do cadastro da igreja ${tenantSlug}`}
                 className="mx-auto h-56 w-56 rounded-lg"
               />
             </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
               {registrationLink}
             </div>
             <div className="flex gap-2">
@@ -106,14 +106,14 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="secondary">Login</Badge>
               <Badge variant="outline">/auth/login?igreja={tenantSlug}</Badge>
             </div>
-            <div className="rounded-xl border bg-card p-3">
+              <div className="rounded-xl border border-border bg-card p-3">
               <img
                 src={loginQrCodeUrl}
                 alt={`QR Code do login da igreja ${tenantSlug}`}
                 className="mx-auto h-56 w-56 rounded-lg"
               />
             </div>
-            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
               {loginLink}
             </div>
             <div className="flex gap-2">

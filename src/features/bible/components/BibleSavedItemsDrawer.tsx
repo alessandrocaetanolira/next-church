@@ -40,7 +40,7 @@ export function BibleSavedItemsDrawer({ userId, onSelect }: BibleSavedItemsDrawe
       <TabsContent value="favorites">
         <ScrollArea className="h-[calc(70dvh-10rem)]">
           <div className="space-y-2 pt-3">
-            {favorites.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum versículo favorito ainda.</p> : favorites.map((favorite) => <button key={favorite.id} type="button" className="flex w-full items-start gap-3 rounded-lg border p-3 text-left hover:bg-muted" onClick={() => onSelect(favorite)}>
+            {favorites.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum versículo favorito ainda.</p> : favorites.map((favorite) => <button key={favorite.id} type="button" className="flex w-full items-start gap-3 rounded-lg border border-border p-3 text-left hover:bg-muted" onClick={() => onSelect(favorite)}>
               <BookmarkCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="text-sm font-medium">{reference(favorite)}</span>
             </button>)}
@@ -50,7 +50,7 @@ export function BibleSavedItemsDrawer({ userId, onSelect }: BibleSavedItemsDrawe
       <TabsContent value="annotations">
         <ScrollArea className="h-[calc(70dvh-10rem)]">
           <div className="space-y-2 pt-3">
-            {annotations.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma anotação ainda.</p> : annotations.map((annotation) => <button key={annotation.id} type="button" className="flex w-full items-start gap-3 rounded-lg border p-3 text-left hover:bg-muted" onClick={() => onSelect(annotation)}>
+            {annotations.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma anotação ainda.</p> : annotations.map((annotation) => <button key={annotation.id} type="button" className="flex w-full items-start gap-3 rounded-lg border border-border p-3 text-left hover:bg-muted" onClick={() => onSelect(annotation)}>
               <NotebookPen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <span className="min-w-0"><span className="block text-sm font-medium">{reference(annotation)}</span><span className="mt-1 block line-clamp-2 text-xs text-muted-foreground">{annotation.note}</span></span>
             </button>)}

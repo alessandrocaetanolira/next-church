@@ -364,7 +364,7 @@ function GroupsPageContent() {
             </div>
             <div className="space-y-2">
               <Label>Capacidades</Label>
-              <div className="space-y-2 rounded-xl border p-3">
+              <div className="space-y-2 rounded-xl border border-border p-3">
                 {capabilities.map((capability) => (
                   <button
                     key={capability.value}
@@ -385,11 +385,11 @@ function GroupsPageContent() {
             </div>
             <div className="space-y-2">
               <Label>Membros</Label>
-              <div className="space-y-3 rounded-xl border p-3">
+              <div className="space-y-3 rounded-xl border border-border p-3">
                 {members.map((member) => {
                   const selected = form.members.some((entry) => entry.memberId === member.id);
                   return (
-                    <div key={member.id} className="space-y-2 rounded-lg border p-3">
+                    <div key={member.id} className="space-y-2 rounded-lg border border-border p-3">
                       <button
                         type="button"
                         onClick={() => toggleMember(member.id)}

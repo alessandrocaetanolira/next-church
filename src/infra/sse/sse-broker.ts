@@ -1,3 +1,9 @@
+/**
+ * Evento de notificação entregue em tempo real para um único usuário.
+ *
+ * O broker conhece apenas o tenant e o destinatário. Ele não conhece regras
+ * de cantina, feed ou qualquer outro módulo de negócio.
+ */
 export type ServerNotificationEvent = {
   id: string;
   tenantId: string;
@@ -21,6 +27,10 @@ type SseListener = (payload: ServerTenantEvent) => void;
 export class SseBroker {
   private readonly listeners = new Map<string, Set<SseListener>>();
 
+  /**
+   * Inscreve um cliente no canal privado do usuário dentro do tenant.
+   * @returns função idempotente de cancelamento da inscrição.
+   */
   subscribe(tenantId: string, userEmail: string, listener: SseListener) {
     const key = `${tenantId}:${userEmail.trim().toLowerCase()}`;
     const current = this.listeners.get(key) ?? new Set<SseListener>();
@@ -35,6 +45,7 @@ export class SseBroker {
     };
   }
 
+  /** Publica um evento somente para os listeners do destinatário informado. */
   publish(payload: ServerNotificationEvent) {
     const key = `${payload.tenantId}:${payload.userEmail.trim().toLowerCase()}`;
     for (const listener of this.listeners.get(key) ?? []) {
@@ -50,6 +61,7 @@ if (process.env.NODE_ENV !== 'production') {
   globalForSse.churchSseBroker = sseBroker;
 }
 
+/** Mantém a API de transporte independente dos módulos de negócio. */
 export function subscribeToTenantEvents(
   tenantId: string,
   userEmail: string,
@@ -77,6 +89,7 @@ export function publishPermissionsUpdated(
   });
 }
 
+/** Publica uma notificação já persistida no canal SSE do destinatário. */
 export function publishTenantEvent(payload: ServerNotificationEvent) {
   sseBroker.publish(payload);
 }

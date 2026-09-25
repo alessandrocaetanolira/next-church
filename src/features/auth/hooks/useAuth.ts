@@ -47,7 +47,7 @@ export function useAuth() {
   const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
   // Mapeamento dos dados da sessão para o objeto User padronizado
-  const user = session?.user ? {
+  const sessionUser = session?.user ? {
     id: (session.user as any).id,
     name: session.user.name || '',
     email: session.user.email || '',
@@ -59,6 +59,11 @@ export function useAuth() {
     planCode: (session.user as any).planCode,
     planFeatures: (session.user as any).planFeatures,
   } as User : null;
+  const user = sessionUser
+    ? (storedUser && storedUser.email === sessionUser.email && storedUser.tenantId === sessionUser.tenantId
+      ? { ...sessionUser, ...storedUser }
+      : sessionUser)
+    : null;
 
   return {
     user: user ?? (isOffline ? storedUser : null),

@@ -68,9 +68,9 @@ function getNotifColor(type: string) {
 
   switch (normalized) {
     case 'order':
-      return 'bg-green-500/10 border-green-500/20';
+      return 'bg-success/10 border-success/20';
     case 'task':
-      return 'bg-amber-500/10 border-amber-500/20';
+      return 'bg-warning/10 border-warning/20';
     case 'alert':
       return 'bg-destructive/10 border-destructive/20';
     case 'loyalty':

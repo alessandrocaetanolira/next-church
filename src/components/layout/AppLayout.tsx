@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { Header } from './Header';
 import { BottomNav } from './BottomNav';
@@ -22,6 +23,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, title: propTitle, hideMobileHeader = false }: AppLayoutProps) {
+  const pathname = usePathname();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { settings, updateSettings } = useAppSettings();
@@ -50,7 +52,9 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
       <div className="min-h-screen-dvh bg-background">
         {!hideMobileHeader && <Header title={title} />}
         <main className="pb-20 safe-bottom">
-          {children}
+          <div key={pathname} className="animate__animated animate__flipInY">
+            {children}
+          </div>
         </main>
         <BottomNav />
       </div>
@@ -84,7 +88,9 @@ export function AppLayout({ children, title: propTitle, hideMobileHeader = false
             </div>
           </header>
           <main className="flex-1 overflow-auto">
-            {children}
+            <div key={pathname} className="animate__animated animate__flipInY">
+              {children}
+            </div>
           </main>
         </div>
       </div>

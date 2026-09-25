@@ -17,7 +17,7 @@ vi.mock('@/lib/server/notification-service', () => ({
   notifyMemberOrderUpdate: notifyMemberMock,
 }));
 
-const member = { role: 'MEMBER', permissions: ['canteen:order'], planFeatures: ['canteen'] };
+const member = { role: 'MEMBER', permissions: ['canteen:order'], planFeatures: ['canteen'], linkedMemberId: 'member-1' };
 const operator = { role: 'ADMIN', permissions: ['canteen:view', 'canteen:sell', 'canteen:operate'], planFeatures: ['canteen'] };
 
 const sale: SaleRecord = {

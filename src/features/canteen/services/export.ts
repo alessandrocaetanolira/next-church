@@ -5,7 +5,7 @@
  */
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
@@ -23,7 +23,7 @@ export function exportSalesPDF(sales: any[], appName: string = "Mesa App") {
   const doc = new jsPDF();
   doc.text(`${appName} - Relatório de Vendas`, 14, 15);
   
-  (doc as any).autoTable({
+  autoTable(doc, {
     head: [['Data', 'Itens', 'Total']],
     body: sales.map(s => [
         format(new Date(s.createdAt), "dd/MM"),
@@ -60,7 +60,7 @@ export function exportDebtPDF(members: any[], appName: string = "Mesa App") {
   const doc = new jsPDF();
   doc.text(`${appName} - Relatório de Fiado`, 14, 15);
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     head: [['Membro', 'Contato', 'Saldo']],
     body: debtors.map((member) => [
       member.name,
@@ -97,5 +97,9 @@ export function exportDebtExcel(members: any[]) {
 export function sendWhatsApp(phone: string, message: string) {
   const cleanPhone = phone.replace(/\D/g, '');
   const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
-  window.open(url, '_blank');
+  // Não abrir uma aba `_blank`: em PWA/mobile isso cria uma página intermediária
+  // branca com o botão "X" ao retornar do WhatsApp. A navegação na própria
+  // janela entrega o link ao aplicativo instalado e preserva o histórico para
+  // voltar ao Church App.
+  window.location.assign(url);
 }

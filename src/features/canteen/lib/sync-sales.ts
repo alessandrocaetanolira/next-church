@@ -5,7 +5,7 @@ type RemoteSale = {
   id: string;
   total: number;
   paymentMethod: string;
-  orderStatus?: 'preparing' | 'ready' | 'cancelled' | null;
+  orderStatus?: 'pending' | 'preparing' | 'ready' | 'cancelled' | null;
   items: Array<{
     productId?: string;
     name: string;

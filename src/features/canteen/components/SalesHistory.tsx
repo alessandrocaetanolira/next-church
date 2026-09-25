@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Banknote, CreditCard, DollarSign, FileSpreadsheet, FileText, MessageSquare, Receipt, Search, Smartphone, TrendingUp, User } from "lucide-react";
@@ -56,7 +57,7 @@ export function SalesHistory() {
   const [search, setSearch] = useState("");
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState(0);
   const [receiptPhone, setReceiptPhone] = useState("");
   const [shareReceiptSaleId, setShareReceiptSaleId] = useState<string | null>(null);
   const [debtPhone, setDebtPhone] = useState("");
@@ -155,7 +156,7 @@ export function SalesHistory() {
   const handlePayDebt = async () => {
     if (!selectedMember) return;
 
-    const amount = Number(paymentAmount.replace(",", "."));
+    const amount = paymentAmount;
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Valor inválido.");
       return;
@@ -192,7 +193,7 @@ export function SalesHistory() {
 
     toast.success("Pagamento registrado!");
     setSelectedMemberId(null);
-    setPaymentAmount("");
+    setPaymentAmount(0);
     if (ledgerMemberId === selectedMember.id) {
       void loadLedger(selectedMember.id);
     }
@@ -388,7 +389,7 @@ export function SalesHistory() {
                         variant="outline"
                         onClick={() => {
                           setSelectedMemberId(member.id);
-                          setPaymentAmount(String(member.creditBalance ?? 0));
+                          setPaymentAmount(member.creditBalance ?? 0);
                         }}
                       >
                         Receber
@@ -468,7 +469,7 @@ export function SalesHistory() {
               </div>
               <div className="space-y-2">
                 <Label>Valor do Pagamento</Label>
-                <Input value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="0,00" />
+                <CurrencyInput value={paymentAmount} onValueChange={setPaymentAmount} placeholder="R$ 0,00" />
               </div>
               <Button onClick={handlePayDebt} className="w-full">Confirmar Pagamento</Button>
             </div>

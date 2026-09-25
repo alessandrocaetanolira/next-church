@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { ArrowLeft, Package, Pin, Plus, Send, Target, Users, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
@@ -109,7 +110,7 @@ export default function GroupDetailPage() {
   const [goalForm, setGoalForm] = useState({
     title: '',
     description: '',
-    targetAmount: '',
+    targetAmount: 0,
     deadline: '',
     items: [] as FundraisingItem[],
   });
@@ -233,13 +234,13 @@ export default function GroupDetailPage() {
       await createFundraisingGoal(groupId, {
           title: goalForm.title.trim(),
           description: goalForm.description.trim(),
-          targetAmount: Number(goalForm.targetAmount) || 0,
+          targetAmount: goalForm.targetAmount,
           items: goalForm.items,
           deadline: goalForm.deadline || null,
         });
       toast.success('Meta criada.');
       setGoalDrawerOpen(false);
-      setGoalForm({ title: '', description: '', targetAmount: '', deadline: '', items: [] });
+      setGoalForm({ title: '', description: '', targetAmount: 0, deadline: '', items: [] });
       await loadData();
     } catch {
       toast.error('Erro ao salvar meta.');
@@ -446,7 +447,7 @@ export default function GroupDetailPage() {
                         <p className="text-sm text-muted-foreground">Nenhum participante neste grupo.</p>
                       ) : (
                         participants.map((member) => (
-                          <div key={member.id} className="flex items-center gap-3 rounded-xl border p-3">
+                          <div key={member.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
                             <Avatar className="h-10 w-10 shrink-0">
                               <AvatarFallback className="bg-primary/10 text-primary text-sm">
                                 {(member.memberName || '?').charAt(0)}
@@ -474,7 +475,7 @@ export default function GroupDetailPage() {
                           <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente.</p>
                         ) : (
                           pendingRequests.map((request) => (
-                            <div key={request.id} className="space-y-3 rounded-xl border p-3">
+                            <div key={request.id} className="space-y-3 rounded-xl border border-border p-3">
                               <div>
                                 <p className="font-medium">{request.memberName}</p>
                                 <p className="text-xs text-muted-foreground">
@@ -516,7 +517,7 @@ export default function GroupDetailPage() {
                       <p className="text-sm text-muted-foreground">Nenhum membro neste grupo.</p>
                     ) : (
                       group.members.map((member) => (
-                        <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                        <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
                           <div className="min-w-0">
                             <p className="break-words font-medium">{member.memberName || 'Membro sem nome'}</p>
                             <p className="break-all text-xs text-muted-foreground">{member.memberEmail || member.memberId}</p>
@@ -536,7 +537,7 @@ export default function GroupDetailPage() {
                     <p className="text-sm text-muted-foreground">Nenhuma publicação neste grupo.</p>
                   ) : (
                     posts.map((post) => (
-                      <div key={post.id} className="rounded-xl border p-3">
+                      <div key={post.id} className="rounded-xl border border-border p-3">
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <p className="min-w-0 break-words text-sm font-medium">{post.userName}</p>
                           <div className="flex flex-wrap justify-end gap-1">
@@ -576,7 +577,7 @@ export default function GroupDetailPage() {
                     goals.map((goal) => {
                       const percentage = goal.targetAmount > 0 ? Math.min(100, (goal.currentAmount / goal.targetAmount) * 100) : 0;
                       return (
-                        <div key={goal.id} className="space-y-3 rounded-xl border p-3">
+                        <div key={goal.id} className="space-y-3 rounded-xl border border-border p-3">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="break-words font-medium">{goal.title}</p>
@@ -636,12 +637,12 @@ export default function GroupDetailPage() {
 
             <div className="space-y-2">
               <Label>Responsáveis e participantes atuais</Label>
-              <div className="space-y-3 rounded-xl border p-3">
+              <div className="space-y-3 rounded-xl border border-border p-3">
                 {selectedMembers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum membro no grupo.</p>
                 ) : (
                   selectedMembers.map((member) => (
-                    <div key={member.memberId} className="space-y-2 rounded-lg border p-3">
+                    <div key={member.memberId} className="space-y-2 rounded-lg border border-border p-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="font-medium">{member.name}</p>
@@ -672,7 +673,7 @@ export default function GroupDetailPage() {
 
             <div className="space-y-2">
               <Label>Adicionar membros</Label>
-              <div className="space-y-3 rounded-xl border p-3">
+              <div className="space-y-3 rounded-xl border border-border p-3">
                 {availableMembers.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Todos os membros disponíveis já estão neste grupo.</p>
                 ) : (
@@ -681,7 +682,7 @@ export default function GroupDetailPage() {
                       key={member.id}
                       type="button"
                       onClick={() => toggleMember(member.id)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left text-sm transition-colors hover:bg-muted/40"
+                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-muted/40"
                     >
                       <span>{member.name}</span>
                       <Badge variant="outline">
@@ -718,7 +719,7 @@ export default function GroupDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Meta em R$</Label>
-                <Input type="number" value={goalForm.targetAmount} onChange={(event) => setGoalForm((current) => ({ ...current, targetAmount: event.target.value }))} />
+                <CurrencyInput value={goalForm.targetAmount} onValueChange={(value) => setGoalForm((current) => ({ ...current, targetAmount: value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Prazo</Label>
@@ -733,7 +734,7 @@ export default function GroupDetailPage() {
                   Item
                 </Button>
               </div>
-              <div className="space-y-3 rounded-xl border p-3">
+              <div className="space-y-3 rounded-xl border border-border p-3">
                 {goalForm.items.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum item adicionado.</p> : null}
                 {goalForm.items.map((item, index) => (
                   <div key={item.id} className="grid grid-cols-[1.3fr,0.7fr,0.5fr] gap-2">

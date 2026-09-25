@@ -94,7 +94,7 @@ export function hasAnyActionPermission(
 }
 
 export function canAccessCanteen(user: AppUser | null | undefined) {
-  return hasAnyActionPermission(user, 'canteen', ['view', 'catalog', 'operate', 'sell', 'manage', 'manage_products']);
+  return hasAnyActionPermission(user, 'canteen', ['view', 'catalog', 'order', 'operate', 'sell', 'manage', 'manage_products']);
 }
 
 export function hasPlanFeature(user: AppUser | null | undefined, feature?: PlanFeature) {

@@ -16,6 +16,7 @@ import { SalesHistory } from './SalesHistory';
 import { ProductsManager } from './ProductsManager';
 import { MemberOrdersView } from './MemberOrdersView';
 import { CatalogView } from './CatalogView';
+import { MemberOrderView } from './MemberOrderView';
 import { LoyaltySettings } from '@/features/settings/components/LoyaltySettings';
 import { ShoppingCart, ChefHat, Package, Receipt, BellPlus, Award } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -36,7 +37,8 @@ type CanteenTab = (typeof VALID_TABS)[number];
 export function CanteenContainer() {
   const { user } = useAuth();
   const canSell = hasActionPermission(user, 'canteen', 'sell');
-  const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
+  const canOrder = hasActionPermission(user, 'canteen', 'order');
+  const canCatalog = hasActionPermission(user, 'canteen', 'catalog') || canOrder;
   const canOperate = hasActionPermission(user, 'canteen', 'operate');
   const canManageProducts = hasActionPermission(user, 'canteen', 'manage_products');
   const canManageCanteen = hasActionPermission(user, 'canteen', 'manage');
@@ -178,7 +180,7 @@ export function CanteenContainer() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl border bg-card p-3">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
         <div>
           <p className="text-sm font-semibold">Status da cantina</p>
           <p className="text-xs text-muted-foreground">{canteenStatus.isOpen ? 'Recebendo pedidos e vendas.' : 'No momento não está recebendo novos pedidos.'}</p>
@@ -192,7 +194,7 @@ export function CanteenContainer() {
       </div>
     <Tabs defaultValue={firstAvailableTab} value={activeTab} onValueChange={handleTabChange} className="space-y-4">
       <TabsList className="grid h-auto w-full grid-flow-col auto-cols-max gap-1 overflow-x-auto p-1 md:grid-cols-6 md:auto-cols-fr md:overflow-visible">
-        {canCatalog ? <TabsTrigger value="catalog" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">Catálogo</TabsTrigger> : null}
+        {canCatalog ? <TabsTrigger value="catalog" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">{canOrder && !canSell ? 'Comprar' : 'Catálogo'}</TabsTrigger> : null}
         {canSell ? <TabsTrigger value="pdv" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
           <ShoppingCart className="w-4 h-4" />
           <span className="hidden sm:inline">PDV</span>
@@ -229,7 +231,7 @@ export function CanteenContainer() {
         </TabsTrigger> : null}
       </TabsList>
 
-      {canCatalog ? <TabsContent value="catalog" className="mt-0"><CatalogView /></TabsContent> : null}
+      {canCatalog ? <TabsContent value="catalog" className="mt-0">{canOrder && !canSell ? <MemberOrderView /> : <CatalogView />}</TabsContent> : null}
       {canSell ? <TabsContent value="pdv" className="mt-0"><PDV /></TabsContent> : null}
       {canOperate ? <TabsContent value="orders" className="mt-0"><MemberOrdersView /></TabsContent> : null}
       {canOperate ? <TabsContent value="prep" className="mt-0"><PreparoView /></TabsContent> : null}
