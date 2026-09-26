@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { filterByTenant } from '@/lib/offline-tenant';
 
 export function useTeams() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export function useTeams() {
   const teams = useLiveQuery(
     async () => {
       if (!tenantId) return [];
-      const all = await db.teams.filter((team) => team.tenantId === tenantId).toArray();
+      const all = filterByTenant(await db.teams.toArray(), tenantId);
       // Filtra times deletados (se houver campo deletedAt, o sync remove, mas preventivamente filtramos)
       return all
         .filter(t => !t.deletedAt)

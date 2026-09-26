@@ -74,6 +74,7 @@ para evitar colisão entre versões.
 Aceite:
 
 - [x] Capítulos de versões diferentes nunca compartilham a mesma chave local.
+- [x] Favoritos da mesma seleção podem coexistir para o mesmo usuário em tenants diferentes.
 - [x] Um marcador de Gênesis 1 em NVI não marca Gênesis 1 em ACF ou AA.
 - [x] O novo banco local inicia sem dados legados, conforme a política de desenvolvimento.
 

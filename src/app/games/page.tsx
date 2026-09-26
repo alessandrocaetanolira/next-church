@@ -103,6 +103,7 @@ export default function GamesPage() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
+  const tenantId = user?.tenantId ?? '';
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const [activeGame, setActiveGame] = useState<'menu' | 'truefalse' | 'complete' | 'hangman' | 'wordsearch'>('menu');
 
@@ -122,9 +123,9 @@ export default function GamesPage() {
     try {
       await createQuizAttempt(attempt);
     } catch {
-      await db.quizAttempts.add(attempt);
+      await db.quizAttempts.add({ ...attempt, tenantId });
     }
-  }, []);
+  }, [tenantId]);
 
   // ===== TRUE/FALSE STATE =====
   const [tfQuestions, setTfQuestions] = useState<typeof TRUE_FALSE_QUESTIONS>([]);

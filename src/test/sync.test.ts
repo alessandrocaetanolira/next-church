@@ -58,6 +58,26 @@ describe('Sync API Routes', () => {
   });
 
   describe('POST /api/sync/push', () => {
+    it('retorna conflito quando o servidor tem uma versão mais recente', async () => {
+      (auth as Mock).mockResolvedValue(mockSession);
+      const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([{ updatedAt: '2026-09-25T12:00:00.000Z' }]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+      };
+      (getTenantClient as Mock).mockReturnValue(mockPrisma);
+
+      const req = new NextRequest('http://localhost/api/sync/push', {
+        method: 'POST',
+        body: JSON.stringify({ changes: [{ id: 7, module: 'tasks', action: 'update', data: { id: 'task-1', updatedAt: '2026-09-25T11:00:00.000Z' } }] }),
+      });
+
+      const response = await pushPOST(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.results[0]).toMatchObject({ id: 7, status: 'conflict', serverUpdatedAt: '2026-09-25T12:00:00.000Z' });
+    });
+
     it('deve processar upsert de tarefas', async () => {
       (auth as Mock).mockResolvedValue(mockSession);
       const mockPrisma = {

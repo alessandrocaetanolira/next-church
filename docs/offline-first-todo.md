@@ -147,6 +147,9 @@ armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 - [x] Filtrar tarefas, equipes, membros, produtos e vendas pelo tenant ativo.
 - [x] Oferecer limpeza explícita de registros legados sem tenant, preservando a Bíblia.
 - [ ] Cobrir os acessos locais restantes antes de concluir o isolamento do Dexie.
+- [x] Testar filtro de registros com dois tenants e rejeitar registros legados sem contexto.
+- [x] Adicionar `tenantId` a favoritos, anotações e tentativas de Quiz locais.
+- [x] Versionar o schema Dexie para incluir tenant nos índices de dados pessoais.
 - [ ] Evitar armazenar senhas ou tokens persistentes em texto puro.
 - [x] Criar testes de schema e recuperação de banco local.
 
@@ -191,7 +194,17 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Criar `GET /api/sync/status` para diagnóstico.
 - [ ] Garantir escopo por tenant e usuário em todas as operações.
 - [ ] Definir respostas para sucesso parcial, conflito e autorização expirada.
-- [ ] Documentar política de resolução de conflitos.
+- [x] Retornar `conflict` quando o servidor tiver `updatedAt` mais recente que a mutação local.
+- [x] Retornar resumo de sucesso parcial, conflitos e falhas no lote de sincronização.
+- [x] Permitir resolução manual de conflito escolhendo a versão do servidor ou reenviando a versão local.
+- [x] Documentar política de resolução de conflitos.
+- [x] Informar autorização expirada e permitir nova autenticação no indicador de sync.
+- [x] Informar falha parcial e oferecer retry manual no indicador de sync.
+
+Política atual: o servidor nunca é sobrescrito automaticamente quando possui
+`updatedAt` mais recente. A opção “Servidor” descarta a mutação local e aguarda
+o próximo pull; a opção “Local” atualiza o timestamp da mutação e a recoloca
+na fila para nova tentativa.
 
 ## Fase 6 — Motor de sincronização
 

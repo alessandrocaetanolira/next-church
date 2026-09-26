@@ -25,6 +25,7 @@ export default function BiblePage() {
   const { data: session } = useSession();
   const user = session?.user;
   const userEmail = user?.email;
+  const tenantId = user?.tenantId ?? '';
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { openDrawer, closeDrawer } = useDrawer();
@@ -103,12 +104,12 @@ export default function BiblePage() {
   }, [selectedBook?.abbrev, selectedChapter, translation]);
 
   const favorites = useLiveQuery(() =>
-    userEmail ? db.bibleFavorites.where('userId').equals(userEmail).toArray() : [],
-    [userEmail]
+    userEmail && tenantId ? db.bibleFavorites.filter((item) => item.userId === userEmail && item.tenantId === tenantId).toArray() : [],
+    [userEmail, tenantId]
   );
   const annotations = useLiveQuery(() =>
-    userEmail ? db.bibleAnnotations.where('userId').equals(userEmail).toArray() : [],
-    [userEmail]
+    userEmail && tenantId ? db.bibleAnnotations.filter((item) => item.userId === userEmail && item.tenantId === tenantId).toArray() : [],
+    [userEmail, tenantId]
   );
 
   const selectedVerseNumbers = useMemo(() => selectedVerses.map((verse) => verse + 1), [selectedVerses]);
@@ -135,6 +136,7 @@ export default function BiblePage() {
     } else {
       await db.bibleFavorites.add({
         userId: userEmail,
+        tenantId,
         translation,
         bookAbbrev: selectedBook.abbrev,
         bookName: selectedBook.name,
@@ -146,7 +148,7 @@ export default function BiblePage() {
       });
       toast.success('Versículos marcados como favoritos!');
     }
-  }, [favorite, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
+  }, [favorite, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, tenantId, translation, userEmail]);
 
   const shareToFeed = useCallback(async () => {
     if (!userEmail || selectedVerses.length === 0 || !selectedBook) return;
@@ -187,6 +189,7 @@ export default function BiblePage() {
         } else {
           await db.bibleAnnotations.add({
             userId,
+            tenantId,
             translation,
             bookAbbrev: selectedBook.abbrev,
             bookName: selectedBook.name,
@@ -204,7 +207,7 @@ export default function BiblePage() {
         closeDrawer();
       }} />,
     });
-  }, [annotation, closeDrawer, openDrawer, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, translation, userEmail]);
+  }, [annotation, closeDrawer, openDrawer, selectedBook, selectedChapter, selectedVerseNumbers, selectionKey, tenantId, translation, userEmail]);
 
   const openSavedItemsDrawer = useCallback(() => {
     if (!userEmail) {
@@ -213,7 +216,7 @@ export default function BiblePage() {
     }
     openDrawer({
       contentClassName: 'max-h-[70dvh]',
-      content: <BibleSavedItemsDrawer userId={userEmail} onSelect={(item: BibleFavorite | BibleAnnotation) => {
+      content: <BibleSavedItemsDrawer userId={userEmail} tenantId={tenantId} onSelect={(item: BibleFavorite | BibleAnnotation) => {
         setTranslation(item.translation);
         setSelectedBook({ abbrev: item.bookAbbrev, name: item.bookName, testament: item.testament, position: 0, translation: item.translation });
         setSelectedChapter(item.chapter);
@@ -221,7 +224,7 @@ export default function BiblePage() {
         closeDrawer();
       }} />,
     });
-  }, [closeDrawer, openDrawer, userEmail]);
+  }, [closeDrawer, openDrawer, tenantId, userEmail]);
 
   const copySelectedVerses = useCallback(async () => {
     if (!selectedBook || selectedVerses.length === 0) return;

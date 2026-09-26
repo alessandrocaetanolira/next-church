@@ -17,6 +17,44 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function summarizeSyncResults(results: Array<{ status: string }>) {
+  const successes = results.filter((result) => result.status === 'success').length;
+  const conflicts = results.filter((result) => result.status === 'conflict').length;
+  const failures = results.filter((result) => result.status !== 'success' && result.status !== 'conflict').length;
+  return {
+    ok: conflicts === 0 && failures === 0,
+    partial: successes > 0 && (conflicts > 0 || failures > 0),
+    successes,
+    conflicts,
+    failures,
+  };
+}
+
+export type ConflictResolution = 'server' | 'local';
+
+export async function resolveSyncConflict(itemId: number, resolution: ConflictResolution, context?: SyncContext) {
+  const item = await db.syncQueue.get(itemId);
+  if (!item || item.status !== 'conflict') return false;
+  if (context && (item.tenantSlug !== context.tenantSlug || item.userId !== context.userId)) return false;
+
+  if (resolution === 'server') {
+    await db.syncQueue.delete(itemId);
+    return true;
+  }
+
+  const data = item.data && typeof item.data === 'object'
+    ? { ...(item.data as Record<string, unknown>), updatedAt: new Date().toISOString() }
+    : item.data;
+  await db.syncQueue.put({
+    ...item,
+    data,
+    status: 'pending',
+    retryCount: 0,
+    lastError: undefined,
+  });
+  return true;
+}
+
 export async function pushChanges(context?: SyncContext) {
   // Compatibilidade: mutações antigas ainda gravam em syncOutbox. Migre-as
   // para a fila explícita antes de enviar.
@@ -71,13 +109,23 @@ export async function pushChanges(context?: SyncContext) {
       await db.syncOutbox.bulkDelete(successIds);
     }
 
-    const failed = results.filter((result) => result.status !== 'success').map((result) => result.id);
+    const conflicts = results.filter((result) => result.status === 'conflict').map((result) => result.id);
+    if (conflicts.length > 0) {
+      const conflictItems = pending.filter((item) => conflicts.includes(item.id ?? -1));
+      await db.syncQueue.bulkPut(conflictItems.map((item) => ({
+        ...item,
+        status: 'conflict' as const,
+        lastError: 'O registro foi alterado no servidor antes da sincronização.',
+      })));
+    }
+
+    const failed = results.filter((result) => result.status !== 'success' && result.status !== 'conflict').map((result) => result.id);
     if (failed.length > 0) {
       const failedItems = pending.filter((item) => failed.includes(item.id ?? -1));
       await db.syncQueue.bulkPut(failedItems.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1 })));
     }
 
-    return { ok: true, skipped: false };
+    return { ...summarizeSyncResults(results), skipped: false };
   } catch (error) {
     await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1, lastError: error instanceof Error ? error.message : 'network error' })));
     return { ok: false, skipped: false, networkError: true };

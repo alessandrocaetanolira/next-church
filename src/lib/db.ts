@@ -48,6 +48,7 @@ export interface LocalSale {
   memberName?: string;
   createdBy: string;
   createdAt: string;
+  updatedAt?: string;
   _status?: 'synced' | 'pending' | 'error';
 }
 
@@ -122,6 +123,7 @@ export interface QuizQuestion {
 /** Tentativa/Resultado de um Quiz por usuário. */
 export interface QuizAttempt {
   id?: number;
+  tenantId?: string;
   userId: string;
   userName: string;
   score: number;
@@ -133,6 +135,7 @@ export interface QuizAttempt {
 /** Postagem no Feed da Comunidade. */
 export interface FeedPost {
   id?: number;
+  tenantId?: string;
   userId: string;
   userName: string;
   userAvatar?: string;
@@ -166,6 +169,7 @@ export interface FeedComment {
 /** Favorito vinculado a um ou mais versículos. */
 export interface BibleFavorite {
   id?: number;
+  tenantId?: string;
   userId: string;
   translation: 'AA' | 'ACF' | 'NVI';
   bookAbbrev: string;
@@ -251,7 +255,7 @@ export interface SyncQueueItem extends SyncOutbox {
   userId?: string;
   entity?: string;
   entityId?: string;
-  status?: 'pending' | 'processing' | 'error';
+  status?: 'pending' | 'processing' | 'error' | 'conflict';
   retryCount?: number;
   lastError?: string;
   idempotencyKey?: string;
@@ -305,6 +309,15 @@ class ChurchDB extends Dexie {
       offlineBibleBooks: '[translation+abbrev], translation, testament, position',
       offlineBibleChapters: '[translation+bookAbbrev+chapter], translation, bookAbbrev',
       offlineBibleDownloads: 'translation, status',
+    });
+
+    // v2: os índices dos dados pessoais passam a considerar o tenant. O
+    // conteúdo bíblico continua compartilhado e não é alterado nesta versão.
+    this.version(2).stores({
+      quizAttempts: '++id, tenantId, userId, score, completedAt',
+      feedPosts: '++id, tenantId, userId, type, createdAt',
+      bibleFavorites: '++id, tenantId, userId, &[tenantId+userId+translation+bookAbbrev+chapter+selectionKey], translation, bookAbbrev, chapter, createdAt',
+      bibleAnnotations: '++id, tenantId, userId, translation, bookAbbrev, chapter, createdAt, updatedAt',
     });
   }
 }

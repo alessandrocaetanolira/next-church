@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { filterByTenant } from '@/lib/offline-tenant';
 
 export function useTasks() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export function useTasks() {
   const tasks = useLiveQuery(
     async () => {
       if (!tenantId) return [];
-      const all = await db.tasks.filter((task) => task.tenantId === tenantId).toArray();
+      const all = filterByTenant(await db.tasks.toArray(), tenantId);
       // Filtra tarefas deletadas e ordena por data
       return all
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

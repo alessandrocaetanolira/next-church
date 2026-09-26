@@ -11,6 +11,7 @@ type SavedBibleItem = BibleFavorite | BibleAnnotation;
 
 type BibleSavedItemsDrawerProps = {
   userId: string;
+  tenantId: string;
   onSelect: (item: SavedBibleItem) => void;
 };
 
@@ -18,15 +19,15 @@ function reference(item: SavedBibleItem) {
   return `${item.bookName} ${item.chapter}:${item.verseNumbers.join(', ')} · ${item.translation}`;
 }
 
-export function BibleSavedItemsDrawer({ userId, onSelect }: BibleSavedItemsDrawerProps) {
+export function BibleSavedItemsDrawer({ userId, tenantId, onSelect }: BibleSavedItemsDrawerProps) {
   const favorites = useLiveQuery(
-    () => db.bibleFavorites.where('userId').equals(userId).reverse().sortBy('createdAt'),
-    [userId],
+    () => db.bibleFavorites.filter((item) => item.userId === userId && item.tenantId === tenantId).sortBy('createdAt').then((items) => items.reverse()),
+    [tenantId, userId],
     [],
   );
   const annotations = useLiveQuery(
-    () => db.bibleAnnotations.where('userId').equals(userId).reverse().sortBy('updatedAt'),
-    [userId],
+    () => db.bibleAnnotations.filter((item) => item.userId === userId && item.tenantId === tenantId).sortBy('updatedAt').then((items) => items.reverse()),
+    [tenantId, userId],
     [],
   );
 

@@ -30,4 +30,25 @@ describe('itens bíblicos salvos', () => {
       { note: 'A criação aponta para Deus.', selectionKey: '1,3' },
     ]);
   });
+
+  it('permite a mesma seleção para o mesmo usuário em tenants diferentes', async () => {
+    const base = {
+      userId: 'membro@igreja.test',
+      translation: 'NVI' as const,
+      bookAbbrev: 'gn',
+      bookName: 'Gênesis',
+      testament: 'AT' as const,
+      chapter: 1,
+      verseNumbers: [1],
+      selectionKey: '1',
+      createdAt: '2026-09-23T00:00:00.000Z',
+    };
+
+    await db.bibleFavorites.bulkAdd([
+      { ...base, tenantId: 'tenant-a' },
+      { ...base, tenantId: 'tenant-b' },
+    ]);
+
+    await expect(db.bibleFavorites.toArray()).resolves.toHaveLength(2);
+  });
 });

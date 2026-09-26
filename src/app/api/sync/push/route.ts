@@ -45,6 +45,13 @@ export async function POST(request: Request) {
   const salesService = new CanteenSalesService(new CanteenSalesRepository(prisma), prisma, tenantId);
   const results = [];
 
+  const tableByModule: Record<string, string> = {
+    tasks: 'Task',
+    products: 'Product',
+    members: 'Member',
+    sales: 'Sale',
+  };
+
   for (const change of changes) {
     try {
       const idempotencyKey = typeof change.idempotencyKey === 'string' ? change.idempotencyKey : null;
@@ -55,6 +62,20 @@ export async function POST(request: Request) {
         if (previous?.status === 'success') {
           results.push({ id: change.id, status: 'success', replayed: true });
           continue;
+        }
+      }
+      if (change.action === 'update' && typeof change.data?.id === 'string' && typeof change.data?.updatedAt === 'string') {
+        const table = tableByModule[change.module];
+        if (table) {
+          const [serverRecord] = await prisma.$queryRawUnsafe<Array<{ updatedAt: string | Date }>>(
+            `SELECT updatedAt FROM "${table}" WHERE id = ? LIMIT 1`, change.data.id,
+          );
+          const localUpdatedAt = new Date(change.data.updatedAt).getTime();
+          const serverUpdatedAt = serverRecord ? new Date(serverRecord.updatedAt).getTime() : NaN;
+          if (Number.isFinite(localUpdatedAt) && Number.isFinite(serverUpdatedAt) && serverUpdatedAt > localUpdatedAt) {
+            results.push({ id: change.id, status: 'conflict', serverUpdatedAt: new Date(serverUpdatedAt).toISOString() });
+            continue;
+          }
         }
       }
       if (change.module === 'sales' && change.action === 'create') {

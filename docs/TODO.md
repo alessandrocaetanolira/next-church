@@ -79,10 +79,17 @@ cache por tenant/usuário e sincronização resiliente.
 - [x] Bloquear claramente publicação, curtida e comentário do Feed sem conexão.
 - [x] Iniciar o isolamento dos registros Dexie sincronizados pelo tenant ativo.
 - [x] Criar limpeza explícita dos registros offline legados sem tenant.
+- [x] Criar teste automatizado de isolamento entre dois tenants.
+- [x] Isolar favoritos, anotações e tentativas de Quiz pelo tenant ativo.
+- [x] Versionar o schema Dexie para índices pessoais com tenant.
 - [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
 - [ ] Garantir sessão offline sem redirecionamento indevido para login.
 - [ ] Isolar cache Dexie por tenant e usuário.
 - [ ] Completar sincronização, retry, conflitos e quota do IndexedDB, documentando a estratégia de resolução.
+- [x] Detectar conflito de versão no `push` sem sobrescrever alteração mais recente do servidor.
+- [x] Expor resumo de sucesso parcial, conflitos e falhas no sincronismo.
+- [x] Permitir resolução manual de conflitos pelo indicador de sincronização.
+- [x] Tratar sessão expirada e retry manual de falha parcial no indicador de sincronização.
 - [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
 - [ ] Validar branding e manifest sem mistura entre tenants.
 

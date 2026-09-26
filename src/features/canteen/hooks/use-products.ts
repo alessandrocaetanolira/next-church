@@ -14,6 +14,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type LocalProduct } from '@/lib/db';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { listCanteenProducts } from '@/services/canteen/products-api';
+import { filterByTenant } from '@/lib/offline-tenant';
 
 export function useProducts(enabled = true) {
   const { user } = useAuth();
@@ -53,9 +54,8 @@ export function useProducts(enabled = true) {
     async () => {
       // Busca todos os produtos ativos do banco local (Dexie)
       if (!enabled || !tenantId) return [];
-      return await db.products
-        .filter((product) => product.tenantId === tenantId && product.deletedAt === null)
-        .toArray();
+      return filterByTenant(await db.products.toArray(), tenantId)
+        .filter((product) => product.deletedAt === null);
     },
     [enabled, tenantId]
   );

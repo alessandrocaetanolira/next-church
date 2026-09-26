@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { filterByTenant } from '@/lib/offline-tenant';
 
 export function useMembers() {
   const { user } = useAuth();
@@ -13,7 +14,7 @@ export function useMembers() {
   const members = useLiveQuery(
     async () => {
       if (!tenantId) return [];
-      const all = await db.members.filter((member) => member.tenantId === tenantId).toArray();
+      const all = filterByTenant(await db.members.toArray(), tenantId);
       return all.filter(m => !m.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
     },
     [tenantId]
