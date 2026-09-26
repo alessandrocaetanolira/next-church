@@ -5,8 +5,7 @@ import type { Session } from "next-auth";
 import { ReactNode, useEffect, useState } from "react";
 import { getAccessibleModules } from '@/lib/access-control';
 import { useAuthStore } from '@/features/auth/store';
-
-const OFFLINE_SESSION_KEY = 'church-app-offline-session';
+import { clearCachedSession, readCachedSession, writeCachedSession } from '@/lib/offline-session';
 
 type OfflineSession = Session & {
   user: Session['user'] & {
@@ -24,17 +23,6 @@ type OfflineSession = Session & {
   };
 };
 
-function readCachedSession(): Session | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const stored = window.localStorage.getItem(OFFLINE_SESSION_KEY);
-    return stored ? JSON.parse(stored) as OfflineSession : null;
-  } catch {
-    window.localStorage.removeItem(OFFLINE_SESSION_KEY);
-    return null;
-  }
-}
-
 function SessionCacheBridge() {
   const { data: session, status } = useSession();
   const setSession = useAuthStore((state) => state.setSession);
@@ -42,7 +30,7 @@ function SessionCacheBridge() {
 
   useEffect(() => {
     if (status === 'unauthenticated' && navigator.onLine) {
-      window.localStorage.removeItem(OFFLINE_SESSION_KEY);
+      clearCachedSession();
       logout();
       return;
     }
@@ -85,7 +73,7 @@ function SessionCacheBridge() {
           isPlatformAdmin: user.isPlatformAdmin,
         },
       };
-      window.localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify(snapshot));
+      writeCachedSession(snapshot);
     } catch {
       // O cache da sessão é opcional; a sessão online continua funcionando.
     }

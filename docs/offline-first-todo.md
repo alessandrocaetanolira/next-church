@@ -142,6 +142,7 @@ armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 - [x] Criar tabela `offlineUserState` para o estado mínimo da sessão local.
 - [ ] Definir chaves compostas por tenant, usuário e entidade quando necessário.
 - [ ] Garantir que dados de tenants diferentes nunca compartilhem índices locais.
+- [x] Isolar o cursor e a fila de sincronização por tenant e usuário no contexto autenticado.
 - [ ] Evitar armazenar senhas ou tokens persistentes em texto puro.
 - [x] Criar testes de schema e recuperação de banco local.
 
@@ -171,10 +172,10 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Exibir indicador de modo offline.
 - [x] Persistir somente o estado mínimo da última sessão válida.
 - [ ] Permitir navegação offline sem redirecionamento indevido para login.
-- [ ] Marcar a sessão como `offline` no cliente.
+- [x] Marcar a sessão como `offline` no cliente.
 - [ ] Bloquear claramente ações que exigem servidor.
 - [ ] Permitir leitura somente dos dados previamente sincronizados.
-- [ ] Limpar a sessão local no logout explícito.
+- [x] Limpar a sessão local no logout explícito.
 - [ ] Testar expiração/revogação da sessão após reconexão.
 
 ## Fase 5 — Contrato de sincronização da API
@@ -195,6 +196,7 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Processar a fila com retry e estado de erro persistido.
 - [x] Usar `idempotencyKey` para impedir duplicidade na migração da fila.
 - [x] Persistir falhas e permitir retry manual.
+- [x] Persistir o cursor incremental em `offlineMetadata` por tenant e usuário.
 - [ ] Atualizar o Dexie após confirmação do servidor.
 - [ ] Processar pull incremental após o push.
 - [ ] Exibir progresso e erros de sincronização.

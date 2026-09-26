@@ -331,6 +331,10 @@ As validações devem ser executadas na raiz do projeto:
   pastores mantêm acesso global, incluindo a Cantina.
 - As Prioridades 1, 2 e 3 do [TODO principal](docs/TODO.md) estão concluídas; a
   Prioridade 4 é o próximo ciclo de implementação e validação.
+- A sessão offline agora usa cache separado por `tenantId + userId`, migra o
+  formato legado com segurança e remove o contexto local no logout explícito.
+- O sincronismo persiste o cursor em `offlineMetadata` e filtra a fila de saída
+  por `tenantSlug + userId` antes do envio.
 - As migrations global, Bíblia e tenant foram verificadas; o tenant existente foi
   migrado com backup automático. O `bible.db` foi preservado.
 - Antes de deploy, execute novamente TypeScript, lint, testes e build após qualquer

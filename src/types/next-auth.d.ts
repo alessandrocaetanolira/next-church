@@ -7,6 +7,7 @@ declare module "next-auth" {
       permissions: string[];
       tenantId: string;
       tenantSlug: string;
+      id: string;
       linkedMemberId?: string | null;
       teamIds: string[];
       version: number;
@@ -21,6 +22,7 @@ declare module "next-auth" {
     permissions: string[];
     tenantId: string;
     tenantSlug: string;
+    id: string;
     linkedMemberId?: string | null;
     teamIds: string[];
     version: number;

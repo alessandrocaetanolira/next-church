@@ -1,25 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { pushChanges, pullChanges } from "../services/sync-service";
+import type { SyncContext } from "../services/sync-context";
 
 export function useSync() {
   const { status, data: session } = useSession();
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const isAuthenticated = status === 'authenticated' && Boolean(session?.user?.tenantId);
+  const syncContext = useMemo<SyncContext | undefined>(() => (
+    session?.user?.tenantId && session.user.id && session.user.tenantSlug
+      ? { tenantSlug: session.user.tenantSlug, userId: session.user.id }
+      : undefined
+  ), [session?.user?.id, session?.user?.tenantId, session?.user?.tenantSlug]);
+  const isAuthenticated = status === 'authenticated' && Boolean(syncContext);
 
   const sync = useCallback(async () => {
     if (!navigator.onLine || !isAuthenticated) return;
     setIsSyncing(true);
     try {
-      await pushChanges();
-      await pullChanges();
+      await pushChanges(syncContext);
+      await pullChanges(syncContext);
     } finally {
       setIsSyncing(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, syncContext]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

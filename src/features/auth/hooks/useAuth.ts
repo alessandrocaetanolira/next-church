@@ -11,6 +11,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useAuthStore } from '@/features/auth/store';
+import { clearCachedSession } from '@/lib/offline-session';
 
 /**
  * Interface que define a estrutura de um usuário autenticado.
@@ -69,11 +70,16 @@ export function useAuth() {
 
   return {
     user: user ?? (isOffline ? storedUser : null),
+    isOffline,
     isLoading: status === "loading",
     isAuthenticated: status === "authenticated",
     /** Revalida a sessão e repassa permissões atualizadas para o Zustand. */
     refreshSession: update,
     /** Encerra a sessão e redireciona para a tela de login */
-    logout: () => signOut({ callbackUrl: "/auth/login" }),
+    logout: () => {
+      clearCachedSession();
+      useAuthStore.getState().logout();
+      return signOut({ callbackUrl: "/auth/login" });
+    },
   };
 }

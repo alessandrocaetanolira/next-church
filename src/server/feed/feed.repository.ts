@@ -45,7 +45,7 @@ export class FeedRepository {
     await this.prisma.$executeRawUnsafe(`
       INSERT INTO "FeedPost" (id, userId, userName, userAvatar, senderType, senderGroupId, type, title, content, reference, mediaUrl, mediaType, visibility, groupId, pinnedUntil, targetUserIds, readBy, likes, comments, createdAt, updatedAt, deletedAt)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, data.id, data.userId, data.userName, data.userAvatar, data.senderType, data.senderGroupId, data.type, data.title, data.content, data.reference, data.mediaUrl, data.mediaType, data.visibility, data.groupId, data.pinnedUntil, data.visibility === 'individual' ? JSON.stringify(data.targetUserIds) : null, '[]', '[]', now, now, null);
+    `, data.id, data.userId, data.userName, data.userAvatar, data.senderType, data.senderGroupId, data.type, data.title, data.content, data.reference, data.mediaUrl, data.mediaType, data.visibility, data.groupId, data.pinnedUntil, data.visibility === 'individual' ? JSON.stringify(data.targetUserIds) : null, '[]', '[]', '[]', now, now, null);
     return this.findById(data.id);
   }
 

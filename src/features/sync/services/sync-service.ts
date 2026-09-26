@@ -7,6 +7,7 @@
 
 import { db, LocalMember, LocalProduct, LocalSale, LocalTask, SyncOutbox } from "@/lib/db";
 import { syncRequest } from '@/services/sync/sync-api';
+import { readSyncCursor, SyncContext, writeSyncCursor } from './sync-context';
 
 function backoffDelay(retryCount: number) {
   return Math.min(30_000, 500 * (2 ** Math.min(retryCount, 6)));
@@ -16,7 +17,7 @@ function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function pushChanges() {
+export async function pushChanges(context?: SyncContext) {
   // Compatibilidade: mutações antigas ainda gravam em syncOutbox. Migre-as
   // para a fila explícita antes de enviar.
   const legacy = await db.syncOutbox.toArray();
@@ -27,6 +28,7 @@ export async function pushChanges() {
     if (missing.length > 0) {
       await db.syncQueue.bulkAdd(missing.map((item) => ({
         ...item,
+        ...(context ? { tenantSlug: context.tenantSlug, userId: context.userId } : {}),
         status: 'pending' as const,
         retryCount: 0,
         idempotencyKey: `${item.id ?? 'new'}:${item.timestamp}`,
@@ -34,7 +36,8 @@ export async function pushChanges() {
     }
   }
 
-  const pending = await db.syncQueue.where('status').anyOf('pending', 'error').toArray();
+  const pending = (await db.syncQueue.where('status').anyOf('pending', 'error').toArray())
+    .filter((item) => !context || (item.tenantSlug === context.tenantSlug && item.userId === context.userId));
   if (pending.length === 0) return { ok: true, skipped: true };
 
   try {
@@ -81,8 +84,10 @@ export async function pushChanges() {
   }
 }
 
-export async function pullChanges() {
-  const lastSync = localStorage.getItem('lastSync') || new Date(0).toISOString();
+export async function pullChanges(context?: SyncContext) {
+  const lastSync = context
+    ? await readSyncCursor(context)
+    : (typeof window !== 'undefined' ? window.localStorage.getItem('lastSync') : null) || new Date(0).toISOString();
 
   try {
     const response = await syncRequest<{
@@ -123,7 +128,11 @@ export async function pullChanges() {
     });
 
     if (data.timestamp) {
-      localStorage.setItem('lastSync', data.timestamp);
+      if (context) {
+        await writeSyncCursor(context, data.timestamp);
+      } else if (typeof window !== 'undefined') {
+        window.localStorage.setItem('lastSync', data.timestamp);
+      }
     }
     return { ok: true, skipped: false };
   } catch (error) {
@@ -134,8 +143,8 @@ export async function pullChanges() {
 /**
  * Inicia o ciclo de sincronização completo.
  */
-export async function syncAll() {
+export async function syncAll(context?: SyncContext) {
   if (!navigator.onLine) return { ok: false, skipped: true, offline: true };
-  await pushChanges();
-  return pullChanges();
+  await pushChanges(context);
+  return pullChanges(context);
 }
