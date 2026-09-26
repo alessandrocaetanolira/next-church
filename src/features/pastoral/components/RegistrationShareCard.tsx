@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, QrCode, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAppBaseUrl } from '@/lib/app-base-url';
+import { AppImage } from '@/components/shared';
 
 interface RegistrationShareCardProps {
   tenantSlug: string;
@@ -80,9 +81,11 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="outline">/cadastro?igreja={tenantSlug}</Badge>
             </div>
               <div className="rounded-xl border border-border bg-card p-3">
-              <img
+              <AppImage
                 src={registrationQrCodeUrl}
                 alt={`QR Code do cadastro da igreja ${tenantSlug}`}
+                width={220}
+                height={220}
                 className="mx-auto h-56 w-56 rounded-lg"
               />
             </div>
@@ -107,9 +110,11 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="outline">/auth/login?igreja={tenantSlug}</Badge>
             </div>
               <div className="rounded-xl border border-border bg-card p-3">
-              <img
+              <AppImage
                 src={loginQrCodeUrl}
                 alt={`QR Code do login da igreja ${tenantSlug}`}
+                width={220}
+                height={220}
                 className="mx-auto h-56 w-56 rounded-lg"
               />
             </div>

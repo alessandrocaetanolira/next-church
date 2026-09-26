@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/DataTable';
 import { SharedFlatList } from '@/components/SharedFlatList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -15,41 +14,8 @@ import { Eye, Plus, QrCode } from 'lucide-react';
 import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
 import { hasActionPermission } from '@/lib/access-control';
 import { listMembers } from '@/services/members/members-api';
-
-type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
-
-interface ManagedMember {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  parentPhone?: string | null;
-  birthDate?: string | null;
-  conversionDate?: string | null;
-  baptismDate?: string | null;
-  previousChurch?: string | null;
-  aboutMe?: string | null;
-  maritalStatus?: string | null;
-  approved: boolean;
-  userId: string | null;
-  role: MemberRole | null;
-  permissions: string[];
-  hasAccess: boolean;
-}
-
-const roleLabels: Record<MemberRole, string> = {
-  ADMIN: 'Admin',
-  PASTOR: 'Pastor',
-  LEADER: 'Líder',
-  MEMBER: 'Membro',
-};
-
-const maritalStatusLabels: Record<string, string> = {
-  single: 'Solteiro(a)',
-  married: 'Casado(a)',
-  divorced: 'Divorciado(a)',
-  widowed: 'Viúvo(a)',
-};
+import { MembersWebTable } from '@/features/members/components/MembersWebTable';
+import { roleLabels, type ManagedMember } from '@/features/members/components/member-display';
 
 export default function MembersPage() {
   const router = useRouter();
@@ -85,38 +51,6 @@ export default function MembersPage() {
       member.phone.toLowerCase().includes(term)
     );
   });
-
-  const columns = [
-    { key: 'name', header: 'Nome', render: (m: ManagedMember) => m.name },
-    { key: 'email', header: 'Email', render: (m: ManagedMember) => m.email },
-    { key: 'phone', header: 'Telefone', render: (m: ManagedMember) => m.phone },
-    {
-      key: 'details',
-      header: 'Dados',
-      render: (m: ManagedMember) => [
-        m.parentPhone ? `Resp.: ${m.parentPhone}` : null,
-        m.maritalStatus ? `Estado civil: ${maritalStatusLabels[m.maritalStatus] ?? m.maritalStatus}` : null,
-      ].filter(Boolean).join(' • ') || '-',
-    },
-    {
-      key: 'approved',
-      header: 'Cadastro',
-      render: (m: ManagedMember) => (
-        <Badge variant={m.approved ? 'success' : 'secondary'}>
-          {m.approved ? 'Aprovado' : 'Pendente'}
-        </Badge>
-      ),
-    },
-    {
-      key: 'role',
-      header: 'Perfil',
-      render: (m: ManagedMember) => (
-        <Badge variant={m.role ? 'outline' : 'secondary'}>
-          {m.role ? roleLabels[m.role] : 'Sem acesso'}
-        </Badge>
-      ),
-    },
-  ];
 
   return (
     <PageShell>
@@ -183,16 +117,7 @@ export default function MembersPage() {
           </div>
 
           <div className="hidden lg:block">
-            <DataTable
-              columns={columns}
-              data={filteredMembers}
-              actions={(member: ManagedMember) => (
-                <Button size="sm" variant="outline" onClick={() => router.push(`/members/${member.id}`)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Detalhes
-                </Button>
-              )}
-            />
+            <MembersWebTable members={filteredMembers} onOpenMember={(member) => router.push(`/members/${member.id}`)} />
           </div>
         </>
       )}

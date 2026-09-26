@@ -2,23 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useUIStore } from '@/features/ui/store';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/DataTable';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Minus, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import { ConfirmDeleteDialog, Notice, PageHeader, PageShell, SearchField } from '@/components/common';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 import { createMaterial, deleteMaterial, listMaterials, updateMaterial, updateMaterialQuantity, type Material } from '@/services/materials/materials-api';
+import { MaterialsWebTable } from '@/features/materials/components/MaterialsWebTable';
 
 type MaterialItem = Material;
-type StockStatus = 'destructive' | 'warning' | 'success';
 
 const categories = ['Limpeza', 'Cantina', 'Louvor', 'Escritório', 'Outros'];
 const units = ['unidades', 'litros', 'kg', 'metros', 'caixas', 'pacotes', 'rolos', 'jogos'];
@@ -55,13 +52,6 @@ export default function MaterialsPage() {
     () => materials.filter((material) => material.name.toLowerCase().includes(search.toLowerCase()) || material.category.toLowerCase().includes(search.toLowerCase())),
     [materials, search]
   );
-
-  const getStockStatus = (material: MaterialItem): { color: StockStatus; label: string } => {
-    const ratio = material.minQuantity > 0 ? material.quantity / material.minQuantity : material.quantity;
-    if (ratio <= 1) return { color: 'destructive', label: 'Baixo' };
-    if (ratio <= 2) return { color: 'warning', label: 'Atenção' };
-    return { color: 'success', label: 'OK' };
-  };
 
   const updateQuantity = async (material: MaterialItem, delta: number) => {
     const quantity = Math.max(0, material.quantity + delta);
@@ -123,30 +113,6 @@ export default function MaterialsPage() {
     }
   };
 
-  const columns: Column<MaterialItem>[] = [
-    { key: 'name', header: 'Nome', render: (material) => <div><p className="font-medium">{material.name}</p><p className="text-sm text-muted-foreground">{material.category}</p></div> },
-    {
-      key: 'quantity',
-      header: 'Quantidade',
-      render: (material) => (
-        <div className="flex items-center gap-2">
-          {canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, -1)}><Minus className="w-3 h-3" /></Button>}
-          <span className="font-medium w-16 text-center">{material.quantity} {material.unit}</span>
-          {canUpdate && <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => void updateQuantity(material, 1)}><Plus className="w-3 h-3" /></Button>}
-        </div>
-      ),
-    },
-    { key: 'minQuantity', header: 'Mínimo', render: (material) => <span>{material.minQuantity} {material.unit}</span> },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (material) => {
-        const status = getStockStatus(material);
-        return <Badge variant={status.color}>{status.label}</Badge>;
-      },
-    },
-  ];
-
   return (
     <PageShell>
       <PageHeader
@@ -178,20 +144,13 @@ export default function MaterialsPage() {
         />
       ) : null}
 
-      <DataTable
-        data={filteredMaterials}
-        columns={columns}
-        pageSize={10}
-        actions={(material) => (
-          <div className="flex items-center gap-1">
-            {canUpdate && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openDialog(material)}>
-              <Edit className="w-4 h-4" />
-            </Button>}
-            {canDelete && <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(material.id)}>
-              <Trash2 className="w-4 h-4 text-destructive" />
-            </Button>}
-          </div>
-        )}
+      <MaterialsWebTable
+        materials={filteredMaterials}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        onUpdateQuantity={(material, delta) => void updateQuantity(material, delta)}
+        onEdit={openDialog}
+        onDelete={setDeleteId}
       />
 
       <Drawer open={dialogOpen} onOpenChange={setDialogOpen}>

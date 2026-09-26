@@ -14,7 +14,7 @@ export default defineConfig({
     maxWorkers: 1,
     setupFiles: ['./src/test/setup.ts'],
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
 });

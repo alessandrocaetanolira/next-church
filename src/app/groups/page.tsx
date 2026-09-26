@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -19,6 +18,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { hasActionPermission } from '@/lib/access-control';
 import { createGroup, listGroups, listJoinRequests, listMembers, requestGroupJoin } from '@/services/groups/groups-api';
+import { GroupsWebGrid } from '@/features/groups/components/GroupsWebGrid';
+import { GroupsWebTable } from '@/features/groups/components/GroupsWebTable';
 
 type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';
 type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
@@ -76,6 +77,9 @@ const icons: Record<GroupType, React.ComponentType<{ className?: string }>> = {
   parking: Car,
 };
 
+const groupTypeLabels = Object.fromEntries(groupTypes.map((item) => [item.value, item.label]));
+const capabilityLabels = Object.fromEntries(capabilities.map((item) => [item.value, item.label]));
+
 function GroupsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,11 +118,7 @@ function GroupsPageContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    void loadData();
-  }, [user?.linkedMemberId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [groupsData, membersData, joinRequestsData] = await Promise.all([
         listGroups<GroupItem[]>(),
@@ -136,7 +136,11 @@ function GroupsPageContent() {
     } catch {
       toast.error('Erro ao carregar grupos.');
     }
-  };
+  }, [user?.linkedMemberId]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const visibleGroups = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -273,63 +277,32 @@ function GroupsPageContent() {
         ) : null}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {visibleGroups.map((group) => {
-          const Icon = icons[group.type] ?? Layers;
-          const isTeam = group.type === 'team';
-          const isMember = Boolean(user?.linkedMemberId && group.members.some((member) => member.memberId === user.linkedMemberId));
-          const isLeader = Boolean(user?.linkedMemberId && group.members.some((member) => member.memberId === user.linkedMemberId && ['leader', 'responsible'].includes(member.role)));
-          const hasPendingRequest = hasPendingJoinRequest(group.id);
-          return (
-            <Card key={group.id} className="h-full overflow-hidden border-border transition-colors hover:border-primary/30">
-              <Link href={`/groups/${group.id}`}>
-                <CardContent className="space-y-3 pt-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary')}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">{group.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{groupTypes.find((item) => item.value === group.type)?.label}</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="shrink-0 whitespace-nowrap">{group.members.length} membros</Badge>
-                  </div>
-                  <p className="break-words text-sm text-muted-foreground">{group.description || 'Sem descrição cadastrada.'}</p>
-                  {isTeam ? (
-                    <div className="flex flex-wrap gap-2">
-                      {isLeader ? <Badge className="whitespace-nowrap">Responsável</Badge> : null}
-                      {isMember ? <Badge variant="outline" className="whitespace-nowrap">Participando</Badge> : null}
-                      {!isMember && hasPendingRequest ? <Badge variant="secondary" className="whitespace-nowrap">Solicitado</Badge> : null}
-                    </div>
-                  ) : null}
-                  <div className="flex flex-wrap gap-2">
-                    {group.capabilities.length > 0 ? group.capabilities.map((capability) => (
-                      <Badge key={capability} variant="outline" className="max-w-full break-words text-[11px]">
-                        {capabilities.find((item) => item.value === capability)?.label ?? capability}
-                      </Badge>
-                    )) : (
-                      <Badge variant="outline" className="text-[11px]">Sem capacidades</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Link>
-              {isTeam && !canManage && !isMember && hasActionPermission(user, 'groups', 'request') ? (
-                <div className="px-4 pb-4">
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => void requestJoin(group)}
-                    disabled={hasPendingRequest || requestingGroupId === group.id || !user?.linkedMemberId}
-                  >
-                    {hasPendingRequest ? 'Solicitação enviada' : requestingGroupId === group.id ? 'Enviando...' : 'Solicitar ingresso'}
-                  </Button>
-                </div>
-              ) : null}
-            </Card>
-          );
-        })}
+      <div className="hidden md:block">
+        <GroupsWebTable
+          groups={visibleGroups}
+          groupTypeLabels={groupTypeLabels}
+          capabilityLabels={capabilityLabels}
+          canManage={canManage}
+          canRequest={hasActionPermission(user, 'groups', 'request')}
+          linkedMemberId={user?.linkedMemberId}
+          hasPendingJoinRequest={hasPendingJoinRequest}
+          requestingGroupId={requestingGroupId}
+          onRequestJoin={(group) => void requestJoin(group)}
+        />
+      </div>
+      <div className="md:hidden">
+        <GroupsWebGrid
+          groups={visibleGroups}
+          groupTypeLabels={groupTypeLabels}
+          capabilityLabels={capabilityLabels}
+          icons={icons}
+          linkedMemberId={user?.linkedMemberId}
+          canManage={canManage}
+          canRequest={hasActionPermission(user, 'groups', 'request')}
+          hasPendingJoinRequest={hasPendingJoinRequest}
+          requestingGroupId={requestingGroupId}
+          onRequestJoin={(group) => void requestJoin(group)}
+        />
       </div>
 
       {visibleGroups.length === 0 ? (

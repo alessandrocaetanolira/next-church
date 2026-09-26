@@ -5,11 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Share2, Bookmark, BookmarkCheck, Copy, List, X, ChevronDown, ChevronsUpDown, WifiOff, NotebookPen, ScrollText } from 'lucide-react';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
+import { Share2, Bookmark, BookmarkCheck, Copy, X, NotebookPen, ScrollText } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
@@ -20,6 +19,7 @@ import { BibleSavedItemsDrawer } from '@/features/bible/components/BibleSavedIte
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 import { createFeedPost } from '@/services/feed/feed-api';
+import { BibleWebNavigation } from '@/features/bible/components/BibleWebNavigation';
 
 export default function BiblePage() {
   const { data: session } = useSession();
@@ -33,7 +33,6 @@ export default function BiblePage() {
   const [translation, setTranslation] = useState<BibleTranslation>('NVI');
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
   const [selectedChapter, setSelectedChapter] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
   const [verses, setVerses] = useState<string[]>([]);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
@@ -49,7 +48,7 @@ export default function BiblePage() {
     );
   };
 
-  async function fetchBooks() {
+  const fetchBooks = useCallback(async () => {
     try {
       const result = await getBibleBooks(translation);
       setBooks(result.data);
@@ -58,9 +57,9 @@ export default function BiblePage() {
     } catch {
       toast.error('Erro ao carregar livros');
     }
-  }
+  }, [translation]);
 
-  async function fetchAvailableChapters(book: string) {
+  const fetchAvailableChapters = useCallback(async (book: string) => {
     try {
       const result = await getBibleChapters(book, translation);
       const chapters = result.data;
@@ -73,9 +72,9 @@ export default function BiblePage() {
     } catch {
       toast.error('Erro ao carregar capítulos');
     }
-  }
+  }, [selectedChapter, translation]);
 
-  async function loadChapterData(book: string, chapter: number) {
+  const loadChapterData = useCallback(async (book: string, chapter: number) => {
     try {
       const result = await getBibleChapter(book, chapter, translation);
       setVerses(result.data.verses);
@@ -84,19 +83,19 @@ export default function BiblePage() {
       setVerses([]);
       toast.error('Erro ao carregar versículos.');
     }
-  }
+  }, [translation]);
 
   useEffect(() => {
     setPageTitle('Bíblia');
     fetchBooks();
-  }, [setPageTitle, translation]);
+  }, [fetchBooks, setPageTitle]);
 
   useEffect(() => {
     if (selectedBook) {
       fetchAvailableChapters(selectedBook.abbrev);
       loadChapterData(selectedBook.abbrev, selectedChapter);
     }
-  }, [selectedBook, selectedChapter, translation]);
+  }, [fetchAvailableChapters, loadChapterData, selectedBook, selectedChapter]);
 
   useEffect(() => {
     const viewport = bibleReaderRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
@@ -273,7 +272,7 @@ export default function BiblePage() {
         </div>
       </>,
     });
-  }, [canShareToFeed, clearVerseSelection, closeDrawer, copySelectedVerses, favorite, openAnnotationDrawer, openDrawer, selectedBook, selectedChapter, selectedVerses, shareToFeed, toggleFavorite, translation, verses]);
+  }, [annotation, canShareToFeed, clearVerseSelection, closeDrawer, copySelectedVerses, favorite, openAnnotationDrawer, openDrawer, selectedBook, selectedChapter, selectedVerses, shareToFeed, toggleFavorite, translation, verses]);
 
   const openTranslationDrawer = useCallback(() => {
     openDrawer({
@@ -326,7 +325,6 @@ export default function BiblePage() {
     setSelectedChapter(1);
     setSelectedVerses([]);
     setBookListOpen(false);
-    setSearchTerm('');
   };
 
   const toggleBook = async (book: BibleBook) => {
@@ -345,84 +343,9 @@ export default function BiblePage() {
     setBookListOpen(false);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const regex = /([a-zA-Z\s]+)\s+(\d+)(?::(\d+))?/;
-    const match = searchTerm.match(regex);
-    if (match) {
-      const [_, bookName, chapter, verse] = match;
-      const foundBook = books.find(b => b.name.toLowerCase().includes(bookName.toLowerCase().trim()));
-      if (foundBook) {
-        selectBook(foundBook);
-        setSelectedChapter(parseInt(chapter));
-        if (verse) setTimeout(() => setSelectedVerses([parseInt(verse) - 1]), 500);
-      }
-    }
-  };
-
-  const filteredBooks = searchTerm ? books.filter(b => b.name.toLowerCase().includes(searchTerm.toLowerCase())) : books;
-  const otBooks = filteredBooks.filter(b => b.testament === 'AT');
-  const ntBooks = filteredBooks.filter(b => b.testament === 'NT');
-
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
-      {/* Top Navigation Bar */}
-      <div className="bg-card border-b border-border px-4 py-3 space-y-2">
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" className="w-[78px] justify-between bg-background px-2" onClick={openTranslationDrawer}>
-            {translation}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-          {/* Seletor de Livro */}
-          <Drawer open={bookListOpen} onOpenChange={setBookListOpen}>
-            <DrawerTrigger asChild>
-              <Button variant="outline" className="flex-[2] justify-start gap-2 font-semibold bg-background">
-                <List className="w-4 h-4" />
-                {selectedBook?.name || 'Selecione...'}
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent className="max-h-[82dvh]">
-              <DrawerHeader className="border-b text-left"><DrawerTitle>Livros da Bíblia</DrawerTitle></DrawerHeader>
-              <ScrollArea className="h-[calc(82dvh-6.5rem)] px-4 pb-6">
-                {[
-                  ['Antigo Testamento', otBooks],
-                  ['Novo Testamento', ntBooks],
-                ].map(([title, testamentBooks], index) => (
-                  <div key={title as string}>
-                    {index > 0 && <Separator />}
-                    <section className="py-4">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title as string}</p>
-                      <div className="divide-y divide-border rounded-lg border border-border">
-                        {(testamentBooks as BibleBook[]).map((book) => {
-                          const isExpanded = expandedBook === book.abbrev;
-                          const chapters = chaptersByBook[book.abbrev] ?? [];
-                          return <div key={`${translation}-${book.abbrev}`}>
-                            <button type="button" onClick={() => toggleBook(book)} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-medium">
-                              <span className={cn(book.abbrev === selectedBook?.abbrev ? 'text-primary' : 'text-foreground')}>{book.name}</span>
-                              <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
-                            </button>
-                            {isExpanded && <div className="grid grid-cols-6 gap-2 border-t border-border bg-muted/40 p-3">
-                              {chapters.map((chapter) => <Button key={`${book.abbrev}-${chapter}`} type="button" variant={book.abbrev === selectedBook?.abbrev && chapter === selectedChapter ? 'default' : 'outline'} size="sm" className="h-9 px-0" onClick={() => selectChapterFromDrawer(book, chapter)}>{chapter}</Button>)}
-                            </div>}
-                          </div>;
-                        })}
-                      </div>
-                    </section>
-                  </div>
-                ))}
-              </ScrollArea>
-            </DrawerContent>
-          </Drawer>
-
-          <Button type="button" variant="outline" className="w-[100px] justify-between bg-background px-2" onClick={openChapterDrawer}>
-            Cap {selectedChapter}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-
-          <Button size="icon" variant="ghost" onClick={openSavedItemsDrawer} aria-label="Itens salvos">
-            <BookmarkCheck className="w-5 h-5" />
-          </Button>
-        </div>
-        {contentSource === 'cache' && <p className="flex items-center gap-1 text-xs text-muted-foreground"><WifiOff className="h-3.5 w-3.5" /> Conteúdo salvo no dispositivo</p>}
-      </div>
+      <BibleWebNavigation translation={translation} selectedBook={selectedBook} selectedChapter={selectedChapter} contentSource={contentSource} books={books} chaptersByBook={chaptersByBook} expandedBook={expandedBook} bookListOpen={bookListOpen} onBookListOpenChange={setBookListOpen} onToggleBook={(book) => void toggleBook(book)} onSelectChapter={selectChapterFromDrawer} onOpenTranslation={openTranslationDrawer} onOpenChapter={openChapterDrawer} onOpenSavedItems={openSavedItemsDrawer} />
 
       <ScrollArea ref={bibleReaderRef} className="flex-1 bg-background/50">
         <div className="max-w-2xl mx-auto px-5 py-8 pb-32">

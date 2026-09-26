@@ -10,6 +10,7 @@
 import { Suspense, useEffect } from 'react';
 import { CanteenContainer } from '@/features/canteen/components/CanteenContainer';
 import { useUIStore } from '@/features/ui/store';
+import { WebPageContainer } from '@/components/shared/web';
 
 export default function CantinaPage() {
   const setPageTitle = useUIStore((state) => state.setPageTitle);
@@ -19,8 +20,8 @@ export default function CantinaPage() {
   }, [setPageTitle]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4">
+    <WebPageContainer size="wide" className="space-y-4">
       <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando cantina...</div>}><CanteenContainer /></Suspense>
-    </div>
+    </WebPageContainer>
   );
 }

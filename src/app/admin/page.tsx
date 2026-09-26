@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getPlatformOverview, type PlatformOverview } from '@/services/admin/tenants-api';
+import { WebPageContainer, WebPageHeader } from '@/components/shared/web';
 
 type Overview = PlatformOverview;
 
@@ -38,19 +39,13 @@ export default function PlatformAdminDashboard() {
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight">Administração da plataforma</h1>
-          </div>
-          <p className="text-muted-foreground text-sm mt-1">Acompanhe o estado global das igrejas e dos bancos.</p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/tenants">Gerenciar igrejas</Link>
-        </Button>
-      </div>
+    <WebPageContainer size="wide" className="space-y-6">
+      <WebPageHeader
+        title="Administração da plataforma"
+        description="Acompanhe o estado global das igrejas e dos bancos."
+        icon={<ShieldCheck className="h-6 w-6 text-primary" />}
+        actions={<Button asChild><Link href="/admin/tenants">Gerenciar igrejas</Link></Button>}
+      />
 
       {error && <Badge variant="destructive">Não foi possível carregar o resumo dos tenants.</Badge>}
 
@@ -79,6 +74,6 @@ export default function PlatformAdminDashboard() {
           <p>Dados operacionais continuam isolados nos bancos de cada igreja.</p>
         </CardContent>
       </Card>
-    </div>
+    </WebPageContainer>
   );
 }

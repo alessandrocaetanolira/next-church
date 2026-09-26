@@ -13,7 +13,36 @@ export class BrandingService {
   constructor(private readonly repository: BrandingRepository) {}
 
   normalize(row: Record<string, any>) {
-    return { slug: row.slug, name: row.name, logoUrl: row.brandingLogoUrl ?? row.logoUrl ?? null, themeVariant: row.themeVariant ?? 'default', themeMode: row.themeMode ?? 'light', pwaName: row.pwaName ?? row.name, pwaShortName: row.pwaShortName ?? row.pwaName ?? row.name, icon192Url: row.icon192Url ?? null, icon512Url: row.icon512Url ?? null, primaryColor: row.primaryColor ?? null, secondaryColor: row.secondaryColor ?? null, themeColor: row.themeColor ?? row.primaryColor ?? null, backgroundColor: row.backgroundColor ?? row.secondaryColor ?? null, configJson: row.configJson ?? null, schemaVersion: row.schemaVersion ?? 1, brandingVersion: row.brandingVersion ?? 1 };
+    const legacyLogo = row.brandingLogoUrl ?? row.logoUrl ?? null;
+    return {
+      slug: row.slug,
+      name: row.name,
+      logoUrl: legacyLogo,
+      logoLightUrl: row.logoLightUrl ?? legacyLogo,
+      logoDarkUrl: row.logoDarkUrl ?? legacyLogo,
+      mobileIconUrl: row.mobileIconUrl ?? row.icon192Url ?? null,
+      sidebarLogoUrl: row.sidebarLogoUrl ?? legacyLogo,
+      sidebarOpenLightUrl: row.sidebarOpenLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo,
+      sidebarOpenDarkUrl: row.sidebarOpenDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo,
+      sidebarCollapsedLightUrl: row.sidebarCollapsedLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo,
+      sidebarCollapsedDarkUrl: row.sidebarCollapsedDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo,
+      sidebarUseImage: row.sidebarUseImage ?? true,
+      sidebarTitle: row.sidebarTitle === undefined ? row.name : row.sidebarTitle ?? null,
+      sidebarSubtitle: row.sidebarSubtitle === undefined ? 'Gestão de Tarefas' : row.sidebarSubtitle ?? null,
+      themeVariant: row.themeVariant ?? 'default',
+      themeMode: row.themeMode ?? 'light',
+      pwaName: row.pwaName ?? row.name,
+      pwaShortName: row.pwaShortName ?? row.pwaName ?? row.name,
+      icon192Url: row.icon192Url ?? null,
+      icon512Url: row.icon512Url ?? null,
+      primaryColor: row.primaryColor ?? null,
+      secondaryColor: row.secondaryColor ?? null,
+      themeColor: row.themeColor ?? row.primaryColor ?? null,
+      backgroundColor: row.backgroundColor ?? row.secondaryColor ?? null,
+      configJson: row.configJson ?? null,
+      schemaVersion: row.schemaVersion ?? 1,
+      brandingVersion: row.brandingVersion ?? 1,
+    };
   }
 
   async update(current: Record<string, any>, tenantSlug: string, input: unknown) {
@@ -34,6 +63,14 @@ export class BrandingService {
     };
     const name = typeof body.name === 'string' && body.name.trim() ? body.name.trim() : current.name;
     const logoUrl = await upload('logoBase64', current.brandingLogoUrl ?? current.logoUrl ?? null);
+    const logoLightUrl = await upload('logoLightBase64', current.logoLightUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
+    const logoDarkUrl = await upload('logoDarkBase64', current.logoDarkUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
+    const mobileIconUrl = await upload('mobileIconBase64', current.mobileIconUrl ?? current.icon192Url ?? null, { width: 192, height: 192 });
+    const sidebarLogoUrl = await upload('sidebarLogoBase64', current.sidebarLogoUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
+    const sidebarOpenLightUrl = await upload('sidebarOpenLightBase64', current.sidebarOpenLightUrl ?? current.logoLightUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
+    const sidebarOpenDarkUrl = await upload('sidebarOpenDarkBase64', current.sidebarOpenDarkUrl ?? current.logoDarkUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
+    const sidebarCollapsedLightUrl = await upload('sidebarCollapsedLightBase64', current.sidebarCollapsedLightUrl ?? current.logoLightUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
+    const sidebarCollapsedDarkUrl = await upload('sidebarCollapsedDarkBase64', current.sidebarCollapsedDarkUrl ?? current.logoDarkUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
     const primaryColor = color(body.primaryColor, current.primaryColor ?? null);
     const secondaryColor = color(body.secondaryColor, current.secondaryColor ?? null);
     const primaryLum = primaryColor ? luminance(primaryColor) : null;
@@ -43,7 +80,12 @@ export class BrandingService {
       if (ratio < 1.5) throw new Error('As cores primária e secundária precisam ter contraste mínimo.');
     }
     await this.repository.update(current.id, {
-      name, logoUrl, themeVariant: typeof body.themeVariant === 'string' && body.themeVariant.trim() ? body.themeVariant.trim() : current.themeVariant ?? 'default',
+      name, logoUrl, logoLightUrl, logoDarkUrl, mobileIconUrl, sidebarLogoUrl,
+      sidebarOpenLightUrl, sidebarOpenDarkUrl, sidebarCollapsedLightUrl, sidebarCollapsedDarkUrl,
+      sidebarUseImage: typeof body.sidebarUseImage === 'boolean' ? body.sidebarUseImage : current.sidebarUseImage ?? true,
+      sidebarTitle: body.sidebarTitle === null ? null : typeof body.sidebarTitle === 'string' ? body.sidebarTitle.trim() || null : current.sidebarTitle ?? name,
+      sidebarSubtitle: body.sidebarSubtitle === null ? null : typeof body.sidebarSubtitle === 'string' ? body.sidebarSubtitle.trim() || null : current.sidebarSubtitle ?? null,
+      themeVariant: typeof body.themeVariant === 'string' && body.themeVariant.trim() ? body.themeVariant.trim() : current.themeVariant ?? 'default',
       pwaName: typeof body.pwaName === 'string' && body.pwaName.trim() ? body.pwaName.trim() : current.pwaName ?? name,
       pwaShortName: typeof body.pwaShortName === 'string' && body.pwaShortName.trim() ? body.pwaShortName.trim() : current.pwaShortName ?? current.pwaName ?? name,
       icon192Url: await upload('icon192Base64', current.icon192Url ?? null, { width: 192, height: 192 }), icon512Url: await upload('icon512Base64', current.icon512Url ?? null, { width: 512, height: 512 }),

@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Check, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -12,6 +11,8 @@ import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from 'sonner';
 import { PLAN_FEATURES } from '@/lib/plan-features';
 import { createAdminPlan, deleteAdminPlan, listAdminPlans, updateAdminPlan, type AdminPlan } from '@/services/admin/plans-api';
+import { WebPageContainer, WebPageHeader } from '@/components/shared/web';
+import { PlansWebTable } from '@/features/admin-plans/components/PlansWebTable';
 
 type Plan = AdminPlan;
 
@@ -112,11 +113,8 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Planos</h1>
-        <p className="text-sm text-muted-foreground">Defina preços, limites e recursos disponíveis para cada tenant.</p>
-      </div>
+    <WebPageContainer size="wide" className="space-y-6">
+      <WebPageHeader title="Planos" description="Defina preços, limites e recursos disponíveis para cada tenant." />
 
       <Card>
         <CardHeader>
@@ -152,21 +150,9 @@ export default function PlansPage() {
       <Card>
         <CardHeader><CardTitle>Planos cadastrados</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : plans.map((plan) => (
-            <div key={plan.id} className="flex flex-col gap-3 rounded-lg border border-border p-4 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2"><h2 className="font-semibold">{plan.name}</h2><Badge variant="outline">{plan.code}</Badge><Badge variant={plan.active ? 'success' : 'destructive'}>{plan.active ? 'Ativo' : 'Inativo'}</Badge></div>
-                <p className="text-sm text-muted-foreground">{plan.description || 'Sem descrição.'}</p>
-                <p className="text-xs text-muted-foreground">R$ {(plan.priceCents / 100).toFixed(2)} · {plan.maxUsers ?? 'Ilimitado'} usuários · {plan.churches} igreja(s) usando</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => { setEditingId(plan.id); setForm(formFromPlan(plan)); }}><Pencil /> Editar</Button>
-                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void deletePlan(plan)} disabled={plan.churches > 0}><Trash2 /> Excluir</Button>
-              </div>
-            </div>
-          ))}
+          {loading ? <p className="text-sm text-muted-foreground">Carregando...</p> : <PlansWebTable plans={plans} onEdit={(plan) => { setEditingId(plan.id); setForm(formFromPlan(plan)); }} onDelete={(plan) => void deletePlan(plan)} />}
         </CardContent>
       </Card>
-    </div>
+    </WebPageContainer>
   );
 }

@@ -20,15 +20,9 @@ import { formatCurrency } from "@/lib/utils";
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { deleteMember, listMembers } from '@/services/members/members-api';
+import { MembersCanteenWebTable, type CanteenMember } from '@/features/canteen/components/MembersCanteenWebTable';
 
-interface RemoteMember {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  creditBalance?: number;
-  approved?: boolean;
-}
+type RemoteMember = CanteenMember;
 
 export function MembersList() {
   const { user } = useAuth();
@@ -118,7 +112,10 @@ export function MembersList() {
           </Dialog>
         </div>
 
-        <div className="space-y-3">
+        <div className="hidden md:block">
+          <MembersCanteenWebTable members={filteredMembers} canUpdate={canUpdate} canDelete={canDelete} onEdit={(member) => { setSelectedMember(member); setDialogOpen(true); }} onDelete={setDeleteId} />
+        </div>
+        <div className="space-y-3 md:hidden">
           {filteredMembers.map((member) => (
             <div key={member.id} className="bg-card rounded-xl p-4 border border-border">
               <div className="flex items-center justify-between gap-4">

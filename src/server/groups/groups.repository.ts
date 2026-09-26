@@ -6,12 +6,21 @@ import { generateId } from '@/lib/id';
 export class GroupsRepository {
   constructor(private readonly prisma: TenantPrismaClient) {}
 
-  async list(type: string | null) {
+  async list(type: string | null, memberId?: string | null) {
     await ensureGroupTeamCompatibility(this.prisma);
     const [groups, memberships] = await Promise.all([
       this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
         `SELECT id, name, description, type, capabilities, color, icon, active, createdAt, updatedAt
-         FROM "Group" WHERE deletedAt IS NULL AND (? IS NULL OR type = ?) ORDER BY name ASC`, type, type,
+         FROM "Group"
+         WHERE deletedAt IS NULL
+           AND (? IS NULL OR type = ?)
+           AND (? IS NULL OR EXISTS (
+             SELECT 1 FROM "GroupMember" scopedMember
+             WHERE scopedMember.groupId = "Group".id
+               AND scopedMember.memberId = ?
+               AND scopedMember.deletedAt IS NULL
+           ))
+         ORDER BY name ASC`, type, type, memberId ?? null, memberId ?? null,
       ),
       this.prisma.$queryRawUnsafe<Array<{ groupId: string; memberId: string; role: string; memberName: string | null }>>(
         `SELECT gm.groupId, gm.memberId, gm.role, m.name as memberName
@@ -59,11 +68,19 @@ export class GroupsRepository {
     return { success: true, id: data.id };
   }
 
-  async findById(id: string) {
+  async findById(id: string, memberId?: string | null) {
     await ensureGroupTeamCompatibility(this.prisma);
     const [group] = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
       `SELECT id, name, description, type, capabilities, color, icon, active, createdAt, updatedAt
-       FROM "Group" WHERE id = ? AND deletedAt IS NULL LIMIT 1`, id,
+       FROM "Group"
+       WHERE id = ? AND deletedAt IS NULL
+         AND (? IS NULL OR EXISTS (
+           SELECT 1 FROM "GroupMember" scopedMember
+           WHERE scopedMember.groupId = "Group".id
+             AND scopedMember.memberId = ?
+             AND scopedMember.deletedAt IS NULL
+         ))
+       LIMIT 1`, id, memberId ?? null, memberId ?? null,
     );
     if (!group) return null;
     const members = await this.prisma.$queryRawUnsafe<Array<{ id: string; memberId: string; role: string; memberName: string | null; memberEmail: string | null }>>(
@@ -80,6 +97,15 @@ export class GroupsRepository {
 
   canManage(id: string, role: string | null | undefined, linkedMemberId: string | null | undefined) {
     return canManageGroup(this.prisma, role, linkedMemberId, id);
+  }
+
+  async isMember(groupId: string, memberId: string) {
+    const [membership] = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM "GroupMember" WHERE groupId = ? AND memberId = ? AND deletedAt IS NULL LIMIT 1`,
+      groupId,
+      memberId,
+    );
+    return Boolean(membership);
   }
 
   async update(id: string, data: { name: string; description: string; type: string; color: string; icon: string; capabilities: string[]; members: Array<{ memberId: string; role: string }> }) {

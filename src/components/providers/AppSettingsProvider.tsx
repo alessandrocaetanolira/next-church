@@ -11,6 +11,17 @@ export type ViewMode = 'cards' | 'table';
 interface AppSettings {
   appName: string;
   logoUrl?: string | null;
+  logoLightUrl?: string | null;
+  logoDarkUrl?: string | null;
+  mobileIconUrl?: string | null;
+  sidebarLogoUrl?: string | null;
+  sidebarOpenLightUrl?: string | null;
+  sidebarOpenDarkUrl?: string | null;
+  sidebarCollapsedLightUrl?: string | null;
+  sidebarCollapsedDarkUrl?: string | null;
+  sidebarUseImage: boolean;
+  sidebarTitle?: string | null;
+  sidebarSubtitle?: string | null;
   themeVariant: ThemeVariant;
   themeMode: ThemeMode;
   viewMode: ViewMode;
@@ -32,6 +43,17 @@ interface AppSettingsContextType {
 const defaultSettings: AppSettings = {
   appName: 'Church App',
   logoUrl: null,
+  logoLightUrl: null,
+  logoDarkUrl: null,
+  mobileIconUrl: null,
+  sidebarLogoUrl: null,
+  sidebarOpenLightUrl: null,
+  sidebarOpenDarkUrl: null,
+  sidebarCollapsedLightUrl: null,
+  sidebarCollapsedDarkUrl: null,
+  sidebarUseImage: true,
+  sidebarTitle: 'Church App',
+  sidebarSubtitle: 'Gestão de Tarefas',
   themeVariant: 'default',
   themeMode: 'system',
   viewMode: 'cards',
@@ -127,6 +149,17 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           ...current,
           appName: branding.pwaName || branding.name || current.appName,
           logoUrl: branding.logoUrl ?? null,
+          logoLightUrl: branding.logoLightUrl ?? branding.logoUrl ?? null,
+          logoDarkUrl: branding.logoDarkUrl ?? branding.logoUrl ?? null,
+          mobileIconUrl: branding.mobileIconUrl ?? null,
+          sidebarLogoUrl: branding.sidebarLogoUrl ?? branding.logoUrl ?? null,
+          sidebarOpenLightUrl: branding.sidebarOpenLightUrl ?? branding.logoLightUrl ?? branding.logoUrl ?? null,
+          sidebarOpenDarkUrl: branding.sidebarOpenDarkUrl ?? branding.logoDarkUrl ?? branding.logoUrl ?? null,
+          sidebarCollapsedLightUrl: branding.sidebarCollapsedLightUrl ?? branding.logoLightUrl ?? branding.logoUrl ?? null,
+          sidebarCollapsedDarkUrl: branding.sidebarCollapsedDarkUrl ?? branding.logoDarkUrl ?? branding.logoUrl ?? null,
+          sidebarUseImage: branding.sidebarUseImage ?? true,
+          sidebarTitle: branding.sidebarTitle,
+          sidebarSubtitle: branding.sidebarSubtitle,
           themeVariant: (branding.themeVariant as ThemeVariant | undefined) ?? current.themeVariant,
           primaryColor: branding.primaryColor ?? null,
           secondaryColor: branding.secondaryColor ?? null,

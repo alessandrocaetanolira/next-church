@@ -4,6 +4,9 @@ import { withSerwist } from "@serwist/turbopack";
 const nextConfig: NextConfig = {
   // Next espera hostnames (sem protocolo) nesta lista.
   allowedDevOrigins: ["church.bennipersonalizados.com.br"],
+  turbopack: {
+    root: process.cwd(),
+  },
   experimental: {
     useTypeScriptCli: false,
   },

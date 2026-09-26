@@ -15,6 +15,7 @@ import { Baby, HeartPulse, Plus, Search, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
 import { createChild, deleteChild as deleteChildRequest, listKidsOptions, notifyChildResponsibles, publishKidsFeed, updateChild, type KidsChild, type KidsGroupOption, type KidsMemberOption } from '@/services/kids/kids-api';
+import { KidsWebTable } from '@/features/kids/components/KidsWebTable';
 
 type ChildItem = KidsChild;
 type MemberOption = KidsMemberOption;
@@ -226,7 +227,8 @@ export default function KidsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="hidden md:block"><KidsWebTable childrenList={visibleChildren} groups={groups} canUpdate={canUpdate} canDelete={canDelete} onEdit={openDrawer} onNotify={(child) => { setMessageChild(child); setMessageForm({ title: `Aviso sobre ${child.name}`, message: '' }); }} onDelete={(id) => void deleteChild(id)} /></div>
+      <div className="grid gap-4 md:hidden">
         {visibleChildren.map((child) => (
           <Card key={child.id} className="border-border">
             <CardContent className="space-y-3 pt-4">

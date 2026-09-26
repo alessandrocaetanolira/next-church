@@ -20,6 +20,7 @@ import { usePushSubscription } from '@/hooks/use-push-subscription';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { AppImage } from '@/components/shared';
 
 const CHANGELOG = [
   {
@@ -88,11 +89,7 @@ const CHANGELOG = [
   },
 ];
 
-interface HeaderProps {
-  title?: string;
-}
-
-export function Header({ title }: HeaderProps) {
+export function Header() {
   const { user, logout } = useAuth();
   const { settings, updateSettings } = useAppSettings();
   const [showAbout, setShowAbout] = useState(false);
@@ -111,14 +108,12 @@ export function Header({ title }: HeaderProps) {
 
   useEffect(() => {
     setLogoFailed(false);
-  }, [settings.logoUrl]);
+  }, [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
 
   const handleRequestNotifications = async () => {
     const enabled = await push.subscribe();
     if (enabled) toast.success('Notificações ativadas neste dispositivo.');
   };
-
-  const displayTitle = title || settings.appName;
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -147,12 +142,22 @@ export function Header({ title }: HeaderProps) {
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="flex items-center justify-between h-14 px-4">
+        <div className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <img src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
+            <div className="flex h-12 w-48 items-center justify-start">
+              <AppImage
+                src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                alt={settings.appName}
+                className="h-full w-full object-contain object-left dark:hidden"
+                onError={() => setLogoFailed(true)}
+              />
+              <AppImage
+                src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                alt={settings.appName}
+                className="hidden h-full w-full object-contain object-left dark:block"
+                onError={() => setLogoFailed(true)}
+              />
             </div>
-            <h1 className="font-semibold text-foreground">{displayTitle}</h1>
           </div>
 
           <TooltipProvider>
@@ -232,7 +237,7 @@ export function Header({ title }: HeaderProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <img src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
+                <AppImage src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} width={64} height={64} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
               </div>
               {settings.appName}
             </DialogTitle>

@@ -6,9 +6,9 @@ import { GroupsRepository } from './groups.repository';
 export class GroupsService {
   constructor(private readonly repository: GroupsRepository) {}
 
-  list(type: string | null) { return this.repository.list(type); }
+  list(type: string | null, memberId?: string | null) { return this.repository.list(type, memberId); }
 
-  get(id: string) { return this.repository.findById(id); }
+  get(id: string, memberId?: string | null) { return this.repository.findById(id, memberId); }
 
   create(input: unknown) {
     const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;

@@ -22,8 +22,8 @@ export class MaterialsPolicy {
     if (!hasAnyActionPermission(user, 'materials', ['delete', 'manage'])) throw new ForbiddenError('Você não tem permissão para excluir materiais.');
   }
 
-  static assertScope(scope: MaterialScope, teamId: string | null | undefined) {
-    if (!scope.allowed || (teamId && !scope.hasGlobalAccess && !scope.accessibleTeamIds.includes(teamId))) {
+  static assertScope(scope: MaterialScope, teamId: string | null | undefined, options: { allowUnassigned?: boolean } = {}) {
+    if (!scope.allowed || (!scope.hasGlobalAccess && !teamId && !options.allowUnassigned) || (teamId && !scope.hasGlobalAccess && !scope.accessibleTeamIds.includes(teamId))) {
       throw new ForbiddenError('Sem acesso à equipe deste material.');
     }
   }

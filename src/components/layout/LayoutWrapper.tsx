@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import { NotificationsProvider } from '@/components/providers/NotificationsProvider';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
+import { AppImage } from '@/components/shared';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -36,10 +37,12 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse rounded-2xl bg-primary/10 p-4">
-          <img
+          <AppImage
             src={settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
             alt=""
             aria-hidden="true"
+            width={192}
+            height={64}
             className="h-16 w-48 rounded-xl object-contain"
             onError={() => setLoadingLogoFailed(true)}
           />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Pencil, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -140,13 +140,7 @@ export default function MemberDetailsPage() {
   const canManageAccess = hasActionPermission(user, 'members', 'manage_access');
   const canDelete = hasActionPermission(user, 'members', 'delete');
 
-  useEffect(() => {
-    if (memberId) {
-      void loadMember();
-    }
-  }, [memberId]);
-
-  const loadMember = async () => {
+  const loadMember = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getMember<ManagedMember>(memberId);
@@ -160,7 +154,13 @@ export default function MemberDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberId]);
+
+  useEffect(() => {
+    if (memberId) {
+      void loadMember();
+    }
+  }, [memberId, loadMember]);
 
   const togglePermission = (permission: string) => {
     setAccessPermissions((current) =>

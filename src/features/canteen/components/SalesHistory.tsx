@@ -25,6 +25,8 @@ import { getMemberLedger, registerMemberPayment } from "@/services/canteen/opera
 import { exportDebtExcel, exportDebtPDF, exportSalesExcel, exportSalesPDF, sendWhatsApp } from "../services/export";
 import { toast } from "sonner";
 import { useAppSettings } from "@/components/providers/AppSettingsProvider";
+import { SalesWebTable } from '@/features/canteen/components/SalesWebTable';
+import { DebtWebTable } from '@/features/canteen/components/DebtWebTable';
 
 type LedgerEntry = {
   id: string;
@@ -53,7 +55,8 @@ type MemberLedger = {
 export function SalesHistory() {
   const { settings } = useAppSettings();
   const sales = useLiveQuery(() => db.sales.orderBy("createdAt").reverse().toArray());
-  const members = useLiveQuery(() => db.members.toArray()) ?? [];
+  const liveMembers = useLiveQuery(() => db.members.toArray());
+  const members = useMemo(() => liveMembers ?? [], [liveMembers]);
   const [search, setSearch] = useState("");
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
@@ -310,7 +313,10 @@ export function SalesHistory() {
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="hidden md:block">
+            <SalesWebTable sales={filteredSales} getPaymentLabel={getPaymentLabel} onOpenSale={setSelectedSaleId} />
+          </div>
+          <div className="space-y-3 md:hidden">
             {filteredSales.map((sale) => (
               <button
                 key={sale.id}
@@ -363,7 +369,10 @@ export function SalesHistory() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="hidden md:block">
+            <DebtWebTable members={membersWithDebt} onShare={(member) => { setShareDebtMemberId(member.id); setDebtPhone(member.phone || ''); }} onReceive={(member) => { setSelectedMemberId(member.id); setPaymentAmount(member.creditBalance ?? 0); }} onDetails={(member) => void loadLedger(member.id)} />
+          </div>
+          <div className="space-y-3 md:hidden">
             {membersWithDebt.map((member) => (
               <div key={member.id} className="bg-card rounded-xl p-4 border border-border">
                 <div className="flex items-center justify-between">

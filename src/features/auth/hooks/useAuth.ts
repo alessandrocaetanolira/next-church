@@ -28,6 +28,7 @@ export interface User {
   tenantId: string;
   /** Membro vinculado ao usuário autenticado */
   linkedMemberId?: string | null;
+  teamIds: string[];
   /** Permissões granulares do usuário */
   permissions: string[];
   isPlatformAdmin?: boolean;
@@ -54,6 +55,7 @@ export function useAuth() {
     role: (session.user as any).role || 'MEMBER',
     tenantId: (session.user as any).tenantId || '',
     linkedMemberId: (session.user as any).linkedMemberId || null,
+    teamIds: (session.user as any).teamIds || [],
     permissions: (session.user as any).permissions || [],
     isPlatformAdmin: Boolean((session.user as any).isPlatformAdmin),
     planCode: (session.user as any).planCode,

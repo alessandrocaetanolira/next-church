@@ -8,6 +8,7 @@ declare module "next-auth" {
       tenantId: string;
       tenantSlug: string;
       linkedMemberId?: string | null;
+      teamIds: string[];
       version: number;
       isPlatformAdmin: boolean;
       planCode?: string;
@@ -21,6 +22,7 @@ declare module "next-auth" {
     tenantId: string;
     tenantSlug: string;
     linkedMemberId?: string | null;
+    teamIds: string[];
     version: number;
     isPlatformAdmin: boolean;
     planCode?: string;
@@ -35,6 +37,7 @@ declare module "next-auth/jwt" {
     tenantId: string;
     tenantSlug: string;
     linkedMemberId?: string | null;
+    teamIds: string[];
     version: number;
     isPlatformAdmin: boolean;
     planCode?: string;

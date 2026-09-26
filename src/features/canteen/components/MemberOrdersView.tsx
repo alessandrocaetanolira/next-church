@@ -14,7 +14,8 @@ import { updateCanteenSale } from '@/services/canteen/operations-api';
 type PaymentChoice = 'cash' | 'pix' | 'credit' | 'fiado';
 
 export function MemberOrdersView() {
-  const orders = useLiveQuery(() => db.sales.orderBy('createdAt').reverse().toArray()) || [];
+  const liveOrders = useLiveQuery(() => db.sales.orderBy('createdAt').reverse().toArray());
+  const orders = useMemo(() => liveOrders ?? [], [liveOrders]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
 

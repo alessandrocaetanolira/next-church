@@ -4,8 +4,8 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 
 ## Stack
 
-- Next.js 15
-- React 18
+- Next.js 16.3.6 (App Router e Turbopack)
+- React 19.2
 - TypeScript
 - Tailwind CSS
 - shadcn/Radix UI
@@ -14,6 +14,15 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 - SQLite
 - Dexie/IndexedDB
 - Vitest
+- Serwist para PWA e service worker
+
+## Estado do projeto
+
+As Prioridades 1 (estabilização), 2 (template Web) e 3 (permissões e experiência
+de acesso) estão concluídas. O próximo foco é a Prioridade 4: validar e fortalecer
+o fluxo offline-first em dispositivos reais, mantendo sessão, cache, sincronização
+e branding isolados por tenant e usuário. O acompanhamento detalhado está em
+[docs/TODO.md](docs/TODO.md).
 
 ## Requisitos
 
@@ -46,7 +55,7 @@ Siga esta ordem em um ambiente obtido por `git clone` ou `git pull`.
 npm install
 ```
 
-O `postinstall` gera os clients Prisma. Se necessário, a geração pode ser repetida:
+O `postinstall` gera os três clients Prisma. Se necessário, a geração pode ser repetida:
 
 ```bash
 npm run prisma:generate
@@ -88,7 +97,9 @@ relativos são resolvidos a partir da raiz do projeto. Em produção, prefira ca
 absolutos em volume persistente.
 
 Os bancos de tenant e o global são locais e ignorados pelo Git. O `bible.db` é uma
-exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação.
+exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação. Ele
+deve ser preservado: não remova, recrie ou substitua esse arquivo ao resetar o
+ambiente local.
 
 ### 3. Executar o setup inicial
 
@@ -108,9 +119,23 @@ O script executa, nesta ordem:
 6. provisionamento do tenant `igreja-teste`;
 7. seed do branding inicial.
 
-O `bible.db` existente é preservado. O script não deve ser usado para apagar um
-ambiente em produção; ele prepara um ambiente novo e ignora o provisionamento se o
-tenant já existir.
+O `bible.db` existente é preservado. A migration e a importação são idempotentes e
+não fazem reset do catálogo. O script não deve ser usado para apagar um ambiente em
+produção; ele prepara um ambiente novo e ignora o provisionamento se o tenant já
+existir.
+
+### Reset local sem apagar a Bíblia
+
+Para recriar somente os bancos global e de tenants em um ambiente de teste, remova
+apenas os arquivos abaixo e execute novamente o setup:
+
+```bash
+rm -f prisma/databases/global.db prisma/databases/church_*.db
+npm run db:setup:initial
+```
+
+Não use `rm -rf prisma/databases` nem remova `prisma/databases/bible.db`. O banco da
+Bíblia é compartilhado por todos os tenants e deve permanecer preservado.
 
 ### 4. Acessar o ambiente inicial
 
@@ -202,26 +227,25 @@ CC BY-NC; confirme os direitos das traduções antes de qualquer uso comercial.
 
 Login da igreja em `/auth/login`:
 
-````text
+```text
 Igreja: igreja-teste
 Email: admin@igreja-teste.com
 Senha: 123456
+```
 
 Se o usuário existir no tenant, mas a senha do ambiente estiver divergente, atualize
 somente a credencial com:
 
 ```bash
 npm run db:tenant:reset-password -- --tenant igreja-teste --email admin@igreja-teste.com --password 123456
-````
-
-````
+```
 
 Na tela `/auth/login`, deixe o slug da igreja vazio para entrar como administrador global:
 
 ```text
 Email: admin@church.local
 Senha: admin@church
-````
+```
 
 São contas distintas e ficam em bancos diferentes: a primeira fica no banco do tenant
 e a segunda na tabela `PlatformAdmin` do banco global.
@@ -239,7 +263,7 @@ npm run db:seed:platform-admin
 ### Fixtures de permissões
 
 Depois de provisionar os bancos `igreja-teste`, `ig2` e `ig3`, é possível criar os
-usuários de teste por perfil:
+usuários de teste por perfil. Esse comando exige que os três bancos já existam:
 
 ```bash
 npm run db:seed:permission-fixtures
@@ -266,6 +290,7 @@ Abra `http://localhost:3000/auth/login` para usuários da igreja ou
 - `src/components/providers`: providers globais.
 - `src/features`: modulos de dominio.
 - `src/lib`: infraestrutura, banco, permissoes e utilitarios.
+- `src/server`: controllers, services, policies e repositories dos dominios.
 - `src/test`: testes automatizados.
 - `prisma`: schema, migrations e seeds.
 - `docs`: documentacao viva do projeto.
@@ -288,14 +313,28 @@ Abra `http://localhost:3000/auth/login` para usuários da igreja ou
 
 As validações devem ser executadas na raiz do projeto:
 
-- `npx tsc --noEmit` passa.
-- `npm run lint` passa.
-- `npm test` ainda não está totalmente verde: na última execução houve 26 arquivos
-  aprovados e 4 com falha, totalizando 87 testes aprovados, 1 teste falho e 8
-  ignorados. O teste da API Bíblia retornou 500 e três arquivos de integração
-  falharam ao iniciar processos com `spawnSync /bin/sh EPERM` neste ambiente.
-- `npm run build` deve ser executado antes de deploy e ainda precisa ser revalidado
-  quando houver mudanças em módulos, Prisma ou configuração do Next.
+- `npx tsc --noEmit` concluiu sem erros na última verificação.
+- `npx eslint src/app src/components src/features src/server src/lib src/auth.ts`
+  concluiu sem erros e sem warnings.
+- `npx next build --webpack` concluiu com sucesso, incluindo TypeScript e geração
+  das 73 páginas.
+- `npm run build` usando Turbopack concluiu com sucesso, incluindo TypeScript,
+  geração das 73 páginas e o service worker. A configuração fixa a raiz do
+  projeto e mantém uma única configuração PostCSS.
+- O build reporta apenas avisos de rastreamento dinâmico nos clientes Prisma;
+  eles não impedem a compilação.
+- `npm test` concluiu com sucesso fora do sandbox: 36 arquivos e 118 testes
+  passaram. O binding opcional do Rolldown foi reinstalado com `npm install
+  --include=optional`.
+- O escopo de líderes foi aplicado para grupos, materiais e tarefas. `teamIds`
+  agora percorre login, JWT, sessão, store e cache offline; administradores e
+  pastores mantêm acesso global, incluindo a Cantina.
+- As Prioridades 1, 2 e 3 do [TODO principal](docs/TODO.md) estão concluídas; a
+  Prioridade 4 é o próximo ciclo de implementação e validação.
+- As migrations global, Bíblia e tenant foram verificadas; o tenant existente foi
+  migrado com backup automático. O `bible.db` foi preservado.
+- Antes de deploy, execute novamente TypeScript, lint, testes e build após qualquer
+  mudança em módulos, Prisma ou configuração do Next.
 
 O projeto está em refatoração incremental. A ordem de execução fica em
 [docs/TODO.md](docs/TODO.md); os documentos de domínio mantêm o detalhamento técnico.

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
 import ChallengeMode from "@/features/new-games/components/ChallengeMode";
 import { useUser } from "@/features/new-games/contexts/UserContext";
+import { AppImage } from "@/components/shared";
 
 const IMAGES = [
   { id: 1, img: "/jogos-novos/memory/adam-eve.png" },
@@ -152,7 +153,7 @@ const MemoryGame = () => {
                 }`}
               >
                 {card.flipped || card.matched ? (
-                  <img src={card.img} alt="carta" className="w-full h-full object-contain" />
+                  <AppImage src={card.img} alt="carta" width={256} height={256} className="w-full h-full object-contain" />
                 ) : (
                   <span className="text-2xl">✝️</span>
                 )}

@@ -5,6 +5,7 @@ type AppUser = {
   email?: string | null;
   role?: string | null;
   permissions?: string[] | string | null;
+  linkedMemberId?: string | null;
   teamIds?: string[] | string | null;
   isPlatformAdmin?: boolean;
   planFeatures?: string[] | string | null;
@@ -107,8 +108,11 @@ export function hasPlanFeature(user: AppUser | null | undefined, feature?: PlanF
 }
 
 export function hasTeamScopedAccess(user: AppUser | null | undefined, permission: 'tasks' | 'materials') {
-  if (hasPermission(user, permission)) return true;
-  return normalizeTeamIds(user?.teamIds).length > 0;
+  if (!user || !hasPermission(user, permission)) return false;
+  const role = user.role?.toUpperCase();
+  if (role === 'ADMIN' || role === 'PASTOR') return true;
+  if (role === 'LEADER') return normalizeTeamIds(user.teamIds).length > 0;
+  return true;
 }
 
 export function canAccessRoute(user: AppUser | null | undefined, pathname: string) {

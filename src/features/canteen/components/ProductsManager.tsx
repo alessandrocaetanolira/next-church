@@ -16,6 +16,8 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { deleteCanteenProduct, updateCanteenProduct } from '@/services/canteen/products-api';
+import { ProductsWebTable } from '@/features/canteen/components/ProductsWebTable';
+import { AppImage } from '@/components/shared';
 
 export function ProductsManager() {
   const { user } = useAuth();
@@ -114,14 +116,17 @@ export function ProductsManager() {
               </Button> : null}
         </div>
 
-        <div className="space-y-3">
+        <div className="hidden md:block">
+          <ProductsWebTable products={filteredProducts} canUpdate={canUpdate} canDelete={canDelete} savingId={savingId} onToggleAvailable={(productId, value) => void toggleAvailableToday(productId, value)} onEdit={(productId) => router.push(`/cantina/products/${productId}/edit`)} onDelete={setDeleteId} />
+        </div>
+        <div className="space-y-3 md:hidden">
           {filteredProducts.map((product) => (
             <div key={product.id} className="bg-card rounded-xl p-4 border border-border">
               <div className="flex items-start justify-between">
                 <div className="flex flex-1 gap-3">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                      <AppImage src={product.imageUrl} alt={product.name} width={160} height={160} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Sem imagem</div>
                     )}

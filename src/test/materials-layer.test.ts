@@ -35,7 +35,8 @@ describe('camadas de materiais', () => {
   it('restringe materiais vinculados a equipes acessíveis', () => {
     expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: ['team-1'] }, 'team-1')).not.toThrow();
     expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: ['team-1'] }, 'team-2')).toThrow('equipe');
-    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: [] }, null)).not.toThrow();
+    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: [] }, null)).toThrow('equipe');
+    expect(() => MaterialsPolicy.assertScope({ allowed: true, hasGlobalAccess: false, accessibleTeamIds: [] }, null, { allowUnassigned: true })).not.toThrow();
   });
 
   it('normaliza e cria um material', async () => {

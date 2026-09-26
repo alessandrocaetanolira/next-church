@@ -6,13 +6,13 @@
 
 import { LoyaltySettings } from "@/features/settings/components/LoyaltySettings";
 import { PageHeader } from "@/components/common/PageHeader";
-import { PageShell } from "@/components/common/PageShell";
+import { WebPageContainer } from "@/components/shared/web";
 
 export default function ConfiguracoesCantinaPage() {
   return (
-    <PageShell>
+    <WebPageContainer size="wide">
       <PageHeader title="Configurações da Cantina" />
       <LoyaltySettings />
-    </PageShell>
+    </WebPageContainer>
   );
 }

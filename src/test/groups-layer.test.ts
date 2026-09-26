@@ -22,6 +22,20 @@ describe('camadas de grupos', () => {
     expect(() => GroupsPolicy.assertView(withoutAccess)).toThrow('consultar grupos');
   });
 
+  it('restringe líderes aos grupos dos quais participam', async () => {
+    const leader = { role: 'LEADER', linkedMemberId: 'leader-1', permissions: ['groups:view'], planFeatures: ['groups'] };
+    const repository = repositoryMock();
+    repository.isMember = vi.fn().mockResolvedValue(false);
+
+    await expect(GroupsPolicy.assertViewScope(leader, repository, 'group-2')).rejects.toThrow('acesso');
+
+    repository.isMember = vi.fn().mockResolvedValue(true);
+    await expect(GroupsPolicy.assertViewScope(leader, repository, 'group-1')).resolves.toBeUndefined();
+    expect(GroupsPolicy.getLeaderMemberId(leader)).toBe('leader-1');
+    expect(GroupsPolicy.getLeaderMemberId(viewer)).toBeNull();
+    await expect(GroupsPolicy.assertViewScope({ ...leader, linkedMemberId: null }, repository, 'group-1')).rejects.toThrow('acesso');
+  });
+
   it('normaliza o grupo e seus membros antes de persistir', async () => {
     const repository = repositoryMock();
     const service = new GroupsService(repository);

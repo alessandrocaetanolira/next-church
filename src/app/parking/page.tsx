@@ -28,6 +28,7 @@ import {
   type ParkingMember,
   type ParkingSpot,
 } from '@/services/parking/parking-api';
+import { ParkingWebTable } from '@/features/parking/components/ParkingWebTable';
 
 type GroupOption = ParkingGroup;
 type SpotItem = ParkingSpot;
@@ -268,7 +269,8 @@ export default function ParkingPage() {
         <Card><CardContent className="space-y-1 pt-4"><p className="text-sm text-muted-foreground">Ocupadas</p><p className="text-2xl font-bold text-warning">{groupedStats.occupied}</p></CardContent></Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="hidden md:block"><ParkingWebTable spots={spots} groups={groups} canUpdate={canUpdate} canDelete={canDelete} onEdit={openDrawer} onToggle={(spot) => void updateStatus(spot, spot.status === 'free' ? 'occupied' : 'free')} onNotify={(spot) => { setMessageSpot(spot); setMessageForm({ title: `Aviso sobre a vaga ${spot.label}`, message: '' }); }} onDelete={(spot) => void deleteSpot(spot.id, spot.groupId)} /></div>
+      <div className="grid gap-4 md:hidden md:grid-cols-2 xl:grid-cols-3">
         {spots.map((spot) => (
           <Card key={spot.id}>
             <CardContent className="space-y-3 pt-4">

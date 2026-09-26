@@ -19,6 +19,7 @@ import {
   Wallet, ShoppingBag, Receipt, MessageCircle, QrCode, Plus, Minus, 
   ShoppingCart, AlertCircle, Gift, ArrowLeft, Package
 } from 'lucide-react';
+import { AppImage } from '@/components/shared';
 import { 
   getLoyaltyConfig, getLoyaltyProgress, isLoyaltyActive, 
   formatLoyaltyValidity, PAYMENT_METHOD_LABELS 
@@ -449,7 +450,7 @@ function MyAccountPageContent() {
                         <div className="overflow-hidden rounded-lg border border-border bg-muted/30">
                           <div className="aspect-[4/3] w-full">
                             {product.imageUrl ? (
-                              <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                              <AppImage src={product.imageUrl} alt={product.name} width={640} height={480} className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full items-center justify-center">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">

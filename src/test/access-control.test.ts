@@ -44,4 +44,14 @@ describe('permissões combinadas com recursos do plano', () => {
     expect(canAccessCanteen(orderOnlyMember)).toBe(true);
     expect(canAccessRoute(orderOnlyMember, '/cantina')).toBe(true);
   });
+
+  it('expõe tarefas e materiais para o líder somente quando há equipes vinculadas', () => {
+    const leader = { role: 'LEADER', permissions: ['tasks:view', 'materials:view'], planFeatures: ['tasks', 'materials'], teamIds: ['team-1'] };
+    const leaderWithoutTeams = { ...leader, teamIds: [] };
+
+    expect(canAccessRoute(leader, '/schedules')).toBe(true);
+    expect(canAccessRoute(leader, '/materials')).toBe(true);
+    expect(canAccessRoute(leaderWithoutTeams, '/schedules')).toBe(false);
+    expect(canAccessRoute(leaderWithoutTeams, '/materials')).toBe(false);
+  });
 });

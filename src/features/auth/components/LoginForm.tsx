@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThemeVariant } from "@/components/providers/AppSettingsProvider";
 import { getPublicChurchBranding } from '@/services/auth/public-auth-api';
+import { AppImage } from '@/components/shared';
 
 /**
  * LoginForm Component
@@ -137,7 +138,7 @@ export function LoginForm() {
       <CardHeader className="text-center">
         {branding?.logoUrl ? (
           <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/30 p-2">
-            <img src={branding.logoUrl} alt={branding.name} className="h-full w-full object-contain" />
+            <AppImage src={branding.logoUrl} alt={branding.name} width={96} height={96} className="h-full w-full object-contain" />
           </div>
         ) : null}
         <CardTitle className="text-3xl font-bold text-primary">{branding?.pwaName || branding?.name || 'Church App'}</CardTitle>

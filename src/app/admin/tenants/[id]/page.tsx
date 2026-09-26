@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getAdminTenant, getAdminTenantBranding, updateAdminTenantBranding } from '@/services/admin/tenants-api';
+import { WebPageContainer } from '@/components/shared/web';
 
 type Tenant = { id: string; name: string; slug: string; databaseKey?: string | null; plan: string; status?: string; active: boolean; createdAt: string };
 type Branding = { pwaName: string; pwaShortName: string; primaryColor: string; secondaryColor: string; themeColor: string; backgroundColor: string; logoUrl?: string | null; icon192Url?: string | null; icon512Url?: string | null };
@@ -65,8 +66,8 @@ export default function TenantDetailsPage() {
     }
   }
 
-  if (!tenant) return <div className="p-6 text-center">Carregando tenant...</div>;
-  return <main className="mx-auto max-w-4xl space-y-4 p-4">
+  if (!tenant) return <WebPageContainer size="narrow" className="text-center">Carregando tenant...</WebPageContainer>;
+  return <WebPageContainer size="narrow" className="space-y-4">
     <Button asChild variant="ghost"><Link href="/admin/tenants"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para tenants</Link></Button>
     <Card><CardHeader><CardTitle>{tenant.name}</CardTitle><CardDescription>{tenant.slug} · {tenant.databaseKey ?? 'database não definido'}</CardDescription></CardHeader><CardContent>
       <Tabs defaultValue="branding">
@@ -77,5 +78,5 @@ export default function TenantDetailsPage() {
         <TabsContent value="plan"><p className="text-sm text-muted-foreground">Plano atual: <strong>{tenant.plan}</strong>.</p></TabsContent>
       </Tabs>
     </CardContent></Card>
-  </main>;
+  </WebPageContainer>;
 }

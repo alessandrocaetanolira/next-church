@@ -7,6 +7,7 @@ import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download, Bell } from 'lucide-react';
@@ -19,6 +20,7 @@ import { RegistrationShareCard } from '@/features/pastoral/components/Registrati
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
+import { AppImage } from '@/components/shared';
 import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
 
 function CollapsibleSection({ icon: Icon, title, children }: any) {
@@ -86,7 +88,17 @@ export default function SettingsPage() {
   const push = usePushSubscription();
   const [branding, setBranding] = useState({
     name: settings.appName,
-    logoUrl: settings.logoUrl ?? '',
+    logoLightUrl: settings.logoLightUrl ?? settings.logoUrl ?? '',
+    logoDarkUrl: settings.logoDarkUrl ?? settings.logoUrl ?? '',
+    mobileIconUrl: settings.mobileIconUrl ?? '',
+    sidebarLogoUrl: settings.sidebarLogoUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+    sidebarOpenLightUrl: settings.sidebarOpenLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+    sidebarOpenDarkUrl: settings.sidebarOpenDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
+    sidebarCollapsedLightUrl: settings.sidebarCollapsedLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+    sidebarCollapsedDarkUrl: settings.sidebarCollapsedDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
+    sidebarUseImage: settings.sidebarUseImage,
+    sidebarTitle: settings.sidebarTitle ?? settings.appName,
+    sidebarSubtitle: settings.sidebarSubtitle ?? 'Gestão de Tarefas',
     themeVariant: settings.themeVariant,
   });
   const [savingBranding, setSavingBranding] = useState(false);
@@ -100,20 +112,56 @@ export default function SettingsPage() {
         const payload = await getUserBranding();
         setBranding({
           name: payload.name ?? settings.appName,
-          logoUrl: payload.logoUrl ?? '',
+          logoLightUrl: payload.logoLightUrl ?? payload.logoUrl ?? '',
+          logoDarkUrl: payload.logoDarkUrl ?? payload.logoUrl ?? '',
+          mobileIconUrl: payload.mobileIconUrl ?? '',
+          sidebarLogoUrl: payload.sidebarLogoUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
+          sidebarOpenLightUrl: payload.sidebarOpenLightUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
+          sidebarOpenDarkUrl: payload.sidebarOpenDarkUrl ?? payload.logoDarkUrl ?? payload.logoUrl ?? '',
+          sidebarCollapsedLightUrl: payload.sidebarCollapsedLightUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
+          sidebarCollapsedDarkUrl: payload.sidebarCollapsedDarkUrl ?? payload.logoDarkUrl ?? payload.logoUrl ?? '',
+          sidebarUseImage: payload.sidebarUseImage ?? true,
+          sidebarTitle: payload.sidebarTitle ?? '',
+          sidebarSubtitle: payload.sidebarSubtitle ?? '',
           themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? settings.themeVariant,
         });
       } catch {
         setBranding({
           name: settings.appName,
-          logoUrl: settings.logoUrl ?? '',
+          logoLightUrl: settings.logoLightUrl ?? settings.logoUrl ?? '',
+          logoDarkUrl: settings.logoDarkUrl ?? settings.logoUrl ?? '',
+          mobileIconUrl: settings.mobileIconUrl ?? '',
+          sidebarLogoUrl: settings.sidebarLogoUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+          sidebarOpenLightUrl: settings.sidebarOpenLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+          sidebarOpenDarkUrl: settings.sidebarOpenDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
+          sidebarCollapsedLightUrl: settings.sidebarCollapsedLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
+          sidebarCollapsedDarkUrl: settings.sidebarCollapsedDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
+          sidebarUseImage: settings.sidebarUseImage,
+          sidebarTitle: settings.sidebarTitle ?? '',
+          sidebarSubtitle: settings.sidebarSubtitle ?? '',
           themeVariant: settings.themeVariant,
         });
       }
     };
 
     void loadBranding();
-  }, [session?.user, settings.appName, settings.logoUrl, settings.themeVariant]);
+  }, [
+    session?.user,
+    settings.appName,
+    settings.logoUrl,
+    settings.logoLightUrl,
+    settings.logoDarkUrl,
+    settings.mobileIconUrl,
+    settings.sidebarLogoUrl,
+    settings.sidebarOpenLightUrl,
+    settings.sidebarOpenDarkUrl,
+    settings.sidebarCollapsedLightUrl,
+    settings.sidebarCollapsedDarkUrl,
+    settings.sidebarUseImage,
+    settings.sidebarTitle,
+    settings.sidebarSubtitle,
+    settings.themeVariant,
+  ]);
 
   const handleClearCache = async () => {
     if (confirm('Tem certeza? Todos os dados offline serão apagados.')) {
@@ -128,15 +176,35 @@ export default function SettingsPage() {
   const handleSaveBranding = async () => {
     setSavingBranding(true);
     try {
-      const isNewLogo = branding.logoUrl.startsWith('data:');
       const payload = await updateUserBranding({
-          name: branding.name,
-          logoBase64: isNewLogo ? branding.logoUrl : undefined,
-          themeVariant: branding.themeVariant,
-        });
+        name: branding.name,
+        themeVariant: branding.themeVariant,
+    logoLightBase64: branding.logoLightUrl === '' ? null : branding.logoLightUrl.startsWith('data:') ? branding.logoLightUrl : undefined,
+    logoDarkBase64: branding.logoDarkUrl === '' ? null : branding.logoDarkUrl.startsWith('data:') ? branding.logoDarkUrl : undefined,
+    mobileIconBase64: branding.mobileIconUrl === '' ? null : branding.mobileIconUrl.startsWith('data:') ? branding.mobileIconUrl : undefined,
+    sidebarLogoBase64: branding.sidebarLogoUrl === '' ? null : branding.sidebarLogoUrl.startsWith('data:') ? branding.sidebarLogoUrl : undefined,
+        sidebarOpenLightBase64: branding.sidebarOpenLightUrl === '' ? null : branding.sidebarOpenLightUrl.startsWith('data:') ? branding.sidebarOpenLightUrl : undefined,
+        sidebarOpenDarkBase64: branding.sidebarOpenDarkUrl === '' ? null : branding.sidebarOpenDarkUrl.startsWith('data:') ? branding.sidebarOpenDarkUrl : undefined,
+        sidebarCollapsedLightBase64: branding.sidebarCollapsedLightUrl === '' ? null : branding.sidebarCollapsedLightUrl.startsWith('data:') ? branding.sidebarCollapsedLightUrl : undefined,
+        sidebarCollapsedDarkBase64: branding.sidebarCollapsedDarkUrl === '' ? null : branding.sidebarCollapsedDarkUrl.startsWith('data:') ? branding.sidebarCollapsedDarkUrl : undefined,
+        sidebarUseImage: branding.sidebarUseImage,
+        sidebarTitle: branding.sidebarTitle.trim() || null,
+        sidebarSubtitle: branding.sidebarSubtitle.trim() || null,
+      });
       updateSettings({
         appName: payload.name ?? branding.name,
         logoUrl: payload.logoUrl ?? null,
+        logoLightUrl: payload.logoLightUrl ?? payload.logoUrl ?? null,
+        logoDarkUrl: payload.logoDarkUrl ?? payload.logoUrl ?? null,
+        mobileIconUrl: payload.mobileIconUrl ?? null,
+        sidebarLogoUrl: payload.sidebarLogoUrl ?? null,
+        sidebarOpenLightUrl: payload.sidebarOpenLightUrl ?? null,
+        sidebarOpenDarkUrl: payload.sidebarOpenDarkUrl ?? null,
+        sidebarCollapsedLightUrl: payload.sidebarCollapsedLightUrl ?? null,
+        sidebarCollapsedDarkUrl: payload.sidebarCollapsedDarkUrl ?? null,
+        sidebarUseImage: payload.sidebarUseImage ?? true,
+        sidebarTitle: payload.sidebarTitle,
+        sidebarSubtitle: payload.sidebarSubtitle,
         themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? settings.themeVariant,
       });
       toast.success('Branding atualizado.');
@@ -147,7 +215,9 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  type BrandingImageField = 'mobileIconUrl' | 'sidebarOpenLightUrl' | 'sidebarOpenDarkUrl' | 'sidebarCollapsedLightUrl' | 'sidebarCollapsedDarkUrl';
+
+  const handleLogoUpload = async (field: BrandingImageField, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -155,7 +225,7 @@ export default function SettingsPage() {
     reader.onload = () => {
       const result = reader.result;
       if (typeof result === 'string') {
-        setBranding((current) => ({ ...current, logoUrl: result }));
+        setBranding((current) => ({ ...current, [field]: result }));
       }
     };
     reader.readAsDataURL(file);
@@ -242,7 +312,7 @@ export default function SettingsPage() {
       </CollapsibleSection>
 
       {canUpdateSettings && (
-        <CollapsibleSection icon={ImageIcon} title="Nome e Logo da Igreja">
+        <CollapsibleSection icon={ImageIcon} title="Identidade visual e logos">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Nome da igreja</Label>
@@ -253,22 +323,48 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Logo da igreja</Label>
-              <Input type="file" accept="image/*" onChange={handleLogoUpload} />
-              {branding.logoUrl ? (
-                <div className="mt-2 flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-background">
-                    <img src={branding.logoUrl} alt={branding.name} className="h-full w-full object-contain" />
+              <p className="font-medium">Logos por contexto</p>
+              <p className="text-sm text-muted-foreground">Use arquivos separados para preservar contraste e leitura em cada tema.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {([
+                  ['mobileIconUrl', 'Ícone mobile', 'Ícone quadrado usado no mobile e atalhos.'],
+                  ['sidebarOpenLightUrl', 'Sidebar aberta · tema claro', 'Logo retangular usada quando a sidebar está expandida no tema claro.'],
+                  ['sidebarOpenDarkUrl', 'Sidebar aberta · tema escuro', 'Logo retangular usada quando a sidebar está expandida no tema escuro.'],
+                  ['sidebarCollapsedLightUrl', 'Sidebar recolhida · tema claro', 'Ícone quadrado usado quando a sidebar está recolhida no tema claro.'],
+                  ['sidebarCollapsedDarkUrl', 'Sidebar recolhida · tema escuro', 'Ícone quadrado usado quando a sidebar está recolhida no tema escuro.'],
+                ] as const).map(([field, label, hint]) => (
+                  <div key={field} className="space-y-2 rounded-lg border border-border p-3">
+                    <Label>{label}</Label>
+                    <p className="text-xs text-muted-foreground">{hint}</p>
+                    <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handleLogoUpload(field, event)} />
+                    {branding[field] && <AppImage src={branding[field]} alt={label} width={320} height={160} className={field === 'mobileIconUrl' ? 'h-20 w-20 rounded-lg object-contain' : 'h-16 w-full rounded-lg object-contain'} />}
+                    {branding[field] && <Button type="button" variant="outline" size="sm" onClick={() => setBranding((current) => ({ ...current, [field]: '' }))}>Remover</Button>}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setBranding((current) => ({ ...current, logoUrl: '' }))}
-                  >
-                    Remover logo
-                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div>
+                <p className="font-medium">Sidebar aberta</p>
+                <p className="text-sm text-muted-foreground">Escolha se a sidebar exibe a imagem retangular e quais textos aparecem ao lado.</p>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                <div>
+                  <p className="text-sm font-medium">Usar imagem na sidebar</p>
+                  <p className="text-xs text-muted-foreground">Quando desativado, a sidebar usa apenas os textos configurados.</p>
                 </div>
-              ) : null}
+                <Switch checked={branding.sidebarUseImage} onCheckedChange={(checked) => setBranding((current) => ({ ...current, sidebarUseImage: checked }))} />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Título opcional</Label>
+                  <Input value={branding.sidebarTitle} onChange={(event) => setBranding((current) => ({ ...current, sidebarTitle: event.target.value }))} placeholder="Ex.: Igreja Esperança" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo opcional</Label>
+                  <Input value={branding.sidebarSubtitle} onChange={(event) => setBranding((current) => ({ ...current, sidebarSubtitle: event.target.value }))} placeholder="Ex.: Gestão de Tarefas" />
+                </div>
+              </div>
             </div>
             <Button className="w-full" onClick={() => void handleSaveBranding()} disabled={savingBranding}>
               {savingBranding ? 'Salvando...' : 'Salvar Branding'}

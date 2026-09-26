@@ -55,6 +55,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             tenantId: '',
             tenantSlug: '',
             linkedMemberId: null,
+            teamIds: [],
             version: platformAdmin.version,
             isPlatformAdmin: true,
           };
@@ -77,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             tenantId: '',
             tenantSlug: '',
             linkedMemberId: null,
+            teamIds: [],
             version: platformAdmin.version,
             isPlatformAdmin: true,
           };
@@ -122,6 +124,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
+          const linkedMember = user.linkedMemberId
+            ? await tenantClient.member.findUnique({
+                where: { id: user.linkedMemberId },
+                select: { teamIds: true },
+              })
+            : null;
+          const teamIds = linkedMember?.teamIds?.split(',').map((teamId) => teamId.trim()).filter(Boolean) ?? [];
+
           // Retorna o objeto padronizado para a sessão
           return {
             id: user.id,
@@ -132,6 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             tenantId: databaseKey,
             tenantSlug: church.slug,
             linkedMemberId: user.linkedMemberId,
+            teamIds,
             version: user.version,
             isPlatformAdmin: false,
             planCode: church.plan,
@@ -156,6 +167,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.tenantId = (user as any).tenantId;
         token.tenantSlug = (user as any).tenantSlug;
         token.linkedMemberId = (user as any).linkedMemberId;
+        token.teamIds = (user as any).teamIds;
         token.version = (user as any).version;
         token.isPlatformAdmin = Boolean((user as any).isPlatformAdmin);
         token.planCode = (user as any).planCode as string | undefined;
@@ -174,6 +186,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).tenantId = token.tenantId as string;
         (session.user as any).tenantSlug = token.tenantSlug as string;
         (session.user as any).linkedMemberId = token.linkedMemberId as string | null | undefined;
+        (session.user as any).teamIds = (token.teamIds as string[]) || [];
         (session.user as any).version = token.version as number;
         (session.user as any).isPlatformAdmin = Boolean(token.isPlatformAdmin);
         (session.user as any).planCode = token.planCode as string | undefined;

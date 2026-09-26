@@ -17,6 +17,7 @@ import { hasActionPermission } from '@/lib/access-control';
 import { Heart, Send, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { listFundraising, listGroups, publishGroupPost } from '@/services/groups/groups-api';
+import { SocialProjectsWebTable } from '@/features/social-projects/components/SocialProjectsWebTable';
 
 type FundraisingItem = {
   id: string;
@@ -26,7 +27,7 @@ type FundraisingItem = {
   unit: string;
 };
 
-type Goal = {
+export type Goal = {
   id: string;
   title: string;
   description?: string | null;
@@ -35,7 +36,7 @@ type Goal = {
   items: FundraisingItem[];
 };
 
-type GroupItem = {
+export type GroupItem = {
   id: string;
   name: string;
   description?: string | null;
@@ -146,7 +147,9 @@ export default function SocialProjectsPage() {
           </CardContent>
         </Card>
       ) : (
-        projectCards.map(({ group, goals }) => (
+        <>
+        <div className="hidden md:block"><SocialProjectsWebTable projectCards={projectCards} /></div>
+        <div className="space-y-4 md:hidden">{projectCards.map(({ group, goals }) => (
           <div key={group.id} className="space-y-3">
             <div className="flex items-center gap-2">
               <Heart className="h-4 w-4 text-pink-500" />
@@ -205,7 +208,8 @@ export default function SocialProjectsPage() {
               </div>
             )}
           </div>
-        ))
+        ))}</div>
+        </>
       )}
 
       <Drawer open={postDrawerOpen} onOpenChange={setPostDrawerOpen}>

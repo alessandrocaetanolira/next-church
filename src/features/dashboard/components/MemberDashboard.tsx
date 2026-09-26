@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type LocalProduct, type LocalSale } from '@/lib/db';
 import { useProducts } from '@/features/canteen/hooks/use-products';
+import { AppImage } from '@/components/shared';
 import { 
   BookOpen, 
   Flame, 
@@ -530,7 +531,7 @@ export function MemberDashboard() {
                         <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30">
                           <div className="aspect-[4/3] w-full">
                             {product.imageUrl ? (
-                              <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                              <AppImage src={product.imageUrl} alt={product.name} width={640} height={480} className="h-full w-full object-cover" />
                             ) : (
                               <div className="flex h-full items-center justify-center">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">

@@ -11,14 +11,14 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
-import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Pin } from 'lucide-react';
+import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { hasActionPermission } from '@/lib/access-control';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
+import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
+import { FeedWebTable } from '@/features/feed/components/FeedWebTable';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -398,130 +398,10 @@ export default function FeedPage() {
             </CardContent>
           </Card>
         ) : (
-          sortedPosts.map((post) => {
-            const config = POST_TYPE_CONFIG[post.type] ?? POST_TYPE_CONFIG.testimony;
-            const Icon = config.icon;
-            const currentUserId = user?.email || '';
-            const liked = currentUserId ? post.likes.includes(currentUserId) : false;
-
-            return (
-              <div key={String(post.id)} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <Card className="overflow-hidden border-border">
-                  <CardContent className="pt-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">{post.userName[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{post.userName}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap justify-end gap-1">
-                        {post.pinnedUntil && new Date(post.pinnedUntil).getTime() > Date.now() ? (
-                          <Badge variant="outline" className="text-[10px] h-6">
-                            <Pin className="mr-1 h-3 w-3" />
-                            Fixado
-                          </Badge>
-                        ) : null}
-                        <Badge variant="secondary" className="text-[10px] gap-1 px-2 h-6">
-                          <Icon className={cn('w-3 h-3', config.color)} />
-                          {config.label}
-                        </Badge>
-                        {post.visibility ? (
-                          <Badge variant="outline" className="text-[10px] h-6">
-                            {post.visibility === 'public' ? 'Todos' : post.visibility === 'group' ? 'Grupo' : 'Individual'}
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div>
-                      {post.groupId ? (
-                        <p className="mb-1 text-[11px] font-medium text-primary">
-                          {groups.find((group) => group.id === post.groupId)?.name ?? 'Grupo'}
-                        </p>
-                      ) : null}
-                      {post.senderType === 'group' ? (
-                        <p className="mb-1 text-[11px] font-medium text-muted-foreground">
-                          Publicado em nome do grupo
-                        </p>
-                      ) : null}
-                      {post.title ? (
-                        <h3 className="mb-2 text-sm font-semibold text-foreground">{post.title}</h3>
-                      ) : null}
-                      {post.type === 'verse' && post.reference && (
-                        <p className="text-xs font-medium text-primary mb-1">{post.reference}</p>
-                      )}
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{post.content}</p>
-                      {post.mediaUrl ? (
-                        <div className="mt-3 overflow-hidden rounded-xl border border-border bg-muted/20">
-                          {post.mediaType === 'video' ? (
-                            <video src={post.mediaUrl} controls className="max-h-80 w-full bg-black object-cover" />
-                          ) : (
-                            <img src={post.mediaUrl} alt={post.title || 'Mídia da publicação'} className="max-h-80 w-full object-cover" />
-                          )}
-                        </div>
-                      ) : null}
-                    </div>
-
-                    {canUpdateFeed ? <div className="flex items-center gap-1 pt-1 border-t border-border mt-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className={cn('text-xs gap-1 h-8 px-2', liked && 'text-pink-500 hover:text-pink-600')}
-                        onClick={() => handleLike(post)}
-                      >
-                        <Heart className={cn('w-3.5 h-3.5', liked && 'fill-current')} />
-                        {post.likes.length > 0 && post.likes.length}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs gap-1 h-8 px-2"
-                        onClick={() => setCommentingOn(commentingOn === post.id ? null : post.id ?? null)}
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        {post.comments.length > 0 && post.comments.length}
-                      </Button>
-                    </div> : null}
-
-                    {post.comments.length > 0 && (
-                      <div className="space-y-2 pl-4 border-l-2 border-border mt-2">
-                        {post.comments.map((comment) => (
-                          <div key={comment.id} className="text-xs">
-                            <span className="font-medium mr-1">{comment.userName}</span>
-                            <span className="text-muted-foreground">{comment.content}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {canUpdateFeed && commentingOn === post.id && (
-                      <div className="flex gap-2 mt-2">
-                        <Textarea
-                          value={commentText}
-                          onChange={(e) => setCommentText(e.target.value)}
-                          placeholder="Escreva um comentário..."
-                          rows={1}
-                          className="resize-none text-xs min-h-[36px] flex-1"
-                        />
-                        <Button
-                          size="icon"
-                          className="shrink-0 h-9 w-9"
-                          onClick={() => handleComment(post)}
-                          disabled={!commentText.trim()}
-                        >
-                          <Send className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })
+          <>
+            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} /></div>
+            <div className="md:hidden"><FeedWebPostList posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} /></div>
+          </>
         )}
       </>
 

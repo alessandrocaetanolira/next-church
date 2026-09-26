@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
+import { TaskWebTable } from './TaskWebTable';
 
 export function TaskList() {
   const { user } = useAuth();
@@ -34,7 +35,9 @@ export function TaskList() {
   }, {} as Record<string, typeof tasks>);
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="hidden md:block"><TaskWebTable tasks={tasks} teams={teams} canDelete={canDelete} onDelete={deleteTask} /></div>
+    <div className="space-y-6 md:hidden">
       {Object.entries(groupedTasks).map(([dateKey, dayTasks]) => (
         <div key={dateKey} className="space-y-2">
           <h3 className="font-semibold text-lg text-muted-foreground capitalize">
@@ -83,5 +86,6 @@ export function TaskList() {
         </div>
       ))}
     </div>
+    </>
   );
 }

@@ -18,6 +18,7 @@ export interface User {
   churchId: string;
   tenantId: string;
   linkedMemberId?: string | null;
+  teamIds: string[];
   isPlatformAdmin?: boolean;
   planCode?: string;
   planFeatures?: string[];
@@ -32,7 +33,7 @@ interface AuthState {
   
   // Actions
   setSession: (user: User | null, tenantId: string | null) => void;
-  updateAccess: (access: { permissions?: string[]; role?: User['role']; planFeatures?: string[] }) => void;
+  updateAccess: (access: { permissions?: string[]; role?: User['role']; planFeatures?: string[]; teamIds?: string[] }) => void;
   logout: () => void;
   setLoading: (isLoading: boolean) => void;
 }

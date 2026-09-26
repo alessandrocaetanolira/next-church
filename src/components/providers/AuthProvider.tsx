@@ -16,6 +16,7 @@ type OfflineSession = Session & {
     tenantSlug?: string;
     permissions?: string[];
     linkedMemberId?: string | null;
+    teamIds?: string[];
     planCode?: string;
     planFeatures?: string[];
     version?: number;
@@ -57,6 +58,7 @@ function SessionCacheBridge() {
         churchId: user.tenantId ?? '',
         tenantId: user.tenantId ?? '',
         linkedMemberId: user.linkedMemberId,
+        teamIds: user.teamIds ?? [],
         isPlatformAdmin: user.isPlatformAdmin,
         planCode: user.planCode,
         planFeatures: user.planFeatures,
@@ -76,6 +78,7 @@ function SessionCacheBridge() {
           tenantSlug: user.tenantSlug,
           permissions: user.permissions,
           linkedMemberId: user.linkedMemberId,
+          teamIds: user.teamIds ?? [],
           planCode: user.planCode,
           planFeatures: user.planFeatures,
           version: user.version,

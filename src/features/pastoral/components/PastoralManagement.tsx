@@ -15,6 +15,7 @@ import { SummaryCards } from '@/features/pastoral/components/SummaryCards';
 import { Clock, Megaphone, Pin, Plus, Trash2, UserCheck, UserX, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPastoralAnnouncement, deletePastoralAnnouncement, processPastoralJoinRequest, processPendingMember } from '@/services/pastoral/pastoral-api';
+import { PastoralAnnouncementsTable, PastoralMembersTable, PastoralRequestsTable } from './PastoralWebTables';
 
 interface PendingMember {
   id: string;
@@ -207,6 +208,8 @@ export function PastoralManagement({
         </TabsList>
 
         <TabsContent value="announcements" className="space-y-4">
+          <div className="hidden md:block"><PastoralAnnouncementsTable items={announcements} onDelete={(id) => void handleDeleteAnnouncement(id)} /></div>
+          <div className="space-y-4 md:hidden">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -254,9 +257,12 @@ export function PastoralManagement({
             </div>
 
           </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
+          <div className="hidden md:block"><PastoralRequestsTable members={pendingMembers} requests={pendingJoinRequests} processingId={processingId} onMember={(id, action) => void handlePendingMember(id, action)} onRequest={(id, action) => void handleJoinRequest(id, action)} /></div>
+          <div className="md:hidden">
           {pendingMembers.length > 0 ? (
             <div className="space-y-3">
               <h4 className="font-semibold text-sm">Novos membros</h4>
@@ -335,9 +341,12 @@ export function PastoralManagement({
               </CardContent>
             </Card>
           ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="members" className="space-y-3">
+          <div className="hidden md:block"><PastoralMembersTable members={activeMembersWithTeams} /></div>
+          <div className="md:hidden">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Membros ativos</CardTitle>
@@ -360,6 +369,7 @@ export function PastoralManagement({
               ))}
             </CardContent>
           </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

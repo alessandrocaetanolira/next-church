@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
@@ -137,24 +137,19 @@ export default function GroupDetailPage() {
   const canPublishFeed = hasActionPermission(user, 'feed', 'share');
 
   useEffect(() => {
-    if (!groupId) return;
-    void loadData();
-  }, [groupId, user?.linkedMemberId]);
-
-  useEffect(() => {
     setPageTitle(group?.name ?? 'Grupo');
   }, [group?.name, setPageTitle]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!groupId) return;
 
     try {
-      const [groupPayload, postsPayload, goalsPayload, membersPayload, requestsPayload] = await Promise.all([
-        getGroup<GroupDetail>(groupId),
+      const groupPayload = await getGroup<GroupDetail>(groupId);
+      const [postsPayload, goalsPayload, membersPayload, requestsPayload] = await Promise.all([
         listGroupFeed<{ items?: FeedPost[] }>(groupId),
         listFundraising<FundraisingGoal[]>(groupId),
         listMembers<MemberOption[]>(),
-        isTeam || !group ? listJoinRequests<JoinRequestItem[]>() : Promise.resolve([]),
+        groupPayload.type === 'team' ? listJoinRequests<JoinRequestItem[]>() : Promise.resolve([]),
       ]);
 
       setGroup(groupPayload);
@@ -166,7 +161,12 @@ export default function GroupDetailPage() {
     } catch {
       toast.error('Erro ao carregar grupo.');
     }
-  };
+  }, [groupId]);
+
+  useEffect(() => {
+    if (!groupId) return;
+    void loadData();
+  }, [groupId, loadData]);
 
   useEffect(() => {
     if (!group) return;

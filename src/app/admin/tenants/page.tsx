@@ -5,6 +5,7 @@ import { TenantList } from '@/features/admin-tenants/components/tenant-list';
 import { CreateTenantForm } from '@/features/admin-tenants/components/create-tenant-form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShieldAlert } from 'lucide-react';
+import { WebPageContainer, WebPageHeader } from '@/components/shared/web';
 
 export default function AdminTenantsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -12,14 +13,8 @@ export default function AdminTenantsPage() {
   const handleRefresh = () => setRefreshKey(prev => prev + 1);
 
   return (
-    <div className="p-4 space-y-4 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gerenciamento de Tenants</h1>
-          <p className="text-muted-foreground text-sm">Controle de igrejas e provisionamento de bancos.</p>
-        </div>
-        <CreateTenantForm onCreated={handleRefresh} />
-      </div>
+    <WebPageContainer size="wide" className="space-y-4">
+      <WebPageHeader title="Gerenciamento de Tenants" description="Controle de igrejas e provisionamento de bancos." actions={<CreateTenantForm onCreated={handleRefresh} />} />
 
       <Card className="border-destructive/20 bg-destructive/5">
         <CardHeader className="py-3 px-4 flex flex-row items-center gap-3">
@@ -39,6 +34,6 @@ export default function AdminTenantsPage() {
           <TenantList key={refreshKey} />
         </CardContent>
       </Card>
-    </div>
+    </WebPageContainer>
   );
 }

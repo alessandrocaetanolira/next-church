@@ -34,6 +34,17 @@ model ChurchBranding {
   pwaName             String?
   pwaShortName        String?
   logoUrl             String?
+  logoLightUrl        String?
+  logoDarkUrl         String?
+  mobileIconUrl       String?
+  sidebarLogoUrl      String?
+  sidebarOpenLightUrl String?
+  sidebarOpenDarkUrl  String?
+  sidebarCollapsedLightUrl String?
+  sidebarCollapsedDarkUrl  String?
+  sidebarUseImage     Boolean  @default(true)
+  sidebarTitle        String?
+  sidebarSubtitle     String?
   icon192Url          String?
   icon512Url          String?
   primaryColor        String?

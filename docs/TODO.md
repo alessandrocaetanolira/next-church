@@ -3,6 +3,12 @@
 Este é o índice canônico de trabalho. Os documentos de domínio abaixo mantêm o
 detalhamento técnico; este arquivo contém apenas o estado e a ordem de execução.
 
+## Próximo foco
+
+As Prioridades 1, 2 e 3 estão concluídas. A próxima etapa é a Prioridade 4,
+dedicada à validação do fluxo offline-first em dispositivo real, isolamento do
+cache por tenant/usuário e sincronização resiliente.
+
 ## Estado atual
 
 - [x] Next.js 16 + Turbopack + TypeScript.
@@ -18,29 +24,64 @@ detalhamento técnico; este arquivo contém apenas o estado e a ordem de execuç
 
 ## Prioridade 1 — Estabilização
 
-- [ ] Executar a suíte completa fora do sandbox e corrigir falhas reais, separando-as de limitações de subprocesso.
-- [ ] Corrigir migrations pendentes em ambientes existentes antes de consultar colunas novas.
-- [ ] Revalidar `npm run build` após as últimas alterações de branding/layout.
-- [ ] Reduzir warnings relevantes de lint, principalmente imagens e configuração do Vitest.
-- [ ] Atualizar o estado de validação no README após cada rodada.
+- [x] Executar a suíte completa fora do sandbox e corrigir falhas reais, separando-as de limitações de subprocesso.
+- [x] Corrigir migrations pendentes em ambientes existentes antes de consultar colunas novas.
+- [x] Revalidar `npm run build` após as últimas alterações de branding/layout.
+- [x] Reduzir warnings relevantes de lint, corrigindo imagens, hooks e configuração do Vitest.
+- [x] Atualizar o estado de validação no README após cada rodada.
 
-## Prioridade 2 — Permissões e experiência de acesso
+## Prioridade 2 — Template Web
 
-- [ ] Completar escopo de líder em grupos, materiais e tarefas.
-- [ ] Garantir que o administrador veja todos os módulos autorizados, incluindo Cantina.
-- [ ] Persistir permissões no store após login e atualizar via SSE.
-- [ ] Cobrir permissões com testes de policy, service e resposta HTTP.
+- [x] Separar o `WebTemplate` do componente de layout que também atende o Mobile.
+- [x] Extrair `WebHeader` com logo, título, tema, notificações e ações da conta.
+- [x] Separar `WebSidebar` da renderização dos itens de navegação.
+- [x] Criar configuração central de navegação Web por grupos e módulos.
+- [x] Manter as regras de acesso fora dos componentes visuais de navegação.
+- [x] Criar `WebPageContainer` com largura e espaçamento padrão para telas Web.
+- [x] Criar breadcrumbs e contexto de navegação para telas internas.
+- [x] Criar `WebUserMenu` com perfil, configurações e logout.
+- [x] Criar `WebPageHeader` compartilhado para cabeçalhos de telas Web.
+- [x] Criar entrada compartilhada para componentes Web reutilizáveis (`components/shared/web`).
+- [x] Iniciar a migração de Membros para o padrão Web com tabela desktop própria.
+- [x] Iniciar a migração de Materiais com tabela desktop própria.
+- [x] Migrar Grupos para tabela Web, mantendo cartões no Mobile.
+- [x] Iniciar a migração do Feed com lista de publicações Web própria.
+- [x] Migrar o Feed para tabela Web, mantendo cards no Mobile.
+- [x] Iniciar a migração da Bíblia com navegação Web própria.
+- [x] Iniciar a migração de Administração e Cantina para o padrão Web com container compartilhado.
+- [x] Migrar a listagem de Planos para tabela Web.
+- [x] Migrar a gestão de Produtos da Cantina para tabela Web.
+- [x] Migrar o histórico de vendas da Cantina para tabela Web.
+- [x] Migrar a listagem de Fiado da Cantina para tabela Web.
+- [x] Migrar a listagem de membros da Cantina para tabela Web.
+- [x] Migrar Notificações para tabela Web.
+- [x] Migrar Escalas para tabela Web.
+- [x] Concluir as principais listagens desktop de Administração e Cantina.
+- [x] Migrar Grupos, Feed e Bíblia com componentes Web próprios.
+- [x] Migrar Estacionamento para tabela Web.
+- [x] Migrar Infantil para tabela Web.
+- [x] Migrar Projetos Sociais para tabela Web.
+- [x] Migrar Pastoral para tabelas Web.
+- [x] Garantir que chamadas de API permaneçam em hooks/services de domínio.
+- [x] Manter o template Mobile inalterado durante esta fase, usando variantes Web apenas no desktop.
 
-## Prioridade 3 — Offline-first real
+## Prioridade 3 — Permissões e experiência de acesso
 
-- [ ] Validar abertura e refresh offline em dispositivo real.
+- [x] Completar escopo de líder em grupos, materiais e tarefas.
+- [x] Garantir que o administrador veja todos os módulos autorizados, incluindo Cantina.
+- [x] Persistir permissões e equipes no store após login e atualizar permissões via SSE.
+- [x] Cobrir permissões com testes de policy, service e resposta HTTP.
+
+## Prioridade 4 — Offline-first real
+
+- [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
 - [ ] Garantir sessão offline sem redirecionamento indevido para login.
 - [ ] Isolar cache Dexie por tenant e usuário.
-- [ ] Completar sincronização, retry, conflitos e quota do IndexedDB.
+- [ ] Completar sincronização, retry, conflitos e quota do IndexedDB, documentando a estratégia de resolução.
 - [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
 - [ ] Validar branding e manifest sem mistura entre tenants.
 
-## Prioridade 4 — Cantina
+## Prioridade 5 — Cantina
 
 - [ ] Adicionar consumidor intencional `VISITOR` sem criar membro falso.
 - [ ] Diferenciar no PDV: membro, visitante e não identificado.
@@ -48,23 +89,25 @@ detalhamento técnico; este arquivo contém apenas o estado e a ordem de execuç
 - [ ] Adicionar filtros e relatórios por tipo de consumidor.
 - [ ] Revisar PDF de vendas e operação de remoção de pedidos prontos.
 
-## Prioridade 5 — Branding e UI
+## Prioridade 6 — Branding e UI
 
 - [ ] Preview de branding no painel administrativo.
 - [ ] Restaurar branding padrão do app.
-- [ ] Alternar logo claro/escuro conforme o tema.
+- [x] Alternar logo claro/escuro conforme o tema no template Web.
+- [x] Configurar ícone mobile e quatro logos da sidebar: aberta/recolhida em claro/escuro.
+- [x] Configurar uso opcional da imagem e textos opcionais da sidebar.
 - [ ] Atualizar metadata/title e ícones dinamicamente por tenant.
 - [ ] Consolidar `AppImage`, `ErrorState`, `ActionMenu` e filtros compartilhados.
 - [ ] Validar carregamento inicial e fallback de logo após login.
 
-## Prioridade 6 — Notificações e e-mail
+## Prioridade 7 — Notificações e e-mail
 
 - [x] Broker SSE, persistência interna e Web Push.
 - [x] Eventos compartilhados para Cantina e demais módulos principais.
 - [ ] Adicionar testes para remetente, entrega e eventos de crédito.
 - [ ] Implementar e-mail transacional com provider, templates, fila, retry e idempotência.
 
-## Prioridade 7 — Módulos de baixa prioridade
+## Prioridade 8 — Módulos de baixa prioridade
 
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).

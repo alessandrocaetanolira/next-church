@@ -33,6 +33,7 @@ import {
   Eye,
   Check,
 } from 'lucide-react';
+import { NotificationsWebTable } from '@/features/notifications/components/NotificationsWebTable';
 
 function normalizeType(type: string): NotificationFilter {
   if (type.startsWith('canteen-order-')) return 'order';
@@ -208,6 +209,8 @@ export default function NotificationsPage() {
           ))}
         </div>
 
+        <div className="hidden md:block"><NotificationsWebTable notifications={filteredNotifications} getTypeLabel={getTypeLabel} onOpen={handleOpenNotif} /></div>
+        <div className="md:hidden">
         {filteredNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
             <Bell className="w-16 h-16 mb-4 opacity-20" />
@@ -268,6 +271,7 @@ export default function NotificationsPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       <Dialog open={!!selectedNotif} onOpenChange={(open) => !open && setSelectedNotif(null)}>

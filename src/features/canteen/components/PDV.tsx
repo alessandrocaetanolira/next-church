@@ -20,6 +20,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceC
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { db } from '@/lib/db';
+import { AppImage } from '@/components/shared';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
 import { generateId } from '@/lib/id';
@@ -269,9 +270,11 @@ export function PDV() {
                             {product.imageUrl ? (
                                 <div className="mb-3 overflow-hidden rounded-lg border border-border bg-muted/20">
                                   <div className="aspect-[4/3] w-full">
-                                    <img
+                                    <AppImage
                                       src={product.imageUrl}
                                       alt={product.name}
+                                      width={640}
+                                      height={480}
                                       className="h-full w-full object-cover"
                                     />
                                   </div>
