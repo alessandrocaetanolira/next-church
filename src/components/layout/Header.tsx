@@ -144,7 +144,7 @@ export function Header() {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-48 items-center justify-start">
+            <div className="flex h-9 w-40 items-center justify-start">
               <AppImage
                 src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
                 alt={settings.appName}

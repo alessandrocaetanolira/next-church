@@ -1,21 +1,37 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSync } from '@/features/sync/hooks/use-sync';
 
-export function PWAProvider({ children }: { children: React.ReactNode }) {
+function PWASyncEffect() {
   const { performFullSync, isAuthenticated } = useSync();
-
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (!hasRun.current && isAuthenticated) {
-      void performFullSync();
-      hasRun.current = true;
-    }
-    // performFullSync is supplied by the sync hook and is intentionally not a dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+    if (hasRun.current || !isAuthenticated || typeof window === 'undefined' || !window.navigator.onLine) return;
 
-  return <>{children}</>;
+    hasRun.current = true;
+    void performFullSync().catch((error: unknown) => {
+      // A sincronização inicial não pode impedir a renderização do aplicativo.
+      console.warn('[PWA] sincronização inicial indisponível:', error);
+    });
+  }, [isAuthenticated, performFullSync]);
+
+  return null;
+}
+
+export function PWAProvider({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' && 'serviceWorker' in navigator) {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => void registration.unregister());
+      });
+      void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+    }
+    setMounted(true);
+  }, []);
+
+  return <>{children}{mounted ? <PWASyncEffect /> : null}</>;
 }

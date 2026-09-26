@@ -4,7 +4,7 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 
 ## Stack
 
-- Next.js 16.3.6 (App Router e Turbopack)
+- Next.js 16.3.6 (App Router; desenvolvimento via Webpack enquanto a estabilidade do Turbopack é acompanhada)
 - React 19.2
 - TypeScript
 - Tailwind CSS
@@ -79,6 +79,8 @@ AUTH_URL="http://localhost:3000"
 # AUTH_URL="https://church.bennipersonalizados.com.br"
 # NEXTAUTH_URL="https://church.bennipersonalizados.com.br"
 NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
+# Origem pública usada nos links e QR Codes enviados para membros:
+NEXT_PUBLIC_SHARE_BASE_URL="https://church.bennipersonalizados.com.br"
 AUTH_TRUST_HOST="true"
 
 # Web Push (opcional; gere um par VAPID para habilitar notificações com o app fechado)
@@ -162,6 +164,20 @@ npm run lint
 npm test
 npm run build
 ```
+
+O comando `npm run dev` usa `next dev --webpack` para evitar a recompilação
+inconsistente de módulos observada no HMR do Turbopack durante o desenvolvimento.
+Em caso de chunks antigos no navegador, encerre o servidor, remova `.next` e faça
+um hard refresh. O service worker é desativado automaticamente em desenvolvimento.
+
+Os testes automatizados usam Vitest:
+
+```bash
+npm test
+```
+
+A suíte cobre autenticação, permissões, isolamento de tenants, migrations, APIs,
+Feed, sincronização offline, Bíblia, notificações, cantina e camadas de domínio.
 
 Para conferir os bancos e migrations aplicadas:
 

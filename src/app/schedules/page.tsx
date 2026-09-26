@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Gestão de escalas e tarefas',
 };
 
-import { PageTitle } from '@/components/PageTitle';
+import { WebPageLayout } from '@/components/shared/web';
 
 export default async function SchedulesPage() {
   const session = await auth();
@@ -25,17 +25,12 @@ export default async function SchedulesPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
-      <PageTitle title="Escalas" />
-      <div className="flex justify-end">
-        {hasActionPermission(session.user, 'tasks', 'create') ? <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Escala
-        </Button> : null}
-      </div>
-      <main>
-        <TaskList />
-      </main>
-    </div>
+    <WebPageLayout
+      title="Escalas"
+      description="Organize escalas, tarefas e responsabilidades da equipe."
+      actions={hasActionPermission(session.user, 'tasks', 'create') ? <Button><Plus className="mr-2 h-4 w-4" />Nova Escala</Button> : null}
+    >
+      <TaskList />
+    </WebPageLayout>
   );
 }

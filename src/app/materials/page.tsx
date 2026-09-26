@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConfirmDeleteDialog, Notice, PageHeader, PageShell, SearchField } from '@/components/common';
+import { ConfirmDeleteDialog, Notice, PageHeader, SearchField } from '@/components/common';
+import { WebPageLayout } from '@/components/shared/web';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 import { createMaterial, deleteMaterial, listMaterials, updateMaterial, updateMaterialQuantity, type Material } from '@/services/materials/materials-api';
@@ -114,7 +115,7 @@ export default function MaterialsPage() {
   };
 
   return (
-    <PageShell>
+    <WebPageLayout>
       <PageHeader
         title="Materiais"
         description="Controle itens, quantidades mínimas e reposições por categoria."
@@ -203,6 +204,6 @@ export default function MaterialsPage() {
         title="Excluir material"
         description="O material será removido da listagem. Esta ação não pode ser desfeita."
       />
-    </PageShell>
+    </WebPageLayout>
   );
 }

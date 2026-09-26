@@ -38,22 +38,26 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const appContent = (
+    <AuthProvider>
+      <AppSettingsProvider>
+        <DrawerProvider>
+          <PWAProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </PWAProvider>
+        </DrawerProvider>
+      </AppSettingsProvider>
+    </AuthProvider>
+  );
+
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="font-sans">
-        <SerwistProvider swUrl="/serwist/sw.js" options={{ scope: "/", updateViaCache: "none" }}>
-          <AuthProvider>
-            <AppSettingsProvider>
-              <DrawerProvider>
-                <PWAProvider>
-                  <LayoutWrapper>
-                    {children}
-                  </LayoutWrapper>
-                </PWAProvider>
-              </DrawerProvider>
-            </AppSettingsProvider>
-          </AuthProvider>
-        </SerwistProvider>
+        {process.env.NODE_ENV === 'production' ? (
+          <SerwistProvider swUrl="/serwist/sw.js" options={{ scope: "/", updateViaCache: "none" }}>
+            {appContent}
+          </SerwistProvider>
+        ) : appContent}
       </body>
     </html>
   );

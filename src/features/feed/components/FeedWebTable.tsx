@@ -1,6 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
+import { Fragment } from 'react';
 import { ptBR } from 'date-fns/locale';
 import { Eye, Heart, MessageCircle, Send } from 'lucide-react';
 import type { FeedPost } from '@/lib/db';
@@ -30,11 +31,11 @@ export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, comm
       <Table>
         <TableHeader><TableRow><TableHead>Publicação</TableHead><TableHead>Autor</TableHead><TableHead>Tipo</TableHead><TableHead>Visibilidade</TableHead><TableHead>Data</TableHead><TableHead className="w-[190px] text-right">Ações</TableHead></TableRow></TableHeader>
         <TableBody>
-          {posts.map((post) => {
+          {posts.map((post, index) => {
             const liked = currentUserId ? post.likes.includes(currentUserId) : false;
             const groupName = post.groupId ? groups.find((group) => group.id === post.groupId)?.name : null;
             return (
-              <>
+              <Fragment key={String(post.id ?? `post-${index}`)}>
                 <TableRow key={String(post.id)}>
                   <TableCell><div className="max-w-[360px]"><p className="truncate font-medium">{post.title || post.content}</p>{groupName ? <p className="text-xs text-primary">{groupName}</p> : null}<p className="truncate text-sm text-muted-foreground">{post.content}</p></div></TableCell>
                   <TableCell className="whitespace-nowrap">{post.userName}</TableCell>
@@ -44,7 +45,7 @@ export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, comm
                   <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" aria-label="Visualizar publicação"><Eye className="h-4 w-4" /></Button>{canUpdateFeed ? <><Button size="sm" variant="ghost" className={liked ? 'text-pink-500' : ''} onClick={() => onLike(post)}><Heart className={liked ? 'fill-current' : ''} /><span>{post.likes.length}</span></Button><Button size="sm" variant="ghost" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle /><span>{post.comments.length}</span></Button></> : null}</div></TableCell>
                 </TableRow>
                 {canUpdateFeed && commentingOn === post.id ? <TableRow key={`${String(post.id)}-comment`}><TableCell colSpan={6}><div className="flex gap-2"><Textarea value={commentText} onChange={(event) => onCommentTextChange(event.target.value)} placeholder="Escreva um comentário..." rows={1} className="min-h-[36px] resize-none" /><Button size="icon" onClick={() => onComment(post)} disabled={!commentText.trim()}><Send className="h-4 w-4" /></Button></div></TableCell></TableRow> : null}
-              </>
+              </Fragment>
             );
           })}
           {posts.length === 0 ? <TableRow><TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Nenhuma publicação encontrada.</TableCell></TableRow> : null}

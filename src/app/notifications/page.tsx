@@ -34,6 +34,7 @@ import {
   Check,
 } from 'lucide-react';
 import { NotificationsWebTable } from '@/features/notifications/components/NotificationsWebTable';
+import { WebPageLayout } from '@/components/shared/web';
 
 function normalizeType(type: string): NotificationFilter {
   if (type.startsWith('canteen-order-')) return 'order';
@@ -163,7 +164,7 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-2xl space-y-4 p-4">
+      <WebPageLayout>
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8 -ml-2" onClick={() => router.back()}>
@@ -272,7 +273,7 @@ export default function NotificationsPage() {
           </div>
         )}
         </div>
-      </div>
+      </WebPageLayout>
 
       <Dialog open={!!selectedNotif} onOpenChange={(open) => !open && setSelectedNotif(null)}>
         <DialogContent className="sm:max-w-md">

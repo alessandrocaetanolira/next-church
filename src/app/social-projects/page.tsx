@@ -18,6 +18,7 @@ import { Heart, Send, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { listFundraising, listGroups, publishGroupPost } from '@/services/groups/groups-api';
 import { SocialProjectsWebTable } from '@/features/social-projects/components/SocialProjectsWebTable';
+import { WebPageLayout } from '@/components/shared/web';
 
 type FundraisingItem = {
   id: string;
@@ -130,7 +131,7 @@ export default function SocialProjectsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
+    <WebPageLayout>
       {canPublishToFeed ? (
         <div className="flex justify-end">
           <Button variant="outline" onClick={() => setPostDrawerOpen(true)}>
@@ -257,6 +258,6 @@ export default function SocialProjectsPage() {
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </WebPageLayout>
   );
 }

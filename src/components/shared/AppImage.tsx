@@ -1,10 +1,12 @@
-import Image, { type ImageProps } from 'next/image';
+import type { ImgHTMLAttributes } from 'react';
 
-type AppImageProps = Omit<ImageProps, 'src'> & {
+type AppImageProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> & {
   src: string;
 };
 
-/** Imagens de uploads e provedores externos sem exigir hosts fixos no Next. */
+/** Imagens de uploads, Base64 e provedores externos sem exigir configuração do Next Image. */
 export function AppImage({ src, alt = '', ...props }: AppImageProps) {
-  return <Image {...props} src={src} alt={alt} unoptimized loader={({ src: imageSrc }) => imageSrc} />;
+  // Logos e uploads podem chegar sem dimensões fixas; o elemento nativo evita quebra no mobile.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img {...props} src={src} alt={alt} />;
 }

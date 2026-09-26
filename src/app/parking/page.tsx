@@ -29,6 +29,7 @@ import {
   type ParkingSpot,
 } from '@/services/parking/parking-api';
 import { ParkingWebTable } from '@/features/parking/components/ParkingWebTable';
+import { WebPageLayout } from '@/components/shared/web';
 
 type GroupOption = ParkingGroup;
 type SpotItem = ParkingSpot;
@@ -237,7 +238,7 @@ export default function ParkingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
+    <WebPageLayout>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <Select value={activeGroupId} onValueChange={setActiveGroupId}>
@@ -470,6 +471,6 @@ export default function ParkingPage() {
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </WebPageLayout>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUIStore } from '@/features/ui/store';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
-import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe } from 'lucide-react';
+import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Image as ImageIcon, Video, BarChart3, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
@@ -19,6 +19,10 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
 import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
 import { FeedWebTable } from '@/features/feed/components/FeedWebTable';
+import { WebPageLayout } from '@/components/shared/web';
+import { MobileFeedComposer } from '@/features/feed/components/MobileFeedComposer';
+import { SharedFlatList } from '@/components/SharedFlatList';
+import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -78,6 +82,8 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [newPostsAvailable, setNewPostsAvailable] = useState(false);
+  const latestPostIdRef = useRef<string | number | undefined>(undefined);
   const sortedPosts = useMemo(() => sortFeedPosts(posts), [posts]);
 
   useEffect(() => {
@@ -113,6 +119,10 @@ export default function FeedPage() {
     const items = Array.isArray(payload.items) ? payload.items : [];
 
     setPosts((current) => sortFeedPosts(append ? [...current, ...items] : items));
+    if (!append) {
+      latestPostIdRef.current = items[0]?.id;
+      setNewPostsAvailable(false);
+    }
     setHasMore(Boolean(payload.hasMore));
     setPage(targetPage);
   }, [filterType]);
@@ -136,6 +146,33 @@ export default function FeedPage() {
       active = false;
     };
   }, [loadPosts]);
+
+  useEffect(() => {
+    if (initialLoading || isOffline) return;
+
+    const checkForNewPosts = async () => {
+      try {
+        const payload = await listFeedPosts(1, PAGE_SIZE, filterType);
+        const newestId = Array.isArray(payload.items) ? payload.items[0]?.id : undefined;
+        if (newestId !== undefined && latestPostIdRef.current !== undefined && newestId !== latestPostIdRef.current) {
+          setNewPostsAvailable(true);
+        }
+      } catch {
+        // A atualização silenciosa não deve interromper a leitura do Feed.
+      }
+    };
+
+    const interval = window.setInterval(() => void checkForNewPosts(), 30_000);
+    return () => window.clearInterval(interval);
+  }, [filterType, initialLoading, isOffline]);
+
+  const handleRefreshNewPosts = async () => {
+    try {
+      await loadPosts(1, false);
+    } catch {
+      toast.error('Não foi possível atualizar o Feed.');
+    }
+  };
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
@@ -170,6 +207,8 @@ export default function FeedPage() {
         notifyResponsibles: canTargetFeed && newVisibility === 'group' ? notifyResponsibles : false,
       });
       setPosts((current) => sortFeedPosts([created, ...current]));
+      latestPostIdRef.current = created.id;
+      setNewPostsAvailable(false);
     } catch {
       toast.error('Não foi possível publicar.');
       return;
@@ -221,25 +260,55 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
+    <WebPageLayout className="overflow-x-hidden">
       {isOffline && (canCreatePost || canUpdateFeed) ? (
         <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
           Você está offline. Publicações, curtidas e comentários ficam disponíveis somente quando a conexão retornar.
         </div>
       ) : null}
       {canCreatePost && !isOffline && !composing ? (
-        <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setComposing(true)}>
-          <CardContent className="pt-4 pb-3">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-9 h-9">
+        <Card className="cursor-pointer rounded-2xl border-border shadow-sm transition-colors hover:border-primary/30" onClick={() => setComposing(true)}>
+          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <Avatar className="h-10 w-10 shrink-0">
                 <AvatarFallback className="bg-primary/10 text-primary text-sm">{user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
-              <span className="text-sm text-muted-foreground">Compartilhe algo com a comunidade...</span>
+              <span className="truncate text-sm text-muted-foreground">Compartilhe algo com a comunidade...</span>
+            </div>
+            <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
+              <ImageIcon className="h-5 w-5" /><Video className="h-5 w-5" /><Calendar className="h-5 w-5" /><BarChart3 className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
       ) : canCreatePost && !isOffline ? (
-        <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+        <>
+          <MobileFeedComposer
+            userName={user?.name ?? 'Administrador'}
+            userInitial={(user?.name?.[0] ?? 'A').toUpperCase()}
+            content={newPostContent}
+            title={newPostTitle}
+            postType={newPostType}
+            visibility={newVisibility}
+            mediaType={newMediaType}
+            mediaUrl={newMediaUrl}
+            groupId={newGroupId}
+            targetUserId={newTargetUserId}
+            groups={groups}
+            members={members}
+            canTargetFeed={canTargetFeed}
+            disabled={initialLoading}
+            onContentChange={setNewPostContent}
+            onTitleChange={setNewPostTitle}
+            onPostTypeChange={setNewPostType}
+            onVisibilityChange={setNewVisibility}
+            onMediaTypeChange={setNewMediaType}
+            onMediaUrlChange={setNewMediaUrl}
+            onGroupChange={setNewGroupId}
+            onTargetUserChange={setNewTargetUserId}
+            onClose={() => setComposing(false)}
+            onPublish={handlePost}
+          />
+        <div className="hidden animate-in fade-in slide-in-from-top-2 duration-300 md:block">
           <Card className="border-primary/30">
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -384,9 +453,22 @@ export default function FeedPage() {
             </CardContent>
           </Card>
         </div>
+        </>
       ) : null}
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:hidden">
+        {['all', 'announcement', 'event', 'social_project', 'verse', 'devotional', 'testimony'].map((type) => {
+          const config = type === 'all' ? { label: 'Todos', icon: LayoutGrid, color: '' } : POST_TYPE_CONFIG[type as keyof typeof POST_TYPE_CONFIG];
+          const Icon = config.icon;
+          return (
+            <button key={type} type="button" onClick={() => setFilterType(type)} className="flex min-w-[64px] shrink-0 flex-col items-center gap-1 text-xs">
+              <span className={cn('flex h-14 w-14 items-center justify-center rounded-full border-2 bg-muted/30', filterType === type ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground')}><Icon className="h-6 w-6" /></span>
+              <span className={cn('max-w-20 truncate', filterType === type ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{config.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="hidden items-center gap-2 overflow-x-auto pb-1 scrollbar-hide md:flex">
         <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
         {['all', 'announcement', 'event', 'social_project', 'verse', 'devotional', 'testimony', 'prayer', 'quiz_score'].map((type) => (
           <FilterChip
@@ -398,6 +480,13 @@ export default function FeedPage() {
           </FilterChip>
         ))}
       </div>
+
+      {newPostsAvailable ? (
+        <button type="button" onClick={() => void handleRefreshNewPosts()} className="mx-auto flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/15">
+          Novas publicações disponíveis
+          <span aria-hidden="true">↓</span>
+        </button>
+      ) : null}
 
       <>
         {initialLoading ? (
@@ -417,18 +506,36 @@ export default function FeedPage() {
         ) : (
           <>
             <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} /></div>
-            <div className="md:hidden"><FeedWebPostList posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} /></div>
+            <div className="md:hidden">
+              <SharedFlatList
+                data={sortedPosts}
+                keyExtractor={(post) => String(post.id)}
+                onEndReached={() => void handleLoadMore()}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                className="gap-4"
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} />}
+              />
+            </div>
           </>
         )}
       </>
 
       {hasMore && (
-        <div className="pt-2">
+        <div className="hidden pt-2 md:block">
           <Button variant="outline" className="w-full" onClick={handleLoadMore} disabled={loadingMore}>
             {loadingMore ? 'Carregando...' : 'Carregar mais'}
           </Button>
         </div>
       )}
-    </div>
+      <MobileCommentsDrawer
+        post={sortedPosts.find((post) => post.id === commentingOn) ?? null}
+        open={commentingOn !== null}
+        commentText={commentText}
+        onCommentTextChange={setCommentText}
+        onComment={handleComment}
+        onClose={() => setCommentingOn(null)}
+      />
+    </WebPageLayout>
   );
 }

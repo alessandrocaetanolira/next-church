@@ -84,7 +84,7 @@ cache por tenant/usuário e sincronização resiliente.
 - [x] Versionar o schema Dexie para índices pessoais com tenant.
 - [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
 - [ ] Garantir sessão offline sem redirecionamento indevido para login.
-- [ ] Isolar cache Dexie por tenant e usuário.
+- [x] Isolar cache Dexie por tenant e usuário.
 - [ ] Completar sincronização, retry, conflitos e quota do IndexedDB, documentando a estratégia de resolução.
 - [x] Detectar conflito de versão no `push` sem sobrescrever alteração mais recente do servidor.
 - [x] Expor resumo de sucesso parcial, conflitos e falhas no sincronismo.
@@ -103,14 +103,19 @@ cache por tenant/usuário e sincronização resiliente.
 
 ## Prioridade 6 — Branding e UI
 
-- [ ] Preview de branding no painel administrativo.
+- [x] Preview de branding no painel administrativo com tela mobile de dashboard e variantes iOS/Android.
+- [x] Organizar a aba Aparência em layout Web lado a lado, com preview à esquerda e formulários à direita.
+- [x] Aplicar logos light/dark configuráveis no loading inicial e nos estados de carregamento compartilhados.
 - [ ] Restaurar branding padrão do app.
 - [x] Alternar logo claro/escuro conforme o tema no template Web.
 - [x] Configurar ícone mobile e quatro logos da sidebar: aberta/recolhida em claro/escuro.
 - [x] Configurar uso opcional da imagem e textos opcionais da sidebar.
 - [ ] Atualizar metadata/title e ícones dinamicamente por tenant.
-- [ ] Consolidar `AppImage`, `ErrorState`, `ActionMenu` e filtros compartilhados.
-- [ ] Validar carregamento inicial e fallback de logo após login.
+- [x] Consolidar `AppImage` e fallback de logo nos principais carregamentos.
+- [x] Validar fallback de logo após login e em light/dark.
+- [x] Criar `InfiniteScroll` compartilhado para listas mobile.
+- [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
+- [ ] Consolidar `ErrorState`, `ActionMenu` e filtros compartilhados.
 
 ## Prioridade 7 — Notificações e e-mail
 

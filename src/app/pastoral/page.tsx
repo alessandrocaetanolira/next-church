@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { PastoralManagement } from '@/features/pastoral/components/PastoralManagement';
 import { redirect } from 'next/navigation';
-import { PageShell } from '@/components/common/PageShell';
+import { WebPageLayout } from '@/components/shared/web';
 
 type PendingMemberRow = {
   id: string;
@@ -96,7 +96,7 @@ export default async function PastoralPage() {
   ]);
 
   return (
-    <PageShell className="space-y-6">
+    <WebPageLayout>
       <PastoralManagement
         tenantSlug={session.user.tenantSlug ?? session.user.tenantId}
         stats={{ members, sales, tasks }}
@@ -143,6 +143,6 @@ export default async function PastoralPage() {
           name: String(team.name),
         }))}
       />
-    </PageShell>
+    </WebPageLayout>
   );
 }

@@ -11,7 +11,8 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from 'sonner';
 import { Eye, Plus, QrCode } from 'lucide-react';
-import { EmptyState, LoadingState, PageHeader, PageShell, SearchField } from '@/components/common';
+import { EmptyState, LoadingState, PageHeader, SearchField } from '@/components/common';
+import { WebPageLayout } from '@/components/shared/web';
 import { hasActionPermission } from '@/lib/access-control';
 import { listMembers } from '@/services/members/members-api';
 import { MembersWebTable } from '@/features/members/components/MembersWebTable';
@@ -53,7 +54,7 @@ export default function MembersPage() {
   });
 
   return (
-    <PageShell>
+    <WebPageLayout>
       <PageHeader
         title="Lista de Membros"
         description="A tela principal fica focada na busca. Edição, permissões e exclusão ficam no detalhe do membro."
@@ -134,6 +135,6 @@ export default function MembersPage() {
           </div>
         </DrawerContent>
       </Drawer>
-    </PageShell>
+    </WebPageLayout>
   );
 }

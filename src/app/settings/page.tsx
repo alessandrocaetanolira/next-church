@@ -20,11 +20,33 @@ import { RegistrationShareCard } from '@/features/pastoral/components/Registrati
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
-import { AppImage } from '@/components/shared';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { AppImage, MobileThemePreview } from '@/components/shared';
+import { WebPageLayout } from '@/components/shared/web';
 import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
+import { AdministracaoTab } from './tabs/administracaoTab';
+import { AparenciaTab } from './tabs/aparenciaTab';
+import { BibliaOfflineTab } from './tabs/bibliaOfflineTab';
+import { IgrejaTab } from './tabs/igrejaTab';
+import { NotificacoesTab } from './tabs/notificacoesTab';
+import { SettingsTabs, type SettingsTab } from './tabs/settingsTabs';
 
 function CollapsibleSection({ icon: Icon, title, children }: any) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+
+  if (!isMobile) {
+    return (
+      <section className="space-y-6">
+        <div className="flex items-center gap-3 border-b border-border pb-3">
+          <Icon className="h-5 w-5 shrink-0 text-primary" />
+          <h3 className="flex-1 text-xl font-semibold tracking-tight">{title}</h3>
+        </div>
+        <div className="space-y-6">{children}</div>
+      </section>
+    );
+  }
+
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
       <CollapsibleTrigger className="w-full flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
@@ -102,6 +124,7 @@ export default function SettingsPage() {
     themeVariant: settings.themeVariant,
   });
   const [savingBranding, setSavingBranding] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('appearance');
 
   useEffect(() => { setPageTitle('Configurações'); }, [setPageTitle]);
 
@@ -238,12 +261,36 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
-      <h2 className="text-xl font-bold mb-4">Configurações</h2>
+    <WebPageLayout
+      title="Configurações"
+      description="Gerencie a aparência, identidade e recursos do seu aplicativo."
+    >
 
-      {/* Tema e Aparência */}
-      <CollapsibleSection icon={Palette} title="Tema e Aparência">
-        <div className="space-y-3">
+      <SettingsTabs value={settingsTab} onChange={setSettingsTab} />
+
+      {/* Tema, aparência e identidade visual */}
+      <AparenciaTab active={settingsTab === 'appearance'} value="appearance">
+        <CollapsibleSection icon={Palette} title="Tema, aparência e identidade visual">
+          <div className="grid gap-6 lg:grid-cols-[430px_minmax(0,1fr)] lg:items-start">
+            <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
+              <div>
+                <p className="font-medium">Preview do aplicativo</p>
+                <p className="text-sm text-muted-foreground">Visualização da identidade atual no mobile.</p>
+              </div>
+              <p className="text-center text-xs text-muted-foreground">Pré-visualização iOS</p>
+              <div className="theme-preview-stage lg:justify-start">
+                <MobileThemePreview
+                  appName={branding.name || settings.appName}
+                  userName={session?.user?.name ?? 'Alessandro'}
+                  logoUrl={branding.mobileIconUrl || branding.logoLightUrl || branding.logoDarkUrl}
+                  accentColor={themes.find((theme) => theme.variant === branding.themeVariant)?.color}
+                  dark={settings.themeMode === 'dark'}
+                />
+              </div>
+            </div>
+            <div className="min-w-0 space-y-4">
+        <div className="space-y-6">
+          <div className="space-y-3">
           <Label>Cor Principal</Label>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
             {themes.map((theme) => (
@@ -262,8 +309,8 @@ export default function SettingsPage() {
               {savingBranding ? 'Aplicando...' : 'Aplicar cor da igreja'}
             </Button>
           )}
-        </div>
-        <div className="flex items-center justify-between py-2">
+          </div>
+          <div className="flex items-center justify-between py-2">
           <div className="w-full space-y-3">
             <div>
               <p className="font-medium">Aparência do app</p>
@@ -283,43 +330,14 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+          </div>
         </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection icon={Download} title="Bíblia offline">
-        <p className="text-sm text-muted-foreground">O download é opcional e fica salvo somente neste dispositivo. Escolha quais versões deseja acessar sem internet.</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <BibleDownloadControl translation="AA" />
-          <BibleDownloadControl translation="ACF" />
-          <BibleDownloadControl translation="NVI" />
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection icon={Bell} title="Notificações no dispositivo">
-        <p className="text-sm text-muted-foreground">
-          Receba alertas mesmo quando o app estiver fechado. A permissão é controlada pelo navegador.
-        </p>
-        {!push.supported ? (
-          <p className="text-sm text-muted-foreground">{push.supportIssue ?? 'Este navegador não oferece notificações Push.'}</p>
-        ) : push.subscribed ? (
-          <Button variant="outline" className="w-full" onClick={() => void push.unsubscribe()} disabled={push.loading}>
-            {push.loading ? 'Desativando...' : 'Desativar notificações Push'}
-          </Button>
-        ) : (
-          <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
-            {push.loading ? 'Ativando...' : 'Ativar notificações Push'}
-          </Button>
-        )}
-        {push.permission === 'granted' && !push.subscribed && !push.loading && (
-          <p className="text-xs text-muted-foreground">Permissão concedida, mas o registro do dispositivo ainda não foi concluído.</p>
-        )}
-        {push.error && <p className="text-xs text-destructive">{push.error}</p>}
-        {push.permission === 'denied' && !push.error && <p className="text-xs text-destructive">A permissão foi bloqueada. Reative-a nas configurações do navegador.</p>}
-      </CollapsibleSection>
-
-      {canUpdateSettings && (
-        <CollapsibleSection icon={ImageIcon} title="Identidade visual e logos">
-          <div className="space-y-4">
+        {canUpdateSettings && (
+          <div className="space-y-4 border-t border-border pt-6">
+            <div>
+              <p className="font-medium">Identidade visual e logos</p>
+              <p className="text-sm text-muted-foreground">Essas imagens alimentam o preview e cada contexto do aplicativo.</p>
+            </div>
             <div className="space-y-2">
               <Label>Nome da igreja</Label>
               <Input
@@ -373,46 +391,87 @@ export default function SettingsPage() {
               </div>
             </div>
             <Button className="w-full" onClick={() => void handleSaveBranding()} disabled={savingBranding}>
-              {savingBranding ? 'Salvando...' : 'Salvar Branding'}
+              {savingBranding ? 'Salvando...' : 'Salvar identidade visual'}
             </Button>
           </div>
-        </CollapsibleSection>
-      )}
-
-      {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && session?.user?.tenantId ? (
-        <CollapsibleSection icon={ImageIcon} title="Cadastro da Igreja">
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Compartilhe o link ou o QR Code corretos do cadastro público da sua igreja.
-            </p>
-            <RegistrationShareCard tenantSlug={session.user.tenantSlug ?? session.user.tenantId} />
+        )}
+            </div>
           </div>
         </CollapsibleSection>
-      ) : null}
+      </AparenciaTab>
 
-      {/* Admin Features */}
-      {session?.user?.role === 'ADMIN' && (
-        <>
-          <CollapsibleSection icon={Gift} title="Programa de Fidelidade">
-            <div className="space-y-4">
-               <p className="text-sm text-muted-foreground">Configurações avançadas de fidelidade para membros.</p>
-               <Button variant="outline" className="w-full">Gerenciar Regras</Button>
+      <BibliaOfflineTab active={settingsTab === 'offline'} value="offline">
+        <CollapsibleSection icon={Download} title="Bíblia offline">
+        <p className="text-sm text-muted-foreground">O download é opcional e fica salvo somente neste dispositivo. Escolha quais versões deseja acessar sem internet.</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <BibleDownloadControl translation="AA" />
+          <BibleDownloadControl translation="ACF" />
+          <BibleDownloadControl translation="NVI" />
+        </div>
+        </CollapsibleSection>
+      </BibliaOfflineTab>
+
+      <NotificacoesTab active={settingsTab === 'notifications'} value="notifications">
+        <CollapsibleSection icon={Bell} title="Notificações no dispositivo">
+        <p className="text-sm text-muted-foreground">
+          Receba alertas mesmo quando o app estiver fechado. A permissão é controlada pelo navegador.
+        </p>
+        {!push.supported ? (
+          <p className="text-sm text-muted-foreground">{push.supportIssue ?? 'Este navegador não oferece notificações Push.'}</p>
+        ) : push.subscribed ? (
+          <Button variant="outline" className="w-full" onClick={() => void push.unsubscribe()} disabled={push.loading}>
+            {push.loading ? 'Desativando...' : 'Desativar notificações Push'}
+          </Button>
+        ) : (
+          <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
+            {push.loading ? 'Ativando...' : 'Ativar notificações Push'}
+          </Button>
+        )}
+        {push.permission === 'granted' && !push.subscribed && !push.loading && (
+          <p className="text-xs text-muted-foreground">Permissão concedida, mas o registro do dispositivo ainda não foi concluído.</p>
+        )}
+        {push.error && <p className="text-xs text-destructive">{push.error}</p>}
+        {push.permission === 'denied' && !push.error && <p className="text-xs text-destructive">A permissão foi bloqueada. Reative-a nas configurações do navegador.</p>}
+        </CollapsibleSection>
+      </NotificacoesTab>
+
+      <IgrejaTab active={settingsTab === 'church'} value="church">
+        {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && session?.user?.tenantId ? (
+          <CollapsibleSection icon={ImageIcon} title="Cadastro da Igreja">
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Compartilhe o link ou o QR Code corretos do cadastro público da sua igreja.
+              </p>
+              <RegistrationShareCard tenantSlug={session.user.tenantSlug ?? session.user.tenantId} />
             </div>
           </CollapsibleSection>
+        ) : <Card className="p-4 text-sm text-muted-foreground">Você não possui permissão para configurar o cadastro da igreja.</Card>}
+      </IgrejaTab>
 
-          <CollapsibleSection icon={Lock} title="Gerenciar Usuários">
-             <div className="space-y-4">
-               <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
-               <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
-                 Listar Usuários
-               </Button>
-             </div>
-          </CollapsibleSection>
-        </>
-      )}
+      <AdministracaoTab active={settingsTab === 'admin'} value="admin">
+        {/* Admin Features */}
+        {session?.user?.role === 'ADMIN' && (
+          <>
+            <CollapsibleSection icon={Gift} title="Programa de Fidelidade">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Configurações avançadas de fidelidade para membros.</p>
+                <Button variant="outline" className="w-full">Gerenciar Regras</Button>
+              </div>
+            </CollapsibleSection>
 
-      {/* Danger Zone */}
-      <Card className="border-border shadow-sm">
+            <CollapsibleSection icon={Lock} title="Gerenciar Usuários">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
+                <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
+                  Listar Usuários
+                </Button>
+              </div>
+            </CollapsibleSection>
+          </>
+        )}
+
+        {/* Danger Zone */}
+        <Card className="border-border shadow-sm">
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 p-4 h-auto text-warning hover:bg-warning/10"
@@ -429,11 +488,12 @@ export default function SettingsPage() {
           <Trash2 className="w-5 h-5" />
           <span>Limpar Dados Offline</span>
         </Button>
-      </Card>
+        </Card>
 
-      <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={() => signOut()}>
-        <LogOut className="w-4 h-4" /> Sair da conta
-      </Button>
-    </div>
+        <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={() => signOut()}>
+          <LogOut className="w-4 h-4" /> Sair da conta
+        </Button>
+      </AdministracaoTab>
+    </WebPageLayout>
   );
 }

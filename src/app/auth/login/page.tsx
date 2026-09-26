@@ -6,6 +6,7 @@
  */
 
 import { LoginForm } from "@/features/auth/components/LoginForm";
+import { LoadingState } from '@/components/common';
 import { Suspense } from 'react';
 
 /**
@@ -16,7 +17,7 @@ import { Suspense } from 'react';
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Suspense fallback={<div className="text-sm text-muted-foreground">Carregando login...</div>}><LoginForm /></Suspense>
+      <Suspense fallback={<LoadingState label="Carregando login..." />}><LoginForm /></Suspense>
     </div>
   );
 }

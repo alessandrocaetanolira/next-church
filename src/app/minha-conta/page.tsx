@@ -20,6 +20,7 @@ import {
   ShoppingCart, AlertCircle, Gift, ArrowLeft, Package
 } from 'lucide-react';
 import { AppImage } from '@/components/shared';
+import { LoadingState } from '@/components/common';
 import { 
   getLoyaltyConfig, getLoyaltyProgress, isLoyaltyActive, 
   formatLoyaltyValidity, PAYMENT_METHOD_LABELS 
@@ -704,7 +705,7 @@ function MyAccountPageContent() {
 }
 
 export default function MyAccountPage() {
-  return <Suspense fallback={<div className="p-8 text-center">Carregando minha conta...</div>}>
+  return <Suspense fallback={<LoadingState label="Carregando minha conta..." />}>
     <MyAccountPageContent />
   </Suspense>;
 }

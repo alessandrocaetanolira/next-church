@@ -18,7 +18,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setLoadingLogoFailed(false);
-  }, [settings.logoUrl]);
+  }, [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -35,15 +35,24 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   if (isLoading && !authFallbackReady) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse rounded-2xl bg-primary/10 p-4">
+        <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="animate-pulse">
           <AppImage
-            src={settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+            src={settings.logoLightUrl && !loadingLogoFailed ? settings.logoLightUrl : settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
             alt=""
             aria-hidden="true"
             width={192}
             height={64}
-            className="h-16 w-48 rounded-xl object-contain"
+            className="h-9 w-40 object-contain object-left dark:hidden"
+            onError={() => setLoadingLogoFailed(true)}
+          />
+          <AppImage
+            src={settings.logoDarkUrl && !loadingLogoFailed ? settings.logoDarkUrl : settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+            alt=""
+            aria-hidden="true"
+            width={192}
+            height={64}
+            className="hidden h-9 w-40 object-contain object-left dark:block"
             onError={() => setLoadingLogoFailed(true)}
           />
         </div>

@@ -5,12 +5,13 @@ import { redirect } from 'next/navigation';
 import { LeaderDashboard } from '@/features/dashboard/components/LeaderDashboard';
 import { MemberDashboard } from '@/features/dashboard/components/MemberDashboard';
 import { PageTitle } from '@/components/PageTitle';
+import { LoadingState } from '@/components/common';
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
 
   if (status === 'loading') {
-    return <div className="p-8 text-center">Carregando...</div>;
+    return <LoadingState className="min-h-screen" />;
   }
 
   if (!session) {

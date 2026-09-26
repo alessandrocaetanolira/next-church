@@ -14,6 +14,7 @@ import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Awar
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createQuizAttempt, listQuizAttempts, type QuizAttempt } from '@/services/quiz/quiz-api';
+import { WebPageLayout } from '@/components/shared/web';
 
 export default function QuizPage() {
   const { data: session } = useSession();
@@ -173,7 +174,7 @@ export default function QuizPage() {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
+    <WebPageLayout>
       <>
         {gameState === 'menu' && (
           <div key="menu" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -387,6 +388,6 @@ export default function QuizPage() {
           </div>
         )}
       </>
-    </div>
+    </WebPageLayout>
   );
 }

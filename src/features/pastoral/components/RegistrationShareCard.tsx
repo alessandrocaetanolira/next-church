@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, QrCode, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getAppBaseUrl } from '@/lib/app-base-url';
+import { getPublicShareBaseUrl } from '@/lib/app-base-url';
 import { AppImage } from '@/components/shared';
 
 interface RegistrationShareCardProps {
@@ -16,15 +16,11 @@ interface RegistrationShareCardProps {
 
 export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps) {
   const registrationLink = useMemo(() => {
-    const baseUrl = getAppBaseUrl();
-    if (!baseUrl) return `/cadastro?igreja=${tenantSlug}`;
-    return `${baseUrl}/cadastro?igreja=${tenantSlug}`;
+    return `${getPublicShareBaseUrl()}/cadastro?igreja=${encodeURIComponent(tenantSlug)}`;
   }, [tenantSlug]);
 
   const loginLink = useMemo(() => {
-    const baseUrl = getAppBaseUrl();
-    if (!baseUrl) return `/auth/login?igreja=${tenantSlug}`;
-    return `${baseUrl}/auth/login?igreja=${tenantSlug}`;
+    return `${getPublicShareBaseUrl()}/auth/login?igreja=${encodeURIComponent(tenantSlug)}`;
   }, [tenantSlug]);
 
   const registrationQrCodeUrl = useMemo(() => {

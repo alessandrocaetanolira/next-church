@@ -20,6 +20,8 @@ import { hasActionPermission } from '@/lib/access-control';
 import { createGroup, listGroups, listJoinRequests, listMembers, requestGroupJoin } from '@/services/groups/groups-api';
 import { GroupsWebGrid } from '@/features/groups/components/GroupsWebGrid';
 import { GroupsWebTable } from '@/features/groups/components/GroupsWebTable';
+import { WebPageLayout } from '@/components/shared/web';
+import { LoadingState } from '@/components/common';
 
 type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';
 type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
@@ -255,7 +257,7 @@ function GroupsPageContent() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4 pb-28 md:pb-6">
+    <WebPageLayout>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative max-w-md flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -395,12 +397,12 @@ function GroupsPageContent() {
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+    </WebPageLayout>
   );
 }
 
 export default function GroupsPage() {
-  return <Suspense fallback={<div className="p-8 text-center">Carregando grupos...</div>}>
+  return <Suspense fallback={<LoadingState label="Carregando grupos..." />}>
     <GroupsPageContent />
   </Suspense>;
 }
