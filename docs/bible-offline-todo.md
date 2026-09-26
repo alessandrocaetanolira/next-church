@@ -79,17 +79,17 @@ Aceite:
 
 ## Fase 2 — Contrato de sincronização
 
-- [ ] Criar endpoint de manifesto do conteúdo bíblico: versões disponíveis, hash/versão,
+- [x] Criar endpoint de manifesto do conteúdo bíblico: versões disponíveis, hash/versão,
       quantidade de livros e capítulos.
-- [ ] Garantir que endpoints de livros, capítulos e versículos retornem metadados de
+- [x] Garantir que endpoints de livros, capítulos e versículos retornem metadados de
       cache (`translation`, `contentVersion` e abreviação do livro).
-- [ ] Definir política de cache: conteúdo só é substituído quando `contentVersion` mudar.
+- [x] Definir política de cache: conteúdo só é substituído quando `contentVersion` mudar.
 - [ ] Documentar que as fontes e downloads respeitam a licença das traduções incluídas.
 
 Aceite:
 
-- [ ] O cliente identifica uma versão desatualizada sem baixar capítulos repetidos.
-- [ ] Uma atualização interrompida não remove capítulos íntegros já disponíveis.
+- [x] O cliente identifica uma versão desatualizada sem baixar capítulos repetidos.
+- [x] Uma atualização interrompida não remove capítulos íntegros já disponíveis.
 
 ## Fase 3 — Leitura cache-first
 
@@ -125,7 +125,7 @@ Aceite:
 
 - [ ] Cachear o shell da tela da Bíblia no service worker, sem confundir cache HTTP com
       conteúdo persistente no Dexie.
-- [ ] Medir espaço usado por versão no IndexedDB e tratar quota excedida.
+- [x] Tratar quota excedida do IndexedDB e manter capítulos íntegros já baixados.
 - [ ] Não usar `localStorage` para textos bíblicos completos.
 - [ ] Testar em navegador sem conexão, aba privada e armazenamento quase cheio.
 - [x] Adicionar testes unitários para chave de cache, download e fallback offline.

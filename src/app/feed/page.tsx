@@ -50,7 +50,7 @@ function sortFeedPosts(items: FeedPost[]) {
 }
 
 export default function FeedPage() {
-  const { user } = useAuth();
+  const { user, isOffline } = useAuth();
   const role = user?.role?.toUpperCase() ?? 'MEMBER';
   const canPostAnnouncement = ['ADMIN', 'PASTOR'].includes(role);
   const canTargetFeed = ['ADMIN', 'PASTOR'].includes(role);
@@ -152,6 +152,10 @@ export default function FeedPage() {
 
   const handlePost = async () => {
     if (!user?.email || !newPostContent.trim()) return;
+    if (isOffline) {
+      toast.info('Publicações exigem conexão. O conteúdo não foi enviado.');
+      return;
+    }
 
     try {
       const created = await createFeedPost({
@@ -184,6 +188,10 @@ export default function FeedPage() {
 
   const handleLike = async (post: FeedPost) => {
     if (!user?.email || !post.id) return;
+    if (isOffline) {
+      toast.info('Curtidas exigem conexão.');
+      return;
+    }
 
     try {
       const updated = await toggleFeedLike(post.id);
@@ -196,6 +204,10 @@ export default function FeedPage() {
 
   const handleComment = async (post: FeedPost) => {
     if (!user?.email || !post.id || !commentText.trim()) return;
+    if (isOffline) {
+      toast.info('Comentários exigem conexão.');
+      return;
+    }
 
     try {
       const updated = await addFeedComment(post.id, commentText.trim());
@@ -210,7 +222,12 @@ export default function FeedPage() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-4 pb-20">
-      {canCreatePost && !composing ? (
+      {isOffline && (canCreatePost || canUpdateFeed) ? (
+        <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-muted-foreground">
+          Você está offline. Publicações, curtidas e comentários ficam disponíveis somente quando a conexão retornar.
+        </div>
+      ) : null}
+      {canCreatePost && !isOffline && !composing ? (
         <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setComposing(true)}>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-3">
@@ -221,7 +238,7 @@ export default function FeedPage() {
             </div>
           </CardContent>
         </Card>
-      ) : canCreatePost ? (
+      ) : canCreatePost && !isOffline ? (
         <div className="animate-in fade-in slide-in-from-top-2 duration-300">
           <Card className="border-primary/30">
             <CardContent className="pt-4 space-y-3">

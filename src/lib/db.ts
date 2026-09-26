@@ -203,6 +203,7 @@ export interface OfflineBibleDownload {
   totalChapters: number;
   contentVersion: string;
   updatedAt: string;
+  lastError?: string;
 }
 
 // --- INFRAESTRUTURA DE SINCRONIZAÇÃO ---

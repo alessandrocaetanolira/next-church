@@ -48,7 +48,7 @@ export function BibleDownloadControl({ translation }: BibleDownloadControlProps)
     <div className="flex items-center justify-between gap-2">
       <div>
         <p className="text-sm font-medium">Leitura offline</p>
-        <p className="text-xs text-muted-foreground">{ready ? 'Disponível neste dispositivo' : download?.status === 'paused' ? `Pausado · ${completed}/${total} capítulos` : download?.status === 'error' ? `Erro · ${completed}/${total} capítulos` : download ? `${completed}/${total} capítulos` : 'Ainda não baixada'}</p>
+        <p className="text-xs text-muted-foreground">{ready ? 'Disponível neste dispositivo' : download?.status === 'paused' ? `Pausado · ${completed}/${total} capítulos` : download?.status === 'error' ? `${download.lastError ?? 'Erro no download'} · ${completed}/${total} capítulos` : download ? `${completed}/${total} capítulos` : 'Ainda não baixada'}</p>
       </div>
       <div className="flex shrink-0 gap-1">
         {active ? <Button type="button" size="icon" variant="outline" onClick={pause} aria-label={`Pausar download ${translation}`}><Pause className="h-4 w-4" /></Button> : <Button type="button" size="icon" variant="outline" onClick={start} disabled={busy} aria-label={`${ready ? 'Baixar novamente' : 'Baixar'} ${translation}`}>

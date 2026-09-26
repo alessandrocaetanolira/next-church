@@ -76,6 +76,7 @@ cache por tenant/usuário e sincronização resiliente.
 
 - [x] Isolar o cache da sessão offline por tenant e usuário e limpar o contexto no logout.
 - [x] Isolar o cursor e a fila de sincronização por tenant e usuário.
+- [x] Bloquear claramente publicação, curtida e comentário do Feed sem conexão.
 - [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
 - [ ] Garantir sessão offline sem redirecionamento indevido para login.
 - [ ] Isolar cache Dexie por tenant e usuário.

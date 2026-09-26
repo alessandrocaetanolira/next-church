@@ -162,9 +162,9 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Disponibilizar a escolha das versões offline nas configurações do usuário.
 - [ ] Completar o fluxo com as três versões disponíveis.
 - [x] Criar manifesto de conteúdo com `contentVersion` derivada do catálogo.
-- [ ] Atualizar somente capítulos quando a versão do conteúdo mudar.
-- [ ] Retomar downloads interrompidos sem apagar capítulos íntegros.
-- [ ] Tratar quota excedida do IndexedDB.
+- [x] Atualizar somente capítulos quando a versão do conteúdo mudar.
+- [x] Retomar downloads interrompidos sem apagar capítulos íntegros.
+- [x] Tratar quota excedida do IndexedDB.
 - [x] Testar versão cacheada e versão ausente offline.
 
 ## Fase 4 — Sessão e modo offline
@@ -173,7 +173,7 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Persistir somente o estado mínimo da última sessão válida.
 - [ ] Permitir navegação offline sem redirecionamento indevido para login.
 - [x] Marcar a sessão como `offline` no cliente.
-- [ ] Bloquear claramente ações que exigem servidor.
+- [x] Bloquear claramente ações do Feed que exigem servidor.
 - [ ] Permitir leitura somente dos dados previamente sincronizados.
 - [x] Limpar a sessão local no logout explícito.
 - [ ] Testar expiração/revogação da sessão após reconexão.
@@ -184,7 +184,7 @@ createdAt, status, retryCount, lastError, idempotencyKey
 - [x] Adicionar `idempotencyKey` às mutações.
 - [ ] Criar `POST /api/sync/push` para envio em lote.
 - [ ] Criar `GET /api/sync/pull` para alterações desde um cursor.
-- [ ] Criar `GET /api/sync/status` para diagnóstico.
+- [x] Criar `GET /api/sync/status` para diagnóstico.
 - [ ] Garantir escopo por tenant e usuário em todas as operações.
 - [ ] Definir respostas para sucesso parcial, conflito e autorização expirada.
 - [ ] Documentar política de resolução de conflitos.

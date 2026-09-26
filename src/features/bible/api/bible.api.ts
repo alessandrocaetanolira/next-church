@@ -12,6 +12,7 @@ export type BibleChapter = {
   chapter: number;
   translation: BibleTranslation;
   verses: string[];
+  contentVersion?: string;
 };
 
 export type CachedBibleResult<T> = {
@@ -43,13 +44,23 @@ async function requestJson<T>(url: string, fetcher: typeof fetch): Promise<T> {
 }
 
 export async function getBibleBooks(translation: BibleTranslation, fetcher: typeof fetch = fetch): Promise<CachedBibleResult<BibleBook[]>> {
+  await resolveContentVersion(fetcher);
   const cached = await db.offlineBibleBooks.where('translation').equals(translation).sortBy('position');
-  if (cached.length === 66) {
+  if (cached.length === 66 && cached.every((book) => book.contentVersion === runtimeContentVersion)) {
     return { data: cached, source: 'cache' };
   }
 
-  const contentVersion = (await db.offlineMetadata.get('bible:content'))?.contentVersion ?? runtimeContentVersion;
-  const books = await requestJson<BibleBook[]>(`/api/bible/books?translation=${translation}`, fetcher);
+  let response: BibleBook[] | { books: BibleBook[]; contentVersion?: string };
+  try {
+    response = await requestJson<BibleBook[] | { books: BibleBook[]; contentVersion?: string }>(`/api/bible/books?translation=${translation}`, fetcher);
+  } catch (error) {
+    if (cached.length === 66) return { data: cached, source: 'cache' };
+    throw error;
+  }
+  const books = Array.isArray(response) ? response : response.books;
+  const contentVersion = Array.isArray(response) ? runtimeContentVersion : response.contentVersion ?? runtimeContentVersion;
+  runtimeContentVersion = contentVersion;
+  await db.offlineMetadata.put({ key: 'bible:content', contentVersion, updatedAt: new Date().toISOString() });
   const cachedAt = new Date().toISOString();
   await db.offlineBibleBooks.bulkPut(books.map((book, index) => ({
     ...book,
@@ -62,13 +73,24 @@ export async function getBibleBooks(translation: BibleTranslation, fetcher: type
 
 export async function getBibleChapters(bookAbbrev: string, translation: BibleTranslation, fetcher: typeof fetch = fetch): Promise<CachedBibleResult<number[]>> {
   const cachedBook = await db.offlineBibleBooks.get([translation, bookAbbrev]);
-  if (cachedBook?.chapterNumbers?.length) {
+  const cachedVersion = (await db.offlineMetadata.get('bible:content'))?.contentVersion ?? runtimeContentVersion;
+  if (cachedBook?.chapterNumbers?.length && cachedBook.contentVersion === cachedVersion) {
     return { data: cachedBook.chapterNumbers, source: 'cache' };
   }
 
-  const chapters = await requestJson<number[]>(`/api/bible/${bookAbbrev.toLowerCase()}/chapters?translation=${translation}`, fetcher);
+  let response: number[] | { chapters: number[]; contentVersion?: string };
+  try {
+    response = await requestJson<number[] | { chapters: number[]; contentVersion?: string }>(`/api/bible/${bookAbbrev.toLowerCase()}/chapters?translation=${translation}`, fetcher);
+  } catch (error) {
+    if (cachedBook?.chapterNumbers?.length) return { data: cachedBook.chapterNumbers, source: 'cache' };
+    throw error;
+  }
+  const chapters = Array.isArray(response) ? response : response.chapters;
+  const contentVersion = Array.isArray(response) ? cachedVersion : response.contentVersion ?? cachedVersion;
+  runtimeContentVersion = contentVersion;
+  await db.offlineMetadata.put({ key: 'bible:content', contentVersion, updatedAt: new Date().toISOString() });
   if (cachedBook) {
-    await db.offlineBibleBooks.put({ ...cachedBook, chapterNumbers: chapters, cachedAt: new Date().toISOString() });
+    await db.offlineBibleBooks.put({ ...cachedBook, chapterNumbers: chapters, contentVersion, cachedAt: new Date().toISOString() });
   }
   return { data: chapters, source: 'network' };
 }
@@ -76,16 +98,31 @@ export async function getBibleChapters(bookAbbrev: string, translation: BibleTra
 export async function getBibleChapter(bookAbbrev: string, chapter: number, translation: BibleTranslation, fetcher: typeof fetch = fetch): Promise<CachedBibleResult<BibleChapter>> {
   const cacheKey = [translation, bookAbbrev, chapter] as [BibleTranslation, string, number];
   const cached = await db.offlineBibleChapters.get(cacheKey);
-  if (cached) {
+  const cachedVersion = (await db.offlineMetadata.get('bible:content'))?.contentVersion ?? runtimeContentVersion;
+  if (cached && cached.contentVersion === cachedVersion) {
     const book = await db.offlineBibleBooks.get([translation, bookAbbrev]);
     return {
-      data: { book: book?.name ?? bookAbbrev, chapter, translation, verses: cached.verses },
+      data: { book: book?.name ?? bookAbbrev, chapter, translation, verses: cached.verses, contentVersion: cached.contentVersion },
       source: 'cache',
     };
   }
 
-  const contentVersion = (await db.offlineMetadata.get('bible:content'))?.contentVersion ?? runtimeContentVersion;
-  const data = await requestJson<BibleChapter>(`/api/bible/${bookAbbrev.toLowerCase()}/${chapter}?translation=${translation}`, fetcher);
+  let data: BibleChapter;
+  try {
+    data = await requestJson<BibleChapter>(`/api/bible/${bookAbbrev.toLowerCase()}/${chapter}?translation=${translation}`, fetcher);
+  } catch (error) {
+    if (cached) {
+      const book = await db.offlineBibleBooks.get([translation, bookAbbrev]);
+      return {
+        data: { book: book?.name ?? bookAbbrev, chapter, translation, verses: cached.verses, contentVersion: cached.contentVersion },
+        source: 'cache',
+      };
+    }
+    throw error;
+  }
+  const contentVersion = data.contentVersion ?? cachedVersion;
+  runtimeContentVersion = contentVersion;
+  await db.offlineMetadata.put({ key: 'bible:content', contentVersion, updatedAt: new Date().toISOString() });
   const entry: OfflineBibleChapter = {
     translation,
     bookAbbrev,
@@ -118,6 +155,12 @@ async function saveDownloadProgress(translation: BibleTranslation, downloadedCha
   return progress;
 }
 
+function isQuotaExceededError(error: unknown) {
+  return error instanceof DOMException && (
+    error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014
+  );
+}
+
 /** Baixa uma versão inteira, mantendo capítulos já cacheados para permitir retomada. */
 export async function downloadBibleTranslation(translation: BibleTranslation, options: DownloadOptions = {}) {
   const fetcher = options.fetcher ?? fetch;
@@ -132,8 +175,6 @@ export async function downloadBibleTranslation(translation: BibleTranslation, op
   const cachedChapters = await db.offlineBibleChapters.where('translation').equals(translation).toArray();
   let downloadedChapters = chapterTasks.filter(({ book, chapter }) => cachedChapters.some((cached) => cached.bookAbbrev === book.abbrev && cached.chapter === chapter && cached.contentVersion === runtimeContentVersion)).length;
 
-  const current = await db.offlineBibleDownloads.get(translation);
-  if (current?.status === 'downloading') return current;
   let progress = await saveDownloadProgress(translation, downloadedChapters, totalChapters, 'downloading');
   options.onProgress?.(progress);
 
@@ -171,7 +212,12 @@ export async function downloadBibleTranslation(translation: BibleTranslation, op
     options.onProgress?.(progress);
     return progress;
   } catch (error) {
+    const message = isQuotaExceededError(error)
+      ? 'Espaço insuficiente no armazenamento offline. Remova uma versão ou libere espaço e tente novamente.'
+      : error instanceof Error ? error.message : 'Não foi possível concluir o download.';
     progress = await saveDownloadProgress(translation, downloadedChapters, totalChapters, 'error');
+    progress.lastError = message;
+    await db.offlineBibleDownloads.put(progress);
     options.onProgress?.(progress);
     throw error;
   }

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/lib/db';
-import { downloadBibleTranslation, getBibleBooks, getBibleChapter } from '@/features/bible/api/bible.api';
+import { downloadBibleTranslation, getBibleBooks, getBibleChapters, getBibleChapter } from '@/features/bible/api/bible.api';
 
 describe('cache offline da Bíblia', () => {
   beforeEach(async () => {
+    await db.offlineMetadata.clear();
     await db.offlineBibleBooks.clear();
     await db.offlineBibleChapters.clear();
     await db.offlineBibleDownloads.clear();
@@ -19,14 +20,14 @@ describe('cache offline da Bíblia', () => {
       cachedAt: '2026-09-23T00:00:00.000Z',
       contentVersion: 'shared-bible-v1',
     })));
-    const fetcher = vi.fn() as unknown as typeof fetch;
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ contentVersion: 'shared-bible-v1' }))) as unknown as typeof fetch;
 
     const result = await getBibleBooks('NVI', fetcher);
 
     expect(result.source).toBe('cache');
     expect(result.data).toHaveLength(66);
     expect(result.data[0]?.name).toBe('Livro 1');
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(fetcher).toHaveBeenCalledWith('/api/bible/manifest');
   });
 
   it('lê um capítulo salvo quando a rede não está disponível', async () => {
@@ -46,9 +47,25 @@ describe('cache offline da Bíblia', () => {
     expect(result.source).toBe('cache');
     expect(result.data).toEqual({
       book: 'Gênesis', chapter: 1, translation: 'NVI',
-      verses: ['No princípio, Deus criou os céus e a terra.'],
+      verses: ['No princípio, Deus criou os céus e a terra.'], contentVersion: 'shared-bible-v1',
     });
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('usa capítulo salvo mesmo quando a versão local está antiga e a rede falha', async () => {
+    await db.offlineMetadata.put({ key: 'bible:content', contentVersion: 'shared-bible-v2', updatedAt: '2026-09-24T00:00:00.000Z' });
+    await db.offlineBibleBooks.put({
+      translation: 'NVI', abbrev: 'gn', name: 'Gênesis', testament: 'AT', position: 1,
+      cachedAt: '2026-09-23T00:00:00.000Z', contentVersion: 'shared-bible-v1', chapterNumbers: [1],
+    });
+    await db.offlineBibleChapters.put({
+      translation: 'NVI', bookAbbrev: 'gn', chapter: 1,
+      verses: ['Conteúdo antigo preservado.'], cachedAt: '2026-09-23T00:00:00.000Z', contentVersion: 'shared-bible-v1',
+    });
+    const fetcher = vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
+
+    await expect(getBibleChapters('gn', 'NVI', fetcher)).resolves.toMatchObject({ source: 'cache', data: [1] });
+    await expect(getBibleChapter('gn', 1, 'NVI', fetcher)).resolves.toMatchObject({ source: 'cache', data: { verses: ['Conteúdo antigo preservado.'] } });
   });
 
   it('armazena o capítulo retornado pela API para a próxima leitura', async () => {
@@ -76,5 +93,20 @@ describe('cache offline da Bíblia', () => {
 
     expect(result).toMatchObject({ translation: 'NVI', status: 'ready', downloadedChapters: 1, totalChapters: 1 });
     await expect(db.offlineBibleChapters.get(['NVI', 'gn', 1])).resolves.toMatchObject({ verses: ['No princípio'] });
+  });
+
+  it('retoma um download que ficou em andamento após reabrir o app', async () => {
+    await db.offlineBibleDownloads.put({
+      translation: 'NVI', status: 'downloading', downloadedChapters: 0, totalChapters: 1,
+      contentVersion: 'shared-bible-v1', updatedAt: '2026-09-23T00:00:00.000Z',
+    });
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/books?')) return new Response(JSON.stringify([{ translation: 'NVI', abbrev: 'gn', name: 'Gênesis', testament: 'AT', position: 1 }]));
+      if (url.includes('/gn/chapters?')) return new Response(JSON.stringify([1]));
+      return new Response(JSON.stringify({ book: 'Gênesis', chapter: 1, translation: 'NVI', verses: ['No princípio'] }));
+    }) as unknown as typeof fetch;
+
+    await expect(downloadBibleTranslation('NVI', { fetcher })).resolves.toMatchObject({ status: 'ready', downloadedChapters: 1 });
   });
 });

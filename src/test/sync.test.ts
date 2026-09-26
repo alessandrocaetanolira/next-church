@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET as pullGET } from '../app/api/sync/pull/route';
 import { POST as pushPOST } from '../app/api/sync/push/route';
+import { GET as statusGET } from '../app/api/sync/status/route';
 import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { NextRequest } from 'next/server';
@@ -109,6 +110,28 @@ describe('Sync API Routes', () => {
       expect(mockPrisma.task.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ deletedAt: expect.any(Date) })
       }));
+    });
+  });
+
+  describe('GET /api/sync/status', () => {
+    it('retorna diagnóstico do sincronismo no tenant autenticado', async () => {
+      (auth as Mock).mockResolvedValue(mockSession);
+      const mockPrisma = {
+        syncOperation: {
+          groupBy: vi.fn().mockResolvedValue([
+            { status: 'success', _count: { _all: 3 } },
+            { status: 'error', _count: { _all: 1 } },
+          ]),
+        },
+      };
+      (getTenantClient as Mock).mockReturnValue(mockPrisma);
+
+      const response = await statusGET();
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toMatchObject({ enabled: true, operations: { success: 3, error: 1 } });
+      expect(mockPrisma.syncOperation.groupBy).toHaveBeenCalledWith({ by: ['status'], _count: { _all: true } });
     });
   });
 });

@@ -14,6 +14,7 @@ vi.mock('@/lib/prisma-factory', () => ({
     bibleVerse: {
       findMany: vi.fn().mockResolvedValue([{ number: 1, text: 'No princípio, Deus criou os céus e a terra.' }]),
     },
+    $queryRawUnsafe: vi.fn().mockResolvedValue([{ translationCode: 'NVI', bookCount: 66, verseCount: 31102 }]),
   })
 }));
 
