@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { db } from '@/lib/db';
+import { clearUnscopedOfflineData, db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 import { hasActionPermission } from '@/lib/access-control';
@@ -171,6 +171,12 @@ export default function SettingsPage() {
       toast.success('Cache e dados offline limpos com sucesso!');
       window.location.reload();
     }
+  };
+
+  const handleClearLegacyOfflineData = async () => {
+    if (!confirm('Remover dados offline antigos sem tenant identificado? O conteúdo da Bíblia será preservado.')) return;
+    const removed = await clearUnscopedOfflineData();
+    toast.success(`${removed} registro(s) legado(s) removido(s).`);
   };
 
   const handleSaveBranding = async () => {
@@ -407,6 +413,14 @@ export default function SettingsPage() {
 
       {/* Danger Zone */}
       <Card className="border-border shadow-sm">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 p-4 h-auto text-warning hover:bg-warning/10"
+          onClick={handleClearLegacyOfflineData}
+        >
+          <Trash2 className="w-5 h-5" />
+          <span>Remover dados offline antigos sem tenant</span>
+        </Button>
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-3 p-4 h-auto text-destructive hover:bg-destructive/10" 

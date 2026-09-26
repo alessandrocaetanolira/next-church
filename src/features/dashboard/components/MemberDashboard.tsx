@@ -59,6 +59,7 @@ export function MemberDashboard() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
+  const tenantId = user?.tenantId ?? '';
   const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
   const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
   const products = useProducts(canCatalog);
@@ -80,21 +81,22 @@ export function MemberDashboard() {
   const syncingRef = useRef(false);
 
   const linkedMember = useLiveQuery(
-    () => user?.email ? db.members.where('email').equals(user.email).first() : undefined,
-    [user?.email]
+    () => user?.email && tenantId ? db.members.filter((member) => member.email === user.email && member.tenantId === tenantId).first() : undefined,
+    [user?.email, tenantId]
   );
 
   const pendingOrders = useLiveQuery(
     async () => {
       if (!linkedMember?.id) return [];
 
-      const sales = await db.sales.where('memberId').equals(linkedMember.id).reverse().sortBy('createdAt');
+      const sales = await db.sales.filter((sale) => sale.memberId === linkedMember.id && sale.tenantId === tenantId).toArray();
+      sales.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
       return sales
         .reverse()
         .filter((sale) => sale.paymentMethod === 'pending' || sale.orderStatus === 'preparing')
         .slice(0, 5);
     },
-    [linkedMember?.id]
+    [linkedMember?.id, tenantId]
   ) || [];
 
   const categories = useMemo(() => {
@@ -148,7 +150,7 @@ export function MemberDashboard() {
       syncingRef.current = true;
 
       try {
-        await syncMemberSalesFromServer();
+        await syncMemberSalesFromServer(tenantId);
       } catch {
         // Próxima notificação ou recarga tenta de novo.
       } finally {
@@ -172,7 +174,7 @@ export function MemberDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [notifications]);
+  }, [notifications, tenantId]);
 
   const handleReadDevotional = () => {
     const persist = async () => {
@@ -293,6 +295,7 @@ export function MemberDashboard() {
         memberName: linkedMember.name,
         createdBy: user?.email || 'unknown',
         createdAt,
+        tenantId,
         _status: 'pending',
       };
 
@@ -342,6 +345,7 @@ export function MemberDashboard() {
           memberName: linkedMember.name,
           createdBy: user?.email || 'unknown',
           createdAt: new Date().toISOString(),
+          tenantId,
           _status: 'pending',
         };
 

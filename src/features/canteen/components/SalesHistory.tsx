@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { useAppSettings } from "@/components/providers/AppSettingsProvider";
 import { SalesWebTable } from '@/features/canteen/components/SalesWebTable';
 import { DebtWebTable } from '@/features/canteen/components/DebtWebTable';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 type LedgerEntry = {
   id: string;
@@ -53,9 +54,11 @@ type MemberLedger = {
 };
 
 export function SalesHistory() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
   const { settings } = useAppSettings();
-  const sales = useLiveQuery(() => db.sales.orderBy("createdAt").reverse().toArray());
-  const liveMembers = useLiveQuery(() => db.members.toArray());
+  const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId).toArray().then((items) => items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) : [], [tenantId]);
+  const liveMembers = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]);
   const members = useMemo(() => liveMembers ?? [], [liveMembers]);
   const [search, setSearch] = useState("");
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);

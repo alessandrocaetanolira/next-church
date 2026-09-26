@@ -27,7 +27,7 @@ type FinancialPayload = {
   }>;
 };
 
-function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number]): LocalSale {
+function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number], tenantId?: string): LocalSale {
   return {
     id: sale.id,
     total: sale.total,
@@ -43,18 +43,19 @@ function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number]): Loca
     memberName: sale.memberName ?? undefined,
     createdBy: sale.createdBy,
     createdAt: sale.createdAt,
+    tenantId,
     _status: 'synced',
   };
 }
 
-export async function syncMemberSalesFromServer() {
+export async function syncMemberSalesFromServer(tenantId?: string) {
   const response = await fetchMemberFinancials<FinancialPayload>();
   if (!response.ok) {
     throw new Error('Falha ao buscar movimentações do membro');
   }
 
   const payload = response.data ?? {};
-  const sales = Array.isArray(payload.sales) ? payload.sales.map(toLocalSale) : [];
+  const sales = Array.isArray(payload.sales) ? payload.sales.map((sale) => toLocalSale(sale, tenantId)) : [];
   await db.sales.bulkPut(sales);
 
   if (payload.member?.id) {
@@ -70,6 +71,7 @@ export async function syncMemberSalesFromServer() {
       avatarUrl: existing?.avatarUrl,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      tenantId,
       deletedAt: existing?.deletedAt,
       _status: 'synced',
     };

@@ -14,6 +14,8 @@ import { initialQuizQuestions } from './db-seeds';
 /** Representa uma tarefa/escala armazenada localmente. */
 export interface LocalTask {
   id: string;
+  tenantId?: string;
+  tenantSlug?: string;
   title: string;
   description?: string;
   teamId: string;
@@ -36,6 +38,8 @@ export interface CartItem {
 /** Representa uma venda da cantina armazenada localmente. */
 export interface LocalSale {
   id: string;
+  tenantId?: string;
+  tenantSlug?: string;
   total: number;
   paymentMethod: string;
   items: CartItem[];
@@ -51,6 +55,7 @@ export interface LocalSale {
 export interface LocalProduct {
   id: string;
   tenantId?: string;
+  tenantSlug?: string;
   name: string;
   price: number;
   cost?: number;
@@ -70,6 +75,8 @@ export interface LocalProduct {
 /** Representa um membro da igreja armazenado localmente. */
 export interface LocalMember {
   id: string;
+  tenantId?: string;
+  tenantSlug?: string;
   name: string;
   email?: string;
   phone?: string;
@@ -86,6 +93,8 @@ export interface LocalMember {
 /** Representa uma equipe armazenada localmente. */
 export interface LocalTeam {
   id: string;
+  tenantId?: string;
+  tenantSlug?: string;
   name: string;
   description?: string;
   color: string;
@@ -319,4 +328,35 @@ export async function seedQuizQuestions() {
  */
 export async function seedOfflineData() {
   await seedQuizQuestions();
+}
+
+/**
+ * Remove somente registros legados que não possuem contexto de tenant.
+ * Conteúdo bíblico não entra nesta limpeza: ele é compartilhado e versionado.
+ */
+export async function clearUnscopedOfflineData() {
+  const tables = [db.tasks, db.teams, db.sales, db.products, db.members] as const;
+  let removed = 0;
+
+  for (const table of tables) {
+    const records = await table.filter((record) => !record.tenantId).toArray();
+    if (records.length > 0) {
+      await table.bulkDelete(records.map((record) => record.id));
+      removed += records.length;
+    }
+  }
+
+  const legacyQueue = await db.syncQueue.filter((item) => !item.tenantSlug || !item.userId).toArray();
+  if (legacyQueue.length > 0) {
+    await db.syncQueue.bulkDelete(legacyQueue.map((item) => item.id!).filter(Boolean));
+    removed += legacyQueue.length;
+  }
+
+  const legacyOutbox = await db.syncOutbox.toArray();
+  if (legacyOutbox.length > 0) {
+    await db.syncOutbox.clear();
+    removed += legacyOutbox.length;
+  }
+
+  return removed;
 }

@@ -10,11 +10,14 @@ import { CreditCard, Smartphone, Banknote, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
 import { updateCanteenSale } from '@/services/canteen/operations-api';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 type PaymentChoice = 'cash' | 'pix' | 'credit' | 'fiado';
 
 export function MemberOrdersView() {
-  const liveOrders = useLiveQuery(() => db.sales.orderBy('createdAt').reverse().toArray());
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
+  const liveOrders = useLiveQuery(() => tenantId ? db.sales.filter((order) => order.tenantId === tenantId).toArray().then((items) => items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) : [], [tenantId]);
   const orders = useMemo(() => liveOrders ?? [], [liveOrders]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);

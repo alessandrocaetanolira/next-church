@@ -55,6 +55,7 @@ function MyAccountPageContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const user = session?.user;
+  const tenantId = user?.tenantId ?? '';
   const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
   const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
   const { notifications } = useNotificationCenter();
@@ -114,7 +115,7 @@ function MyAccountPageContent() {
       syncingRef.current = true;
 
       try {
-        const payload = await syncMemberSalesFromServer();
+        const payload = await syncMemberSalesFromServer(tenantId);
         if (!cancelled) {
           setFinancialMember(payload.member ?? null);
           setServerTransactions(Array.isArray(payload.sales) ? payload.sales as LocalSale[] : []);
@@ -142,33 +143,34 @@ function MyAccountPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [notifications]);
+  }, [notifications, tenantId]);
 
   // Data Queries
   const products = useProducts(canCatalog);
   
   // Mock finding member by email
   const linkedMember = useLiveQuery(
-    () => user?.email ? db.members.where('email').equals(user.email).first() : undefined,
-    [user?.email]
+    () => user?.email && tenantId ? db.members.filter((member) => member.email === user.email && member.tenantId === tenantId).first() : undefined,
+    [user?.email, tenantId]
   );
 
   // Mock sales history
   const transactions = useLiveQuery(
-    () => linkedMember ? db.sales.where('memberId').equals(linkedMember.id).reverse().limit(10).toArray() : [],
-    [linkedMember]
+    () => linkedMember && tenantId ? db.sales.filter((sale) => sale.memberId === linkedMember.id && sale.tenantId === tenantId).toArray().then((items) => items.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 10)) : [],
+    [linkedMember, tenantId]
   );
   const pendingOrders = useLiveQuery(
     async () => {
       if (!linkedMember?.id) return [];
 
-      const sales = await db.sales.where('memberId').equals(linkedMember.id).reverse().sortBy('createdAt');
+      const sales = await db.sales.filter((sale) => sale.memberId === linkedMember.id && sale.tenantId === tenantId).toArray();
+      sales.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
       return sales
         .reverse()
         .filter((sale) => sale.paymentMethod === 'pending' || sale.orderStatus === 'preparing')
         .slice(0, 10);
     },
-    [linkedMember?.id]
+    [linkedMember?.id, tenantId]
   ) || [];
 
   const loyaltyConfig = getLoyaltyConfig();
@@ -300,6 +302,7 @@ function MyAccountPageContent() {
         memberName: linkedMember.name,
         createdBy: user?.email || 'unknown',
         createdAt,
+        tenantId,
         _status: 'pending'
       };
 
@@ -348,6 +351,7 @@ function MyAccountPageContent() {
           memberName: linkedMember.name,
           createdBy: user?.email || 'unknown',
           createdAt: new Date().toISOString(),
+          tenantId,
           _status: 'pending'
         };
 

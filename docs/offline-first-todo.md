@@ -143,6 +143,10 @@ armazenadas duas URLs otimizadas, uma para 192x192 e outra para 512x512.
 - [ ] Definir chaves compostas por tenant, usuário e entidade quando necessário.
 - [ ] Garantir que dados de tenants diferentes nunca compartilhem índices locais.
 - [x] Isolar o cursor e a fila de sincronização por tenant e usuário no contexto autenticado.
+- [x] Marcar dados recebidos pelo `pull` com o contexto do tenant.
+- [x] Filtrar tarefas, equipes, membros, produtos e vendas pelo tenant ativo.
+- [x] Oferecer limpeza explícita de registros legados sem tenant, preservando a Bíblia.
+- [ ] Cobrir os acessos locais restantes antes de concluir o isolamento do Dexie.
 - [ ] Evitar armazenar senhas ou tokens persistentes em texto puro.
 - [x] Criar testes de schema e recuperação de banco local.
 

@@ -70,7 +70,8 @@ export function CanteenContainer() {
   const [activeTab, setActiveTab] = useState<CanteenTab>(initialTab);
   const [canteenStatus, setCanteenStatus] = useState<{ isOpen: boolean; openedAt: string | null }>({ isOpen: false, openedAt: null });
   const [updatingStatus, setUpdatingStatus] = useState(false);
-  const sales = useLiveQuery(() => db.sales.toArray(), []) ?? [];
+  const tenantId = user?.tenantId ?? '';
+  const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId).toArray() : [], [tenantId]) ?? [];
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   const syncingRef = useRef(false);
   const pendingOrders = sales.filter((sale) => sale.paymentMethod === 'pending').length;
@@ -127,8 +128,8 @@ export function CanteenContainer() {
 
       try {
         const [syncedSales, syncedMembers] = await Promise.all([
-          syncCanteenSalesFromServer(),
-          syncCanteenMembersFromServer(),
+          syncCanteenSalesFromServer(tenantId),
+          syncCanteenMembersFromServer(tenantId),
         ]);
         console.info('[canteen-fiado] refresh canteen state', {
           sales: syncedSales.length,
@@ -159,7 +160,7 @@ export function CanteenContainer() {
     return () => {
       cancelled = true;
     };
-  }, [notifications]);
+  }, [notifications, tenantId]);
 
   const handleTabChange = (value: string) => {
     if (!VALID_TABS.includes(value as CanteenTab)) return;

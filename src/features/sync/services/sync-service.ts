@@ -115,6 +115,7 @@ export async function pullChanges(context?: SyncContext) {
             const existing = await db.sales.get(sale.id);
             return {
               ...sale,
+              ...(context ? { tenantId: context.tenantId, tenantSlug: context.tenantSlug } : {}),
               orderStatus: sale.orderStatus ?? existing?.orderStatus,
               _status: 'synced' as const,
             };
@@ -122,9 +123,9 @@ export async function pullChanges(context?: SyncContext) {
         );
         await db.sales.bulkPut(mergedSales);
       }
-      if (data.products) await db.products.bulkPut(data.products);
-      if (data.members) await db.members.bulkPut(data.members);
-      if (data.tasks) await db.tasks.bulkPut(data.tasks);
+      if (data.products) await db.products.bulkPut(data.products.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
+      if (data.members) await db.members.bulkPut(data.members.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
+      if (data.tasks) await db.tasks.bulkPut(data.tasks.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
     });
 
     if (data.timestamp) {

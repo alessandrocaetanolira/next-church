@@ -18,7 +18,7 @@ type RemoteSale = {
   createdAt: string;
 };
 
-function toLocalSale(sale: RemoteSale): LocalSale {
+function toLocalSale(sale: RemoteSale, tenantId?: string): LocalSale {
   return {
     id: sale.id,
     total: sale.total,
@@ -34,18 +34,19 @@ function toLocalSale(sale: RemoteSale): LocalSale {
     memberName: sale.memberName ?? undefined,
     createdBy: sale.createdBy,
     createdAt: sale.createdAt,
+    tenantId,
     _status: 'synced',
   };
 }
 
-export async function syncCanteenSalesFromServer() {
+export async function syncCanteenSalesFromServer(tenantId?: string) {
   const response = await fetchCanteenSales<RemoteSale[]>();
   if (!response.ok) {
     throw new Error('Falha ao buscar vendas da cantina');
   }
 
   const sales = response.data ?? [];
-  const normalized = Array.isArray(sales) ? sales.map(toLocalSale) : [];
+  const normalized = Array.isArray(sales) ? sales.map((sale) => toLocalSale(sale, tenantId)) : [];
 
   await db.sales.bulkPut(normalized);
 

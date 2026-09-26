@@ -17,12 +17,15 @@ import { ChefHat, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateCanteenSale } from "@/services/canteen/operations-api";
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export function PreparoView() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
   const [filter, setFilter] = useState<'all' | 'preparing' | 'ready' | 'cancelled'>('all');
   const orders = useLiveQuery(
-    async () => await db.sales.orderBy('createdAt').reverse().toArray(),
-    []
+    async () => tenantId ? (await db.sales.filter((sale) => sale.tenantId === tenantId).toArray()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [],
+    [tenantId]
   );
 
   const handleStatusChange = async (orderId: string, orderStatus: 'preparing' | 'ready' | 'cancelled') => {

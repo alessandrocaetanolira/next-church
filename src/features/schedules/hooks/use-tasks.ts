@@ -5,16 +5,20 @@ import { db, LocalTask } from '@/lib/db';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export function useTasks() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
   const tasks = useLiveQuery(
     async () => {
-      const all = await db.tasks.toArray();
+      if (!tenantId) return [];
+      const all = await db.tasks.filter((task) => task.tenantId === tenantId).toArray();
       // Filtra tarefas deletadas e ordena por data
       return all
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     },
-    []
+    [tenantId]
   );
 
   const addTask = useCallback(async (task: Omit<LocalTask, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -22,6 +26,7 @@ export function useTasks() {
     const newTask = {
       ...task,
       id,
+      tenantId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       _status: 'pending' as const,
@@ -39,7 +44,7 @@ export function useTasks() {
     } catch {
       toast.error('Erro ao criar tarefa');
     }
-  }, []);
+  }, [tenantId]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<LocalTask>) => {
     try {

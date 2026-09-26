@@ -11,7 +11,7 @@ export function useSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const syncContext = useMemo<SyncContext | undefined>(() => (
     session?.user?.tenantId && session.user.id && session.user.tenantSlug
-      ? { tenantSlug: session.user.tenantSlug, userId: session.user.id }
+      ? { tenantId: session.user.tenantId, tenantSlug: session.user.tenantSlug, userId: session.user.id }
       : undefined
   ), [session?.user?.id, session?.user?.tenantId, session?.user?.tenantSlug]);
   const isAuthenticated = status === 'authenticated' && Boolean(syncContext);

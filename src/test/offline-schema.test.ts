@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { db } from '@/lib/db';
+import { clearUnscopedOfflineData, db } from '@/lib/db';
 
 describe('schema offline Dexie', () => {
   afterEach(async () => {
@@ -25,5 +25,13 @@ describe('schema offline Dexie', () => {
     const item = await db.syncQueue.get(id);
     expect(item).toMatchObject({ status: 'error', retryCount: 2, idempotencyKey: 'tenant-a:task-1:update' });
   });
-});
 
+  it('remove registros legados sem tenant e preserva a Bíblia', async () => {
+    await db.tasks.add({ id: 'legacy-task', title: 'Legado', description: '', teamId: 'team', date: '2026-01-01', status: 'pending', type: 'scale', recurrence: 'none', updatedAt: new Date().toISOString() });
+    await db.offlineBibleBooks.put({ translation: 'NVI', abbrev: 'gn', name: 'Gênesis', testament: 'AT', position: 1, cachedAt: new Date().toISOString(), contentVersion: 'v1' });
+
+    await expect(clearUnscopedOfflineData()).resolves.toBe(1);
+    await expect(db.tasks.get('legacy-task')).resolves.toBeUndefined();
+    await expect(db.offlineBibleBooks.get(['NVI', 'gn'])).resolves.toBeDefined();
+  });
+});

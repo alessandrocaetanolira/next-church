@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
 import { generateId } from '@/lib/id';
 import { createCanteenSale } from '@/services/canteen/sales-api';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 // Mapeamento de Ícones por Categoria
 const CATEGORY_ICONS: Record<string, any> = {
@@ -98,9 +99,11 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
 );
 
 export function PDV() {
+  const { user } = useAuth();
   const products = useProducts();
   const { items, addItem, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
-  const members = useLiveQuery(() => db.members.toArray()) || [];
+  const tenantId = user?.tenantId ?? '';
+  const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]) || [];
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [search, setSearch] = useState('');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -172,6 +175,7 @@ export function PDV() {
       memberName: paymentMethod.toLowerCase() === 'fiado' ? member?.name : undefined,
       createdAt,
       createdBy: 'user',
+      tenantId,
     };
 
     try {

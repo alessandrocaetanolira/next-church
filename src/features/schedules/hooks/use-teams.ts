@@ -5,17 +5,21 @@ import { db, LocalTeam } from '@/lib/db';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export function useTeams() {
+  const { user } = useAuth();
+  const tenantId = user?.tenantId ?? '';
   const teams = useLiveQuery(
     async () => {
-      const all = await db.teams.toArray();
+      if (!tenantId) return [];
+      const all = await db.teams.filter((team) => team.tenantId === tenantId).toArray();
       // Filtra times deletados (se houver campo deletedAt, o sync remove, mas preventivamente filtramos)
       return all
         .filter(t => !t.deletedAt)
         .sort((a, b) => a.name.localeCompare(b.name));
     },
-    []
+    [tenantId]
   );
 
   const addTeam = useCallback(async (team: Omit<LocalTeam, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -23,6 +27,7 @@ export function useTeams() {
     const newTeam = {
       ...team,
       id,
+      tenantId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       deletedAt: null,
@@ -41,7 +46,7 @@ export function useTeams() {
     } catch {
       toast.error('Erro ao criar equipe');
     }
-  }, []);
+  }, [tenantId]);
 
   const updateTeam = useCallback(async (id: string, updates: Partial<LocalTeam>) => {
     try {

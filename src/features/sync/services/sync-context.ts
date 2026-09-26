@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 
 export interface SyncContext {
+  tenantId?: string;
   tenantSlug: string;
   userId: string;
 }

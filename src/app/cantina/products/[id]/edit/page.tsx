@@ -13,6 +13,11 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
-  const product = useLiveQuery(() => user?.tenantId && params.id ? db.products.get(params.id) : undefined, [params.id, user?.tenantId]);
+  const product = useLiveQuery(
+    () => user?.tenantId && params.id
+      ? db.products.filter((item) => item.id === params.id && item.tenantId === user.tenantId).first()
+      : undefined,
+    [params.id, user?.tenantId]
+  );
   return <PageShell size="narrow"><div className="flex items-center gap-3 border-b border-border pb-4"><Button variant="ghost" size="icon" aria-label="Voltar para a cantina" onClick={() => router.back()}><ArrowLeft className="h-5 w-5" /></Button><div><h1 className="text-xl font-semibold">Editar produto</h1><p className="text-sm text-muted-foreground">Atualize os dados do produto.</p></div></div>{product ? <ProductFormEdit product={product} onSuccess={() => router.replace('/cantina')} /> : <p className="text-sm text-muted-foreground">Carregando produto...</p>}</PageShell>;
 }

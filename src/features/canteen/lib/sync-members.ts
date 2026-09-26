@@ -13,7 +13,7 @@ type RemoteMember = {
   updatedAt?: string;
 };
 
-function toLocalMember(member: RemoteMember, existing?: LocalMember): LocalMember {
+function toLocalMember(member: RemoteMember, existing?: LocalMember, tenantId?: string): LocalMember {
   return {
     id: member.id,
     name: member.name,
@@ -25,22 +25,25 @@ function toLocalMember(member: RemoteMember, existing?: LocalMember): LocalMembe
     avatarUrl: existing?.avatarUrl,
     createdAt: member.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     updatedAt: member.updatedAt ?? new Date().toISOString(),
+    tenantId,
     deletedAt: member.deletedAt ?? existing?.deletedAt ?? null,
     _status: 'synced',
   };
 }
 
-export async function syncCanteenMembersFromServer() {
+export async function syncCanteenMembersFromServer(tenantId?: string) {
   const response = await fetchCanteenMembers<RemoteMember[]>();
   if (!response.ok) {
     throw new Error('Falha ao buscar membros da cantina');
   }
 
   const members = response.data ?? [];
-  const existingMembers = await db.members.toArray();
+  const existingMembers = tenantId
+    ? await db.members.filter((member) => member.tenantId === tenantId).toArray()
+    : await db.members.toArray();
   const existingMap = new Map(existingMembers.map((member) => [member.id, member]));
   const normalized = Array.isArray(members)
-    ? members.map((member) => toLocalMember(member, existingMap.get(member.id)))
+    ? members.map((member) => toLocalMember(member, existingMap.get(member.id), tenantId))
     : [];
 
   await db.members.bulkPut(normalized);
