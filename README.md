@@ -73,12 +73,11 @@ DATABASE_URL="file:../databases/global.db"
 BIBLE_DATABASE_URL="file:../databases/bible.db"
 CHURCH_DATABASE_DIR="./prisma/databases"
 AUTH_SECRET="gere-uma-chave-local-forte"
-AUTH_URL="http://localhost:3000"
-
-# Em produção, use a origem pública do deploy, sem barra final:
+# Com `AUTH_TRUST_HOST=true`, a autenticação usa a origem da requisição.
+# Em produção, configure AUTH_URL/NEXTAUTH_URL apenas se o ambiente exigir:
 # AUTH_URL="https://church.bennipersonalizados.com.br"
 # NEXTAUTH_URL="https://church.bennipersonalizados.com.br"
-NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
+# NEXT_PUBLIC_APP_BASE_URL é opcional; no navegador a origem atual é priorizada.
 # Origem pública usada nos links e QR Codes enviados para membros:
 NEXT_PUBLIC_SHARE_BASE_URL="https://church.bennipersonalizados.com.br"
 AUTH_TRUST_HOST="true"

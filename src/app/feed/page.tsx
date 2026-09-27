@@ -16,10 +16,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { addFeedComment, createFeedPost, deleteFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
+import { createFeedPost, deleteFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
-import { FeedWebTable } from '@/features/feed/components/FeedWebTable';
 import { WebPageLayout } from '@/components/shared/web';
 import { MobileFeedComposer } from '@/features/feed/components/MobileFeedComposer';
 import { SharedFlatList } from '@/components/SharedFlatList';
@@ -77,7 +76,6 @@ export default function FeedPage() {
   const [notifyResponsibles, setNotifyResponsibles] = useState(false);
   const [composing, setComposing] = useState(false);
   const [commentingOn, setCommentingOn] = useState<string | number | null>(null);
-  const [commentText, setCommentText] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
@@ -261,24 +259,6 @@ export default function FeedPage() {
       toast.error('Não foi possível registrar a curtida.');
       return;
     }
-  };
-
-  const handleComment = async (post: FeedPost) => {
-    if (!user?.email || !post.id || !commentText.trim()) return;
-    if (isOffline) {
-      toast.info('Comentários exigem conexão.');
-      return;
-    }
-
-    try {
-      const updated = await addFeedComment(post.id, commentText.trim());
-      setPosts((current) => sortFeedPosts(current.map((item) => item.id === updated.id ? updated : item)));
-    } catch {
-      toast.error('Não foi possível comentar.');
-      return;
-    }
-    setCommentText('');
-    setCommentingOn(null);
   };
 
   const canDeletePost = (post: FeedPost) => Boolean(user?.email && post.userId?.toLowerCase() === user.email.toLowerCase()) || hasActionPermission(user, 'feed', 'delete');
@@ -519,10 +499,12 @@ export default function FeedPage() {
       </div>
 
       {newPostsAvailable ? (
-        <button type="button" onClick={() => void handleRefreshNewPosts()} className="mx-auto flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/15">
-          Novas publicações disponíveis
-          <span aria-hidden="true">↓</span>
-        </button>
+        <div className="pointer-events-none fixed inset-x-0 top-16 z-[55] flex justify-center px-4">
+          <button type="button" onClick={() => void handleRefreshNewPosts()} className="pointer-events-auto flex items-center gap-2 rounded-full border border-primary/30 bg-background/95 px-4 py-2 text-sm font-medium text-primary shadow-lg backdrop-blur transition-colors hover:bg-primary/10">
+            Novas publicações disponíveis
+            <span aria-hidden="true">↓</span>
+          </button>
+        </div>
       ) : null}
 
       <>
@@ -542,7 +524,17 @@ export default function FeedPage() {
           </Card>
         ) : (
           <>
-            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} onOpenPost={(post) => router.push(`/feed/${post.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} /></div>
+            <div className="hidden md:block mx-auto w-full max-w-3xl">
+              <SharedFlatList
+                data={sortedPosts}
+                keyExtractor={(post) => String(post.id)}
+                onEndReached={() => void handleLoadMore()}
+                hasMore={hasMore}
+                loadingMore={loadingMore}
+                className="gap-4"
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
+              />
+            </div>
             <div className="md:hidden">
               <SharedFlatList
                 data={sortedPosts}
@@ -558,13 +550,6 @@ export default function FeedPage() {
         )}
       </>
 
-      {hasMore && (
-        <div className="hidden pt-2 md:block">
-          <Button variant="outline" className="w-full" onClick={handleLoadMore} disabled={loadingMore}>
-            {loadingMore ? 'Carregando...' : 'Carregar mais'}
-          </Button>
-        </div>
-      )}
       <MobileCommentsDrawer
         post={sortedPosts.find((post) => post.id === commentingOn) ?? null}
         open={commentingOn !== null}

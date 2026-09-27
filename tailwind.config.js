@@ -8,11 +8,19 @@ const tailwindConfig = {
     "./src/features/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    // O web começa acima de 1024px; iPads permanecem com o layout mobile.
+    screens: {
+      sm: "640px",
+      md: "1025px",
+      lg: "1280px",
+      xl: "1536px",
+      "2xl": "1600px",
+    },
     container: {
       center: true,
       padding: "1rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1600px",
       },
     },
     extend: {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Baby, HeartPulse, Plus, Search, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
-import { createChild, deleteChild as deleteChildRequest, listKidsOptions, notifyChildResponsibles, publishKidsFeed, updateChild, type KidsChild, type KidsGroupOption, type KidsMemberOption } from '@/services/kids/kids-api';
+import { deleteChild as deleteChildRequest, listKidsOptions, notifyChildResponsibles, publishKidsFeed, type KidsChild, type KidsGroupOption, type KidsMemberOption } from '@/services/kids/kids-api';
 import { KidsWebTable } from '@/features/kids/components/KidsWebTable';
 import { WebPageLayout } from '@/components/shared/web';
 
@@ -22,34 +23,19 @@ type ChildItem = KidsChild;
 type MemberOption = KidsMemberOption;
 type GroupOption = KidsGroupOption;
 
-const initialForm = {
-  name: '',
-  birthDate: '',
-  parentMemberIds: [] as string[],
-  allergies: '',
-  medications: '',
-  healthHistory: '',
-  dietaryRestrictions: '',
-  canDoPhysicalActivities: true,
-  notes: '',
-  groupIds: [] as string[],
-};
-
 export default function KidsPage() {
+  const router = useRouter();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { user } = useAuth();
   const [childrenList, setChildrenList] = useState<ChildItem[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [search, setSearch] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingChild, setEditingChild] = useState<ChildItem | null>(null);
   const [messageChild, setMessageChild] = useState<ChildItem | null>(null);
   const [postDrawerOpen, setPostDrawerOpen] = useState(false);
   const [messageForm, setMessageForm] = useState({ title: '', message: '' });
   const [sendingMessage, setSendingMessage] = useState(false);
   const [publishingPost, setPublishingPost] = useState(false);
-  const [form, setForm] = useState(initialForm);
   const [postForm, setPostForm] = useState({
     groupId: '',
     title: '',
@@ -93,50 +79,6 @@ export default function KidsPage() {
       );
     });
   }, [childrenList, search]);
-
-  const openDrawer = (child?: ChildItem) => {
-    setEditingChild(child ?? null);
-    setForm(
-      child
-        ? {
-            name: child.name,
-            birthDate: child.birthDate ? String(child.birthDate).slice(0, 10) : '',
-            parentMemberIds: child.parentMemberIds,
-            allergies: child.allergies ?? '',
-            medications: child.medications ?? '',
-            healthHistory: child.healthHistory ?? '',
-            dietaryRestrictions: child.dietaryRestrictions ?? '',
-            canDoPhysicalActivities: child.canDoPhysicalActivities !== false,
-            notes: child.notes ?? '',
-            groupIds: child.groupIds,
-          }
-        : initialForm,
-    );
-    setDrawerOpen(true);
-  };
-
-  const saveChild = async () => {
-    if (!form.name.trim()) {
-      toast.error('Nome é obrigatório.');
-      return;
-    }
-
-    try {
-      const input = {
-          ...form,
-          name: form.name.trim(),
-        };
-      if (editingChild) await updateChild(editingChild.id, input);
-      else await createChild(input);
-      toast.success(editingChild ? 'Cadastro infantil atualizado.' : 'Criança cadastrada.');
-      setDrawerOpen(false);
-      setEditingChild(null);
-      setForm(initialForm);
-      await loadData();
-    } catch {
-      toast.error('Erro ao salvar cadastro infantil.');
-    }
-  };
 
   const deleteChild = async (id: string) => {
     if (!confirm('Remover esta criança?')) return;
@@ -221,14 +163,14 @@ export default function KidsPage() {
               Publicar no Feed
             </Button>
           ) : null}
-          {canCreate ? <Button onClick={() => openDrawer()}>
+          {canCreate ? <Button onClick={() => router.push('/kids/new')}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Criança
           </Button> : null}
         </div>
       </div>
 
-      <div className="hidden md:block"><KidsWebTable childrenList={visibleChildren} groups={groups} canUpdate={canUpdate} canDelete={canDelete} onEdit={openDrawer} onNotify={(child) => { setMessageChild(child); setMessageForm({ title: `Aviso sobre ${child.name}`, message: '' }); }} onDelete={(id) => void deleteChild(id)} /></div>
+      <div className="hidden md:block"><KidsWebTable childrenList={visibleChildren} groups={groups} canUpdate={canUpdate} canDelete={canDelete} onEdit={(child) => router.push(`/kids/${child.id}/edit`)} onNotify={(child) => { setMessageChild(child); setMessageForm({ title: `Aviso sobre ${child.name}`, message: '' }); }} onDelete={(id) => void deleteChild(id)} /></div>
       <div className="grid gap-4 md:hidden">
         {visibleChildren.map((child) => (
           <Card key={child.id} className="border-border">
@@ -260,7 +202,7 @@ export default function KidsPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                {canUpdate ? <Button variant="outline" className="flex-1" onClick={() => openDrawer(child)}>Editar</Button> : null}
+                {canUpdate ? <Button variant="outline" className="flex-1" onClick={() => router.push(`/kids/${child.id}/edit`)}>Editar</Button> : null}
                 {canUpdate ? <Button
                   variant="outline"
                   className="flex-1"
@@ -291,78 +233,6 @@ export default function KidsPage() {
         </Card>
       ) : null}
 
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent className="max-h-[92vh]">
-          <DrawerHeader>
-            <DrawerTitle>{editingChild ? 'Editar Criança' : 'Nova Criança'}</DrawerTitle>
-          </DrawerHeader>
-          <div className="space-y-4 overflow-y-auto px-4 pb-6">
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Nascimento</Label>
-              <Input type="date" value={form.birthDate} onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Responsável principal</Label>
-              <Select value={form.parentMemberIds[0] ?? ''} onValueChange={(value) => setForm((current) => ({ ...current, parentMemberIds: value ? [value] : [] }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione um responsável" /></SelectTrigger>
-                <SelectContent>
-                  {members.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Grupo infantil</Label>
-              <Select value={form.groupIds[0] ?? ''} onValueChange={(value) => setForm((current) => ({ ...current, groupIds: value ? [value] : [] }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione um grupo" /></SelectTrigger>
-                <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Alergias</Label>
-              <Textarea value={form.allergies} onChange={(event) => setForm((current) => ({ ...current, allergies: event.target.value }))} rows={2} />
-            </div>
-            <div className="space-y-2">
-              <Label>Medicações</Label>
-              <Textarea value={form.medications} onChange={(event) => setForm((current) => ({ ...current, medications: event.target.value }))} rows={2} />
-            </div>
-            <div className="space-y-2">
-              <Label>Histórico relevante</Label>
-              <Textarea value={form.healthHistory} onChange={(event) => setForm((current) => ({ ...current, healthHistory: event.target.value }))} rows={2} />
-            </div>
-            <div className="space-y-2">
-              <Label>Restrições alimentares</Label>
-              <Textarea value={form.dietaryRestrictions} onChange={(event) => setForm((current) => ({ ...current, dietaryRestrictions: event.target.value }))} rows={2} />
-            </div>
-            <div className="space-y-2">
-              <Label>Atividades físicas</Label>
-              <Select value={form.canDoPhysicalActivities ? 'yes' : 'no'} onValueChange={(value) => setForm((current) => ({ ...current, canDoPhysicalActivities: value === 'yes' }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Pode participar</SelectItem>
-                  <SelectItem value="no">Possui restrição</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={3} />
-            </div>
-            <Button className="w-full" onClick={() => void saveChild()}>
-              {editingChild ? 'Salvar alterações' : 'Cadastrar criança'}
-            </Button>
-          </div>
-        </DrawerContent>
-      </Drawer>
 
       <Drawer open={postDrawerOpen} onOpenChange={setPostDrawerOpen}>
         <DrawerContent className="max-h-[92vh]">

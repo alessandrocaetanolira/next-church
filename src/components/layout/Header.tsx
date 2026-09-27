@@ -148,10 +148,16 @@ export function Header() {
     if (/^\/feed\/[^/]+\/comments\/new$/.test(pathname)) return { href: `/feed/${pathname.split('/')[2]}`, label: 'Publicação' };
     if (/^\/feed\/[^/]+$/.test(pathname)) return { href: '/feed', label: 'Feed' };
     if (pathname === '/members/new') return { href: '/members', label: 'Membros' };
+    if (pathname === '/groups/new') return { href: '/groups', label: 'Grupos' };
+    if (/^\/groups\/[^/]+\/edit$/.test(pathname)) return { href: `/groups/${pathname.split('/')[2]}`, label: 'Grupo' };
+    if (pathname === '/kids/new') return { href: '/kids', label: 'Infantil' };
+    if (/^\/kids\/[^/]+\/edit$/.test(pathname)) return { href: '/kids', label: 'Infantil' };
     if (/^\/members\/[^/]+\/(edit|access)$/.test(pathname)) return { href: `/members/${pathname.split('/')[2]}`, label: 'Membro' };
     if (/^\/members\/[^/]+$/.test(pathname)) return { href: '/members', label: 'Membros' };
     if (/^\/groups\/[^/]+$/.test(pathname)) return { href: '/groups', label: 'Grupos' };
+    if (pathname === '/schedules/new') return { href: '/schedules', label: 'Escalas' };
     if (pathname === '/cantina/products/new') return { href: '/cantina', label: 'Cantina' };
+    if (pathname === '/cantina/checkout') return { href: '/cantina?tab=pdv', label: 'PDV' };
     if (/^\/cantina\/products\/[^/]+\/edit$/.test(pathname)) return { href: `/cantina/products/${pathname.split('/')[3]}`, label: 'Produto' };
     if (/^\/cantina\/products\/[^/]+$/.test(pathname)) return { href: '/cantina', label: 'Cantina' };
     return null;

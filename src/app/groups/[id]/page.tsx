@@ -15,12 +15,12 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { Package, Pin, Plus, Send, Target, Users, UserPlus, X } from 'lucide-react';
+import { Minus, Package, Pin, Plus, Send, Target, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { hasActionPermission, hasPermission } from '@/lib/access-control';
 import { cn } from '@/lib/utils';
-import { createFundraisingGoal, getGroup, listFundraising, listGroupFeed, listJoinRequests, listMembers, processJoinRequest, publishGroupPost as publishGroupPostRequest, updateGroup } from '@/services/groups/groups-api';
+import { createFundraisingGoal, deleteFundraisingGoal, getGroup, listFundraising, listGroupFeed, listJoinRequests, listMembers, processJoinRequest, publishGroupPost as publishGroupPostRequest, updateFundraisingGoal } from '@/services/groups/groups-api';
 
 type GroupMember = {
   id: string;
@@ -100,10 +100,9 @@ export default function GroupDetailPage() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [goals, setGoals] = useState<FundraisingGoal[]>([]);
   const [goalDrawerOpen, setGoalDrawerOpen] = useState(false);
-  const [groupDrawerOpen, setGroupDrawerOpen] = useState(false);
   const [postDrawerOpen, setPostDrawerOpen] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
-  const [savingGroup, setSavingGroup] = useState(false);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [savingPost, setSavingPost] = useState(false);
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [goalForm, setGoalForm] = useState({
@@ -112,13 +111,6 @@ export default function GroupDetailPage() {
     targetAmount: 0,
     deadline: '',
     items: [] as FundraisingItem[],
-  });
-  const [groupForm, setGroupForm] = useState({
-    name: '',
-    description: '',
-    color: 'primary',
-    icon: 'users',
-    members: [] as Array<{ memberId: string; role: string }>,
   });
   const [postForm, setPostForm] = useState({
     title: '',
@@ -167,20 +159,6 @@ export default function GroupDetailPage() {
     void loadData();
   }, [groupId, loadData]);
 
-  useEffect(() => {
-    if (!group) return;
-    setGroupForm({
-      name: group.name,
-      description: group.description ?? '',
-      color: group.color ?? 'primary',
-      icon: group.icon ?? 'users',
-      members: group.members.map((member) => ({
-        memberId: member.memberId,
-        role: member.role,
-      })),
-    });
-  }, [group]);
-
   const leaders = useMemo(
     () => group?.members.filter((member) => ['leader', 'responsible'].includes(member.role)) ?? [],
     [group?.members],
@@ -189,23 +167,6 @@ export default function GroupDetailPage() {
   const participants = useMemo(
     () => group?.members.filter((member) => member.role === 'member') ?? [],
     [group?.members],
-  );
-
-  const selectedMembers = useMemo(
-    () =>
-      groupForm.members.map((entry) => {
-        const member = members.find((item) => item.id === entry.memberId);
-        return {
-          ...entry,
-          name: member?.name ?? 'Membro',
-        };
-      }),
-    [groupForm.members, members]
-  );
-
-  const availableMembers = useMemo(
-    () => members.filter((member) => !groupForm.members.some((entry) => entry.memberId === member.id)),
-    [groupForm.members, members]
   );
 
   const addGoalItem = () => {
@@ -222,6 +183,31 @@ export default function GroupDetailPage() {
     }));
   };
 
+  const removeGoalItem = (index: number) => {
+    setGoalForm((current) => ({
+      ...current,
+      items: current.items.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
+  const openNewGoal = () => {
+    setEditingGoalId(null);
+    setGoalForm({ title: '', description: '', targetAmount: 0, deadline: '', items: [] });
+    setGoalDrawerOpen(true);
+  };
+
+  const openEditGoal = (goal: FundraisingGoal) => {
+    setEditingGoalId(goal.id);
+    setGoalForm({
+      title: goal.title,
+      description: goal.description ?? '',
+      targetAmount: goal.targetAmount,
+      deadline: goal.deadline ? goal.deadline.slice(0, 10) : '',
+      items: goal.items.map((item) => ({ ...item })),
+    });
+    setGoalDrawerOpen(true);
+  };
+
   const saveGoal = async () => {
     if (!groupId || !goalForm.title.trim()) {
       toast.error('Título é obrigatório.');
@@ -230,15 +216,21 @@ export default function GroupDetailPage() {
 
     setSavingGoal(true);
     try {
-      await createFundraisingGoal(groupId, {
+      const payload = {
           title: goalForm.title.trim(),
           description: goalForm.description.trim(),
           targetAmount: goalForm.targetAmount,
           items: goalForm.items,
           deadline: goalForm.deadline || null,
-        });
-      toast.success('Meta criada.');
+        };
+      if (editingGoalId) {
+        await updateFundraisingGoal(groupId, editingGoalId, payload);
+      } else {
+        await createFundraisingGoal(groupId, payload);
+      }
+      toast.success(editingGoalId ? 'Meta atualizada.' : 'Meta criada.');
       setGoalDrawerOpen(false);
+      setEditingGoalId(null);
       setGoalForm({ title: '', description: '', targetAmount: 0, deadline: '', items: [] });
       await loadData();
     } catch {
@@ -248,54 +240,35 @@ export default function GroupDetailPage() {
     }
   };
 
-  const toggleMember = (memberId: string) => {
-    setGroupForm((current) => ({
-      ...current,
-      members: current.members.some((member) => member.memberId === memberId)
-        ? current.members.filter((member) => member.memberId !== memberId)
-        : [...current.members, { memberId, role: 'member' }],
-    }));
-  };
-
-  const setMemberRole = (memberId: string, role: string) => {
-    setGroupForm((current) => ({
-      ...current,
-      members: current.members.map((member) => (member.memberId === memberId ? { ...member, role } : member)),
-    }));
-  };
-
-  const removeMember = (memberId: string) => {
-    setGroupForm((current) => ({
-      ...current,
-      members: current.members.filter((member) => member.memberId !== memberId),
-    }));
-  };
-
-  const saveGroup = async () => {
-    if (!groupId || !group) return;
-    if (!groupForm.name.trim()) {
-      toast.error('Nome é obrigatório.');
-      return;
-    }
-
-    setSavingGroup(true);
+  const updateGoalItemCounter = async (goal: FundraisingGoal, itemIndex: number, delta: number) => {
+    if (!groupId) return;
+    const items = goal.items.map((item, index) => index === itemIndex
+      ? { ...item, currentQty: Math.max(0, item.currentQty + delta) }
+      : item);
     try {
-      await updateGroup(groupId, {
-          name: groupForm.name.trim(),
-          description: groupForm.description.trim(),
-          type: group.type,
-          color: groupForm.color,
-          icon: groupForm.icon,
-          capabilities: group.capabilities,
-          members: groupForm.members,
-        });
-      toast.success('Grupo atualizado.');
-      setGroupDrawerOpen(false);
-      await loadData();
-    } catch {
-      toast.error('Erro ao salvar grupo.');
-    } finally {
-      setSavingGroup(false);
+      await updateFundraisingGoal(groupId, goal.id, {
+        title: goal.title,
+        description: goal.description,
+        targetAmount: goal.targetAmount,
+        currentAmount: goal.currentAmount,
+        items,
+        deadline: goal.deadline,
+        active: true,
+      });
+      setGoals((current) => current.map((item) => item.id === goal.id ? { ...item, items } : item));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o contador.');
+    }
+  };
+
+  const removeGoal = async (goal: FundraisingGoal) => {
+    if (!groupId || !window.confirm(`Remover a meta "${goal.title}"?`)) return;
+    try {
+      await deleteFundraisingGoal(groupId, goal.id);
+      setGoals((current) => current.filter((item) => item.id !== goal.id));
+      toast.success('Meta removida.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível remover a meta.');
     }
   };
 
@@ -372,7 +345,7 @@ export default function GroupDetailPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {canManage ? (
-                  <Button size="sm" variant="outline" className="max-w-full" onClick={() => setGroupDrawerOpen(true)}>
+                  <Button size="sm" variant="outline" className="max-w-full" onClick={() => router.push(`/groups/${group.id}/edit`)}>
                     <Users className="mr-2 h-4 w-4" />
                     Gerenciar grupo
                   </Button>
@@ -557,7 +530,7 @@ export default function GroupDetailPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">Arrecadação</h3>
                     {canCreateGroupContent ? (
-                      <Button size="sm" onClick={() => setGoalDrawerOpen(true)}>
+                      <Button size="sm" onClick={openNewGoal}>
                         <Plus className="mr-2 h-4 w-4" />
                         Nova meta
                       </Button>
@@ -575,7 +548,12 @@ export default function GroupDetailPage() {
                               <p className="break-words font-medium">{goal.title}</p>
                               <p className="break-words text-sm text-muted-foreground">{goal.description || 'Sem descrição.'}</p>
                             </div>
-                            <Target className="h-4 w-4 shrink-0 text-primary" />
+                            <div className="flex shrink-0 items-center gap-1">
+                              {canManage ? <>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditGoal(goal)} aria-label="Editar meta"><Target className="h-4 w-4 text-primary" /></Button>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => void removeGoal(goal)} aria-label="Remover meta"><Trash2 className="h-4 w-4" /></Button>
+                              </> : <Target className="h-4 w-4 text-primary" />}
+                            </div>
                           </div>
                           <Progress value={percentage} className="h-2" />
                           <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -587,7 +565,11 @@ export default function GroupDetailPage() {
                               {goal.items.map((item) => (
                                 <div key={item.id} className="flex items-center justify-between gap-3 text-xs">
                                   <span className="min-w-0 break-words">{item.name}</span>
-                                  <span className="shrink-0 whitespace-nowrap text-muted-foreground">{item.currentQty}/{item.targetQty} {item.unit}</span>
+                                  <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-muted-foreground">
+                                    {canManage ? <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => void updateGoalItemCounter(goal, goal.items.indexOf(item), -1)} aria-label={`Diminuir ${item.name}`}><Minus className="h-3 w-3" /></Button> : null}
+                                    <span>{item.currentQty}/{item.targetQty} {item.unit}</span>
+                                    {canManage ? <Button type="button" variant="outline" size="icon" className="h-6 w-6" onClick={() => void updateGoalItemCounter(goal, goal.items.indexOf(item), 1)} aria-label={`Aumentar ${item.name}`}><Plus className="h-3 w-3" /></Button> : null}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -609,95 +591,10 @@ export default function GroupDetailPage() {
         </Card>
       )}
 
-      <Drawer open={groupDrawerOpen} onOpenChange={setGroupDrawerOpen}>
-        <DrawerContent className="max-h-[92vh]">
-          <DrawerHeader>
-            <DrawerTitle>Gerenciar Grupo</DrawerTitle>
-          </DrawerHeader>
-          <div className="space-y-4 overflow-y-auto px-4 pb-6">
-            <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
-              Admins e pastores podem incluir ou remover participantes e responsáveis de qualquer grupo.
-            </div>
-            <div className="space-y-2">
-              <Label>Nome</Label>
-              <Input value={groupForm.name} onChange={(event) => setGroupForm((current) => ({ ...current, name: event.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea value={groupForm.description} onChange={(event) => setGroupForm((current) => ({ ...current, description: event.target.value }))} rows={3} />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Responsáveis e participantes atuais</Label>
-              <div className="space-y-3 rounded-xl border border-border p-3">
-                {selectedMembers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum membro no grupo.</p>
-                ) : (
-                  selectedMembers.map((member) => (
-                    <div key={member.memberId} className="space-y-2 rounded-lg border border-border p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium">{member.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {member.role === 'member' ? 'Participante' : member.role === 'leader' ? 'Líder' : 'Responsável'}
-                          </p>
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMember(member.memberId)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Select
-                        value={member.role}
-                        onValueChange={(value) => setMemberRole(member.memberId, value)}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="member">Membro</SelectItem>
-                          <SelectItem value="leader">Líder</SelectItem>
-                          <SelectItem value="responsible">Responsável</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Adicionar membros</Label>
-              <div className="space-y-3 rounded-xl border border-border p-3">
-                {availableMembers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Todos os membros disponíveis já estão neste grupo.</p>
-                ) : (
-                  availableMembers.map((member) => (
-                    <button
-                      key={member.id}
-                      type="button"
-                      onClick={() => toggleMember(member.id)}
-                      className="flex w-full items-center justify-between gap-3 rounded-lg border border-border p-3 text-left text-sm transition-colors hover:bg-muted/40"
-                    >
-                      <span>{member.name}</span>
-                      <Badge variant="outline">
-                        <UserPlus className="mr-1 h-3 w-3" />
-                        Adicionar
-                      </Badge>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <Button className="w-full" onClick={() => void saveGroup()} disabled={savingGroup}>
-              {savingGroup ? 'Salvando...' : 'Salvar alterações'}
-            </Button>
-          </div>
-        </DrawerContent>
-      </Drawer>
-
       <Drawer open={goalDrawerOpen} onOpenChange={setGoalDrawerOpen}>
         <DrawerContent className="max-h-[92vh]">
           <DrawerHeader>
-            <DrawerTitle>Nova Meta de Arrecadação</DrawerTitle>
+            <DrawerTitle>{editingGoalId ? 'Editar Meta de Arrecadação' : 'Nova Meta de Arrecadação'}</DrawerTitle>
           </DrawerHeader>
           <div className="space-y-4 overflow-y-auto px-4 pb-6">
             <div className="space-y-2">
@@ -729,16 +626,17 @@ export default function GroupDetailPage() {
               <div className="space-y-3 rounded-xl border border-border p-3">
                 {goalForm.items.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum item adicionado.</p> : null}
                 {goalForm.items.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-[1.3fr,0.7fr,0.5fr] gap-2">
+                  <div key={item.id} className="grid grid-cols-[1.3fr,0.7fr,0.5fr_auto] gap-2">
                     <Input value={item.name} onChange={(event) => updateGoalItem(index, { name: event.target.value })} placeholder="Item" />
                     <Input type="number" value={item.targetQty || ''} onChange={(event) => updateGoalItem(index, { targetQty: Number(event.target.value) || 0 })} placeholder="Meta" />
                     <Input value={item.unit} onChange={(event) => updateGoalItem(index, { unit: event.target.value })} placeholder="Un" />
+                    <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => removeGoalItem(index)} aria-label="Remover item"><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
             </div>
             <Button className="w-full" onClick={() => void saveGoal()} disabled={savingGoal}>
-              {savingGoal ? 'Salvando...' : 'Criar Meta'}
+              {savingGoal ? 'Salvando...' : editingGoalId ? 'Salvar alterações' : 'Criar Meta'}
             </Button>
           </div>
         </DrawerContent>

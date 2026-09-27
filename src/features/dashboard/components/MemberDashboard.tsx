@@ -51,7 +51,7 @@ import { toast } from 'sonner';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
 import { generateId } from '@/lib/id';
-import { hasActionPermission } from '@/lib/access-control';
+import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 import { getEngagementProfile, updateEngagementProfile } from '@/services/engagement/engagement-api';
 import { createMemberSale } from '@/services/canteen/member-sales-api';
 
@@ -60,9 +60,9 @@ export function MemberDashboard() {
   const { data: session } = useSession();
   const user = session?.user;
   const tenantId = user?.tenantId ?? '';
-  const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
-  const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
-  const products = useProducts(canCatalog);
+  const canBrowseCanteen = hasAnyActionPermission(user, 'canteen', ['view', 'catalog', 'order']);
+  const canOrder = hasActionPermission(user, 'canteen', 'order');
+  const products = useProducts(canBrowseCanteen);
   const { notifications } = useNotificationCenter();
 
   // Devotional State - Inicialização direta

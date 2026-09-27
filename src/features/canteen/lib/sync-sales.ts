@@ -47,6 +47,13 @@ export async function syncCanteenSalesFromServer(tenantId?: string) {
 
   const sales = response.data ?? [];
   const normalized = Array.isArray(sales) ? sales.map((sale) => toLocalSale(sale, tenantId)) : [];
+  const remoteIds = new Set(normalized.map((sale) => sale.id));
+  const localSales = await db.sales.toArray();
+  const staleSyncedIds = localSales
+    .filter((sale) => sale.tenantId === tenantId && sale._status !== 'pending' && sale._status !== 'error' && !remoteIds.has(sale.id))
+    .map((sale) => sale.id);
+
+  if (staleSyncedIds.length > 0) await db.sales.bulkDelete(staleSyncedIds);
 
   await db.sales.bulkPut(normalized);
 

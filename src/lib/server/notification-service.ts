@@ -402,6 +402,31 @@ export async function notifyCanteenNewOrder(
   });
 }
 
+/** Avisa os operadores conectados para remover uma venda arquivada da fila local. */
+export async function publishCanteenOrderArchived(
+  prisma: PrismaClient,
+  tenantId: string,
+  sale: { id: string },
+) {
+  const recipients = await getCanteenRecipientEmails(prisma);
+  const createdAt = new Date().toISOString();
+
+  for (const userEmail of recipients) {
+    publishTenantEvent({
+      id: `canteen-order-archived:${sale.id}:${userEmail}:${Date.now()}`,
+      tenantId,
+      userEmail,
+      type: 'canteen-order-archived',
+      title: 'Pedido retirado da fila',
+      message: `O pedido #${sale.id.slice(-4)} foi retirado da fila de preparo.`,
+      href: '/cantina?tab=prep',
+      sourceType: 'sale',
+      sourceId: sale.id,
+      createdAt,
+    });
+  }
+}
+
 export async function notifyMemberOrderUpdate(
   prisma: PrismaClient,
   tenantId: string,

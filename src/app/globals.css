@@ -254,7 +254,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  @media (max-width: 767px) {
+  @media (max-width: 1024px) {
     input,
     textarea,
     select,

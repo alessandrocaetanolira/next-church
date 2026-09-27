@@ -1,6 +1,8 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+// Tablets, incluindo iPad em orientação portrait/landscape, usam a experiência mobile.
+// O template web começa somente em telas maiores que 1024 CSS pixels.
+export const MOBILE_BREAKPOINT = 1025;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);

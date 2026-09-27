@@ -490,7 +490,7 @@ export default function SettingsPage() {
         </Button>
         </Card>
 
-        <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={() => signOut()}>
+        <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={async () => { await signOut({ redirect: false }); window.location.replace('/auth/login'); }}>
           <LogOut className="w-4 h-4" /> Sair da conta
         </Button>
       </AdministracaoTab>

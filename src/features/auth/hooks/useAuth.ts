@@ -88,10 +88,11 @@ export function useAuth() {
     /** Revalida a sessão e repassa permissões atualizadas para o Zustand. */
     refreshSession: update,
     /** Encerra a sessão e redireciona para a tela de login */
-    logout: () => {
+    logout: async () => {
       clearCachedSession();
       useAuthStore.getState().logout();
-      return signOut({ callbackUrl: "/auth/login" });
+      await signOut({ redirect: false });
+      window.location.replace('/auth/login');
     },
   };
 }

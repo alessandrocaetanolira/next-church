@@ -9,9 +9,10 @@ Os bancos SQLite locais ficam em `prisma/databases/` e são ignorados pelo Git. 
 DATABASE_URL="file:../databases/global.db"
 CHURCH_DATABASE_DIR="./prisma/databases"
 AUTH_SECRET="gere-uma-chave-local-forte"
-AUTH_URL="http://localhost:3000"
-NEXT_PUBLIC_APP_BASE_URL="http://localhost:3000"
 AUTH_TRUST_HOST="true"
+
+# AUTH_URL/NEXTAUTH_URL e NEXT_PUBLIC_APP_BASE_URL são opcionais.
+# Quando definidos, use a origem pública do deploy, sem localhost.
 ```
 
 `DATABASE_URL` é relativo ao arquivo `prisma/global/schema.prisma`; portanto,

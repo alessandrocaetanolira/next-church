@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { hasActionPermission, hasPermission } from '@/lib/access-control';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Escalas | Church App',
@@ -28,7 +29,7 @@ export default async function SchedulesPage() {
     <WebPageLayout
       title="Escalas"
       description="Organize escalas, tarefas e responsabilidades da equipe."
-      actions={hasActionPermission(session.user, 'tasks', 'create') ? <Button><Plus className="mr-2 h-4 w-4" />Nova Escala</Button> : null}
+      actions={hasActionPermission(session.user, 'tasks', 'create') ? <Button asChild><Link href="/schedules/new"><Plus className="mr-2 h-4 w-4" />Nova Escala</Link></Button> : null}
     >
       <TaskList />
     </WebPageLayout>

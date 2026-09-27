@@ -20,6 +20,7 @@ import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadC
 import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 import { createFeedPost } from '@/services/feed/feed-api';
 import { BibleWebNavigation } from '@/features/bible/components/BibleWebNavigation';
+import { useBibleReadingStore } from '@/features/bible/store';
 
 export default function BiblePage() {
   const { data: session } = useSession();
@@ -28,12 +29,11 @@ export default function BiblePage() {
   const tenantId = user?.tenantId ?? '';
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
+  const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, setTenant, setTranslation, setBook, setChapter: setSelectedChapter } = useBibleReadingStore();
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [books, setBooks] = useState<BibleBook[]>([]);
-  const [translation, setTranslation] = useState<BibleTranslation>('NVI');
   const [selectedBook, setSelectedBook] = useState<BibleBook | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState(1);
   const [verses, setVerses] = useState<string[]>([]);
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
@@ -54,11 +54,15 @@ export default function BiblePage() {
       const result = await getBibleBooks(translation);
       setBooks(result.data);
       setContentSource(result.source);
-      if (result.data.length > 0) setSelectedBook(result.data[0]);
+      if (result.data.length > 0) {
+        const preferredBook = result.data.find((book) => book.abbrev === bookAbbrev) ?? result.data[0];
+        setSelectedBook(preferredBook);
+        if (preferredBook.abbrev !== bookAbbrev) setBook(preferredBook.abbrev);
+      }
     } catch {
       toast.error('Erro ao carregar livros');
     }
-  }, [translation]);
+  }, [bookAbbrev, setBook, translation]);
 
   const fetchAvailableChapters = useCallback(async (book: string) => {
     try {
@@ -73,7 +77,7 @@ export default function BiblePage() {
     } catch {
       toast.error('Erro ao carregar capítulos');
     }
-  }, [selectedChapter, translation]);
+  }, [selectedChapter, setSelectedChapter, translation]);
 
   const loadChapterData = useCallback(async (book: string, chapter: number) => {
     try {
@@ -85,6 +89,10 @@ export default function BiblePage() {
       toast.error('Erro ao carregar versículos.');
     }
   }, [translation]);
+
+  useEffect(() => {
+    if (tenantId && storedTenantId !== tenantId) setTenant(tenantId);
+  }, [setTenant, storedTenantId, tenantId]);
 
   useEffect(() => {
     setPageTitle('Bíblia');
@@ -180,7 +188,7 @@ export default function BiblePage() {
     const userId = userEmail;
     const reference = `${selectedBook.name} ${selectedChapter}:${selectedVerseNumbers.join(', ')} · ${translation}`;
     openDrawer({
-      contentClassName: 'max-h-[70dvh]',
+      contentClassName: 'max-h-[82dvh] rounded-t-[28px] overscroll-contain',
       content: <BibleAnnotationForm reference={reference} initialNote={annotation?.note} title={annotation ? 'Editar anotação' : 'Nova anotação'} onCancel={closeDrawer} onSave={async (note) => {
         const now = new Date().toISOString();
         if (annotation?.id) {
@@ -224,7 +232,7 @@ export default function BiblePage() {
         closeDrawer();
       }} />,
     });
-  }, [closeDrawer, openDrawer, tenantId, userEmail]);
+  }, [closeDrawer, openDrawer, setSelectedChapter, setTranslation, tenantId, userEmail]);
 
   const copySelectedVerses = useCallback(async () => {
     if (!selectedBook || selectedVerses.length === 0) return;
@@ -302,7 +310,7 @@ export default function BiblePage() {
         </div>
       </>,
     });
-  }, [closeDrawer, openDrawer, translation]);
+  }, [closeDrawer, openDrawer, setTranslation, translation]);
 
   const openChapterDrawer = useCallback(() => {
     const chapters = availableChapters.length > 0 ? Array.from(new Set(availableChapters)) : [1];
@@ -321,10 +329,11 @@ export default function BiblePage() {
         </ScrollArea>
       </>,
     });
-  }, [availableChapters, closeDrawer, openDrawer, selectedChapter]);
+  }, [availableChapters, closeDrawer, openDrawer, selectedChapter, setSelectedChapter]);
 
   const selectBook = (book: BibleBook) => {
     setSelectedBook(book);
+    setBook(book.abbrev);
     setSelectedChapter(1);
     setSelectedVerses([]);
     setBookListOpen(false);
@@ -341,13 +350,14 @@ export default function BiblePage() {
 
   const selectChapterFromDrawer = (book: BibleBook, chapter: number) => {
     setSelectedBook(book);
+    setBook(book.abbrev);
     setSelectedChapter(chapter);
     setSelectedVerses([]);
     setBookListOpen(false);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
+    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col md:h-[calc(100dvh-4rem)]">
       <BibleWebNavigation translation={translation} selectedBook={selectedBook} selectedChapter={selectedChapter} contentSource={contentSource} books={books} chaptersByBook={chaptersByBook} expandedBook={expandedBook} bookListOpen={bookListOpen} onBookListOpenChange={setBookListOpen} onToggleBook={(book) => void toggleBook(book)} onSelectChapter={selectChapterFromDrawer} onOpenTranslation={openTranslationDrawer} onOpenChapter={openChapterDrawer} onOpenSavedItems={openSavedItemsDrawer} />
 
       <ScrollArea ref={bibleReaderRef} className="flex-1 bg-background/50">

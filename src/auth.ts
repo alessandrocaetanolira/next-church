@@ -159,7 +159,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     /**
      * Callback para injetar dados customizados no JWT.
      */
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = (user as any).id;
         token.role = (user as any).role;
@@ -173,6 +173,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.planCode = (user as any).planCode as string | undefined;
         token.planFeatures = (user as any).planFeatures as string[] | undefined;
       }
+
+      // O SSE de permissões dispara `useSession().update()` no cliente. Como
+      // as APIs usam o JWT no servidor, recarregamos o acesso do banco para
+      // evitar exigir logout/login após uma alteração de permissões.
+      if (trigger === 'update' && token.email) {
+        try {
+          if (token.isPlatformAdmin) {
+            const platformAdmin = await getGlobalClient().platformAdmin.findUnique({ where: { email: token.email } });
+            if (platformAdmin) {
+              token.role = platformAdmin.role;
+              token.permissions = platformAdmin.permissions?.split(',').map((permission: string) => permission.trim()).filter(Boolean) ?? [];
+              token.version = platformAdmin.version;
+            }
+          } else if (token.tenantId) {
+            const tenantClient = getTenantClient(String(token.tenantId));
+            const currentUser = await tenantClient.user.findUnique({ where: { email: token.email } });
+            if (currentUser) {
+              token.role = currentUser.role;
+              token.permissions = currentUser.permissions?.split(',').map((permission: string) => permission.trim()).filter(Boolean) ?? [];
+              token.linkedMemberId = currentUser.linkedMemberId;
+              token.version = currentUser.version;
+              const linkedMember = currentUser.linkedMemberId
+                ? await tenantClient.member.findUnique({ where: { id: currentUser.linkedMemberId }, select: { teamIds: true } })
+                : null;
+              token.teamIds = linkedMember?.teamIds?.split(',').map((teamId) => teamId.trim()).filter(Boolean) ?? [];
+            }
+          }
+        } catch (error) {
+          console.error('[Auth] Não foi possível atualizar as permissões da sessão:', error);
+        }
+      }
+
       return token;
     },
     /**

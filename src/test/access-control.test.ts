@@ -43,6 +43,15 @@ describe('permissões combinadas com recursos do plano', () => {
 
     expect(canAccessCanteen(orderOnlyMember)).toBe(true);
     expect(canAccessRoute(orderOnlyMember, '/cantina')).toBe(true);
+    expect(getAccessibleModules(orderOnlyMember).has('canteen')).toBe(true);
+  });
+
+  it('exibe a cantina para membros com visualização ou catálogo', () => {
+    const viewOnlyMember = { role: 'MEMBER', permissions: ['canteen:view'], planFeatures: ['canteen'] };
+    const catalogMember = { role: 'MEMBER', permissions: ['canteen:catalog'], planFeatures: ['canteen'] };
+
+    expect(getAccessibleModules(viewOnlyMember).has('canteen')).toBe(true);
+    expect(getAccessibleModules(catalogMember).has('canteen')).toBe(true);
   });
 
   it('expõe tarefas e materiais para o líder somente quando há equipes vinculadas', () => {

@@ -48,6 +48,11 @@ export function NotificationsProvider() {
           return;
         }
 
+        if (notification.type === 'canteen-order-archived') {
+          window.dispatchEvent(new CustomEvent('church:canteen-order-updated', { detail: notification }));
+          return;
+        }
+
         const added = upsertNotification(notification);
         if (added) {
           toast.info(notification.title, {

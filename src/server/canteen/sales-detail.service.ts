@@ -1,4 +1,4 @@
-import { notifyMemberCreditUpdate, notifyMemberOrderUpdate } from '@/lib/server/notification-service';
+import { notifyMemberCreditUpdate, notifyMemberOrderUpdate, publishCanteenOrderArchived } from '@/lib/server/notification-service';
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
 import { CanteenSalesRepository, parseSale } from './sales.repository';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
@@ -38,6 +38,7 @@ export class CanteenSalesDetailService {
       if (sale.orderStatus !== 'ready') throw new ValidationError('Somente pedidos prontos podem ser retirados da fila.');
       const result = await this.repository.archive(id);
       if (!result) throw new NotFoundError('Pedido não encontrado.');
+      await publishCanteenOrderArchived(this.prisma, this.tenantId, { id: result.id });
       return parseSale(result);
     }
 

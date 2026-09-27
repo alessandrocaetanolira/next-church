@@ -8,24 +8,17 @@
 "use client";
 
 import { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useRouter } from 'next/navigation';
 import { useProducts } from '../hooks/use-products';
 import { useCartStore } from '../store/useCartStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceCream, Sandwich, CreditCard, Banknote, Smartphone, User, ChefHat } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceCream, Sandwich } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
-import { db } from '@/lib/db';
 import { AppImage } from '@/components/shared';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
-import { generateId } from '@/lib/id';
-import { createCanteenSale } from '@/services/canteen/sales-api';
-import { useAuth } from '@/features/auth/hooks/useAuth';
 
 // Mapeamento de Ícones por Categoria
 const CATEGORY_ICONS: Record<string, any> = {
@@ -99,17 +92,12 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
 );
 
 export function PDV() {
-  const { user } = useAuth();
+  const router = useRouter();
   const products = useProducts();
   const { items, addItem, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
-  const tenantId = user?.tenantId ?? '';
-  const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]) || [];
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [search, setSearch] = useState('');
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState('');
-  const [sendToPrep, setSendToPrep] = useState(false);
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
@@ -155,70 +143,10 @@ export function PDV() {
     incrementItem(productId);
   };
 
-  const handleCheckout = async (paymentMethod: string) => {
+  const openCheckout = () => {
     if (items.length === 0) return;
-    if (paymentMethod.toLowerCase() === 'fiado' && !selectedMember) {
-      toast.error('Selecione um membro para fiado.');
-      return;
-    }
-
-    const saleId = generateId();
-    const createdAt = new Date().toISOString();
-    const member = members.find((item) => item.id === selectedMember);
-
-    const payload = {
-      id: saleId,
-      total,
-      paymentMethod: paymentMethod.toLowerCase(),
-      items,
-      memberId: paymentMethod.toLowerCase() === 'fiado' ? selectedMember : undefined,
-      memberName: paymentMethod.toLowerCase() === 'fiado' ? member?.name : undefined,
-      createdAt,
-      createdBy: 'user',
-      tenantId,
-    };
-
-    try {
-      try {
-        await createCanteenSale(payload);
-        await db.sales.put({
-          ...payload,
-          orderStatus: sendToPrep ? 'preparing' : undefined,
-          _status: 'synced',
-        });
-      } catch {
-        await db.sales.add({
-          ...payload,
-          orderStatus: sendToPrep ? 'preparing' : undefined,
-          _status: 'pending',
-        });
-        await db.syncOutbox.add({
-          module: 'sales',
-          action: 'create',
-          data: payload,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    } catch {
-      await db.sales.add({
-        ...payload,
-        orderStatus: sendToPrep ? 'preparing' : undefined,
-        _status: 'pending',
-      });
-      await db.syncOutbox.add({
-        module: 'sales',
-        action: 'create',
-        data: payload,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    clearCart();
-    setCheckoutOpen(false);
     setCartOpen(false);
-    setSelectedMember('');
-    setSendToPrep(false);
-    toast.success("Venda registrada!");
+    router.push('/cantina/checkout');
   };
 
   return (
@@ -338,7 +266,7 @@ export function PDV() {
             removeItem={removeItem}
             total={total}
             getProductStock={getProductStock}
-            onCheckout={() => setCheckoutOpen(true)}
+            onCheckout={openCheckout}
           />
         </div>
       </div>
@@ -372,7 +300,7 @@ export function PDV() {
                           removeItem={removeItem}
                           total={total}
                           getProductStock={getProductStock}
-                          onCheckout={() => setCheckoutOpen(true)}
+                          onCheckout={openCheckout}
                         />
                     </div>
                 </DrawerContent>
@@ -380,54 +308,6 @@ export function PDV() {
         )}
       </div>
 
-      {/* Checkout Dialog */}
-      <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader><DialogTitle>Forma de Pagamento</DialogTitle></DialogHeader>
-            <div className="space-y-4">
-                <div className="text-center py-2">
-                  <p className="text-3xl font-bold text-primary">{formatCurrency(total)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{cartCount} item(s)</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('cash')}>
-                      <Banknote className="w-6 h-6 text-success" /><span>Dinheiro</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('pix')}>
-                      <Smartphone className="w-6 h-6 text-primary" /><span>PIX</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('credit')}>
-                      <CreditCard className="w-6 h-6 text-sky-600" /><span>Cartão</span>
-                    </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => handleCheckout('fiado')}>
-                      <User className="w-6 h-6 text-warning" /><span>Fiado</span>
-                    </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label>Membro (para fiado)</Label>
-                  <Select value={selectedMember} onValueChange={setSelectedMember}>
-                    <SelectTrigger><SelectValue placeholder="Selecione um membro" /></SelectTrigger>
-                    <SelectContent>
-                      {members.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border bg-muted/20 p-3">
-                  <div className="flex items-center gap-2">
-                    <ChefHat className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">Enviar para preparo</span>
-                  </div>
-                  <Button variant={sendToPrep ? 'default' : 'outline'} size="sm" onClick={() => setSendToPrep((value) => !value)}>
-                    {sendToPrep ? 'Sim' : 'Não'}
-                  </Button>
-                </div>
-            </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

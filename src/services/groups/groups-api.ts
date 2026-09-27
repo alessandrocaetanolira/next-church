@@ -37,6 +37,14 @@ export function createFundraisingGoal(groupId: string, input: unknown) {
   return apiRequest<unknown>(`/api/groups/${groupId}/fundraising`, { method: 'POST', body: JSON.stringify(input) });
 }
 
+export function updateFundraisingGoal(groupId: string, goalId: string, input: unknown) {
+  return apiRequest<unknown>(`/api/groups/${groupId}/fundraising/${goalId}`, { method: 'PUT', body: JSON.stringify(input) });
+}
+
+export function deleteFundraisingGoal(groupId: string, goalId: string) {
+  return apiRequest<unknown>(`/api/groups/${groupId}/fundraising/${goalId}`, { method: 'DELETE' });
+}
+
 export function updateGroup(groupId: string, input: unknown) {
   return apiRequest<unknown>(`/api/groups/${groupId}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
