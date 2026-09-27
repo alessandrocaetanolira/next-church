@@ -11,12 +11,13 @@ import { FilterChip } from '@/components/ui/filter-chip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
-import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Image as ImageIcon, Video, BarChart3, LayoutGrid } from 'lucide-react';
+import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Image as ImageIcon, BarChart3, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
+import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
+import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
 import { FeedWebTable } from '@/features/feed/components/FeedWebTable';
 import { WebPageLayout } from '@/components/shared/web';
@@ -91,6 +92,12 @@ export default function FeedPage() {
   useEffect(() => {
     setPageTitle('Comunidade');
   }, [setPageTitle]);
+
+  useEffect(() => {
+    const handleFeedUpdate = () => setNewPostsAvailable(true);
+    window.addEventListener('church:feed-post-created', handleFeedUpdate);
+    return () => window.removeEventListener('church:feed-post-created', handleFeedUpdate);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -197,12 +204,13 @@ export default function FeedPage() {
     }
 
     try {
+      const youtubeUrl = newPostContent.match(/https?:\/\/[^\s]+/g)?.map((value) => value.replace(/[),.]+$/, '')).find((value) => getYouTubeEmbedUrl(value));
       const created = await createFeedPost({
         type: newPostType,
         title: newPostTitle.trim() || undefined,
         content: newPostContent.trim(),
-        mediaUrl: newMediaUrl.trim() || undefined,
-        mediaType: newMediaUrl.trim() ? newMediaType : undefined,
+        mediaUrl: newMediaUrl.trim() || youtubeUrl || undefined,
+        mediaType: newMediaUrl.trim() ? 'image' : youtubeUrl ? 'video' : undefined,
         visibility: canTargetFeed ? newVisibility : 'public',
         groupId: canTargetFeed && newVisibility === 'group' ? newGroupId : undefined,
         targetUserIds: canTargetFeed && newVisibility === 'individual' && newTargetUserId ? [newTargetUserId] : [],
@@ -225,6 +233,16 @@ export default function FeedPage() {
     setNotifyResponsibles(false);
     setComposing(false);
     toast.success('Publicado!');
+  };
+
+  const handleFeedImageUpload = async (dataUrl: string) => {
+    try {
+      const uploaded = await uploadFeedImage(dataUrl);
+      setNewMediaUrl(uploaded.url);
+      setNewMediaType('image');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar a imagem.');
+    }
   };
 
   const handleLike = async (post: FeedPost) => {
@@ -269,16 +287,16 @@ export default function FeedPage() {
         </div>
       ) : null}
       {canCreatePost && !isOffline && !composing ? (
-        <Card className="cursor-pointer rounded-2xl border-border shadow-sm transition-colors hover:border-primary/30" onClick={() => setComposing(true)}>
-          <CardContent className="flex items-center gap-3 p-3 sm:p-4">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">{user?.name?.[0] || 'U'}</AvatarFallback>
+        <Card className="cursor-pointer rounded-xl border-border shadow-sm transition-colors hover:border-primary/30" onClick={() => setComposing(true)}>
+          <CardContent className="flex items-center gap-2.5 p-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Avatar className="h-7 w-7 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">{user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <span className="truncate text-sm text-muted-foreground">Compartilhe algo com a comunidade...</span>
             </div>
             <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
-              <ImageIcon className="h-5 w-5" /><Video className="h-5 w-5" /><Calendar className="h-5 w-5" /><BarChart3 className="h-5 w-5" />
+              <ImageIcon className="h-4 w-4" /><Calendar className="h-4 w-4" /><BarChart3 className="h-4 w-4" />
             </div>
           </CardContent>
         </Card>
@@ -305,6 +323,7 @@ export default function FeedPage() {
             onVisibilityChange={setNewVisibility}
             onMediaTypeChange={setNewMediaType}
             onMediaUrlChange={setNewMediaUrl}
+            onImageUpload={handleFeedImageUpload}
             onGroupChange={setNewGroupId}
             onTargetUserChange={setNewTargetUserId}
             onClose={() => setComposing(false)}
@@ -463,8 +482,8 @@ export default function FeedPage() {
           const config = type === 'all' ? { label: 'Todos', icon: LayoutGrid, color: '' } : POST_TYPE_CONFIG[type as keyof typeof POST_TYPE_CONFIG];
           const Icon = config.icon;
           return (
-            <button key={type} type="button" onClick={() => setFilterType(type)} className="flex min-w-[64px] shrink-0 flex-col items-center gap-1 text-xs">
-              <span className={cn('flex h-14 w-14 items-center justify-center rounded-full border-2 bg-muted/30', filterType === type ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground')}><Icon className="h-6 w-6" /></span>
+            <button key={type} type="button" onClick={() => setFilterType(type)} className="flex min-w-[56px] shrink-0 flex-col items-center gap-1 text-[10px]">
+              <span className={cn('flex h-10 w-10 items-center justify-center rounded-full border bg-muted/30', filterType === type ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground')}><Icon className="h-5 w-5" /></span>
               <span className={cn('max-w-20 truncate', filterType === type ? 'font-semibold text-foreground' : 'text-muted-foreground')}>{config.label}</span>
             </button>
           );
@@ -533,9 +552,8 @@ export default function FeedPage() {
       <MobileCommentsDrawer
         post={sortedPosts.find((post) => post.id === commentingOn) ?? null}
         open={commentingOn !== null}
-        commentText={commentText}
-        onCommentTextChange={setCommentText}
-        onComment={handleComment}
+        onNewComment={(post) => router.push(`/feed/${post.id}/comments/new`)}
+        onReply={(post, commentId) => router.push(`/feed/${post.id}/comments/new?replyTo=${encodeURIComponent(commentId)}`)}
         onClose={() => setCommentingOn(null)}
       />
     </WebPageLayout>

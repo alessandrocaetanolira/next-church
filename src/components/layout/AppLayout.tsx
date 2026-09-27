@@ -20,7 +20,7 @@ export function AppLayout({ children, hideMobileHeader = false }: AppLayoutProps
     return (
       <div className="min-h-screen-dvh bg-background">
         {!hideMobileHeader && <Header />}
-        <main className="pb-20 safe-bottom">
+        <main className="mobile-main">
           <div key={pathname}>
             {children}
           </div>

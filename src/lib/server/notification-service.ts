@@ -252,6 +252,22 @@ async function getFeedPostAuthorEmail(prisma: PrismaClient, postId: string) {
   return post?.userId ? normalizeEmail(post.userId) : null;
 }
 
+async function getFeedCommentAuthorEmail(prisma: PrismaClient, postId: string, commentId: string) {
+  const [post] = await prisma.$queryRawUnsafe<Array<{ comments: string | null }>>(
+    `SELECT comments FROM "FeedPost" WHERE id = ? AND deletedAt IS NULL LIMIT 1`,
+    postId,
+  );
+  if (!post?.comments) return null;
+
+  try {
+    const comments = JSON.parse(post.comments) as Array<{ id?: unknown; userId?: unknown }>;
+    const comment = comments.find((item) => item?.id === commentId);
+    return typeof comment?.userId === 'string' ? normalizeEmail(comment.userId) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Dispatcher compartilhado: persiste, publica via SSE e tenta entregar Push.
  * Falhas de Push não impedem a persistência nem o SSE.
@@ -458,7 +474,8 @@ export async function notifyFeedLike(
   }
 ) {
   const authorEmail = await getFeedPostAuthorEmail(prisma, payload.postId);
-  if (!authorEmail || authorEmail === normalizeEmail(payload.actorEmail)) return;
+  const actorEmail = normalizeEmail(payload.actorEmail);
+  if (!authorEmail || authorEmail === actorEmail) return;
 
   await createNotifications(prisma, tenantId, [
     {
@@ -473,32 +490,64 @@ export async function notifyFeedLike(
   ]);
 }
 
+/** Publica uma atualização efêmera para os clientes do Feed conectados via SSE. */
+export async function publishFeedPostCreated(
+  prisma: PrismaClient,
+  tenantId: string,
+  payload: { postId: string; actorEmail: string; actorName: string; title?: string | null; content: string },
+) {
+  const recipients = await getActiveUserEmails(prisma);
+  const preview = payload.content.length > 90 ? `${payload.content.slice(0, 87)}...` : payload.content;
+  const heading = payload.title?.trim() ? payload.title.trim() : 'Nova publicação no Feed';
+  const createdAt = new Date().toISOString();
+
+  for (const userEmail of recipients) {
+    if (userEmail === normalizeEmail(payload.actorEmail)) continue;
+    publishTenantEvent({
+      id: `feed-post:${payload.postId}:${userEmail}`,
+      tenantId,
+      userEmail,
+      type: 'feed.post.created',
+      title: heading,
+      message: `${payload.actorName}: "${preview}"`,
+      href: '/feed',
+      sourceType: 'feed',
+      sourceId: payload.postId,
+      createdAt,
+    });
+  }
+}
+
 export async function notifyFeedComment(
   prisma: PrismaClient,
   tenantId: string,
   payload: {
     postId: string;
+    parentId?: string | null;
     actorEmail: string;
     actorName: string;
     content: string;
   }
 ) {
   const authorEmail = await getFeedPostAuthorEmail(prisma, payload.postId);
-  if (!authorEmail || authorEmail === normalizeEmail(payload.actorEmail)) return;
+  const parentAuthorEmail = payload.parentId
+    ? await getFeedCommentAuthorEmail(prisma, payload.postId, payload.parentId)
+    : null;
+  const actorEmail = normalizeEmail(payload.actorEmail);
+  const recipients = Array.from(new Set([authorEmail, parentAuthorEmail].filter((email): email is string => Boolean(email && email !== actorEmail))));
+  if (!recipients.length) return;
 
   const preview = payload.content.length > 80 ? `${payload.content.slice(0, 77)}...` : payload.content;
 
-  await createNotifications(prisma, tenantId, [
-    {
-      userEmail: authorEmail,
+  await createNotifications(prisma, tenantId, recipients.map((userEmail) => ({
+      userEmail,
       type: 'feed-comment',
-      title: 'Novo comentário na sua publicação',
-      message: `${payload.actorName} comentou: "${preview}"`,
+      title: payload.parentId ? 'Nova resposta no Feed' : 'Novo comentário na sua publicação',
+      message: payload.parentId ? `${payload.actorName} respondeu: "${preview}"` : `${payload.actorName} comentou: "${preview}"`,
       href: '/feed',
       sourceType: 'feed',
       sourceId: payload.postId,
-    },
-  ]);
+    })));
 }
 
 export async function notifyAnnouncementPublished(

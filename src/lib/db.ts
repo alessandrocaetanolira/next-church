@@ -160,6 +160,7 @@ export interface FeedPost {
 /** Comentário em postagem do feed. */
 export interface FeedComment {
   id: string;
+  parentId?: string;
   userId: string;
   userName: string;
   content: string;

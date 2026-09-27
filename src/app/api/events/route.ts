@@ -1,5 +1,4 @@
 import { auth } from '@/auth';
-import { hasActionPermission } from '@/lib/access-control';
 import { openNotificationsStream } from '@/server/notifications/notifications-stream.controller';
 
 export const runtime = 'nodejs';
@@ -10,8 +9,8 @@ export async function GET(request: Request) {
   const tenantId = session?.user?.tenantId;
   const email = session?.user?.email;
   if (!tenantId || !email) return new Response('Não autorizado', { status: 401 });
-  if (!hasActionPermission(session.user, 'notifications', 'view')) {
-    return new Response('Sem permissão', { status: 403 });
-  }
+  // O stream também entrega atualizações de permissões e eventos de módulos.
+  // A autenticação do tenant é suficiente; cada evento continua filtrado por
+  // tenant e destinatário no broker.
   return openNotificationsStream(request, tenantId, email);
 }

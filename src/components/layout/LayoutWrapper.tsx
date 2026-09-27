@@ -31,7 +31,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/admin/login");
   const isFullscreenGameRoute = pathname === "/games/caca-palavras";
-  const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos') || pathname.startsWith('/members/') || pathname.startsWith('/cantina/products/');
+  const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos');
 
   if (isLoading && !authFallbackReady) {
     return (

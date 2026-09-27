@@ -43,6 +43,11 @@ export function NotificationsProvider() {
         }
         if (data.type !== 'notification' || !notification) return;
 
+        if (notification.type === 'feed.post.created') {
+          window.dispatchEvent(new CustomEvent('church:feed-post-created', { detail: notification }));
+          return;
+        }
+
         const added = upsertNotification(notification);
         if (added) {
           toast.info(notification.title, {

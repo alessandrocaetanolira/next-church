@@ -170,8 +170,9 @@
     --info-foreground: 0 0% 100%;
     --info-light: 199 89% 12%;
 
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
+    /* Bordas discretas, alinhadas aos cards do dashboard no tema escuro. */
+    --border: 216 24% 13%;
+    --input: 216 24% 13%;
     --ring: 221 83% 53%;
 
     --sidebar-background: 224 71% 6%;
@@ -180,7 +181,7 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 11%;
     --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 216 34% 17%;
+    --sidebar-border: 216 24% 13%;
     --sidebar-ring: 221 83% 53%;
   }
 
@@ -291,6 +292,12 @@
   /* Safe area para mobile */
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Reserva a altura da BottomNav e a safe area para ações no fim de formulários. */
+  .mobile-main {
+    padding-bottom: calc(5rem + 1rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(5rem + 1rem + env(safe-area-inset-bottom, 0px));
   }
 
   .safe-top {

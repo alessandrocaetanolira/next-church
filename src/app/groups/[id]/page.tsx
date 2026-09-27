@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -16,7 +15,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { ArrowLeft, Package, Pin, Plus, Send, Target, Users, UserPlus, X } from 'lucide-react';
+import { Package, Pin, Plus, Send, Target, Users, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { hasActionPermission, hasPermission } from '@/lib/access-control';
@@ -351,13 +350,6 @@ export default function GroupDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-4 pb-28 md:pb-6">
-      <Button asChild variant="ghost" className="px-0">
-        <Link href="/groups">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para grupos
-        </Link>
-      </Button>
-
       {group ? (
         <>
           <Card>

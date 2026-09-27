@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Pencil, Shield, Trash2 } from 'lucide-react';
+import { Pencil, Shield, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { MemberFormEdit } from '@/components/forms/MemberFormEdit';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { deleteMember, getMember, updateMemberAccess } from '@/services/members/members-api';
+import { permissionOptions } from '@/features/members/components/member-permissions';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
 
@@ -39,39 +40,6 @@ interface ManagedMember {
   createdAt?: string;
   updatedAt?: string;
 }
-
-const permissionOptions = [
-  { id: 'members:view', label: 'Membros: ver' },
-  { id: 'members:create', label: 'Membros: criar' },
-  { id: 'members:update', label: 'Membros: editar' },
-  { id: 'members:delete', label: 'Membros: excluir' },
-  { id: 'members:approve', label: 'Membros: aprovar' },
-  { id: 'members:manage_access', label: 'Membros: acessos' },
-  { id: 'groups:update', label: 'Grupos: editar' },
-  { id: 'tasks:create', label: 'Tarefas: criar' },
-  { id: 'tasks:update', label: 'Tarefas: editar' },
-  { id: 'materials:view', label: 'Materiais: ver' },
-  { id: 'materials:create', label: 'Materiais: criar' },
-  { id: 'materials:update', label: 'Materiais: editar' },
-  { id: 'materials:manage', label: 'Materiais: administrar' },
-  { id: 'canteen:view', label: 'Cantina: ver' },
-  { id: 'canteen:catalog', label: 'Cantina: catálogo' },
-  { id: 'canteen:order', label: 'Cantina: pedir' },
-  { id: 'canteen:manage', label: 'Cantina: administrar' },
-  { id: 'canteen:create', label: 'Cantina: criar' },
-  { id: 'canteen:operate', label: 'Cantina: operar' },
-  { id: 'canteen:sell', label: 'Cantina: vender' },
-  { id: 'canteen:manage_products', label: 'Cantina: produtos' },
-  { id: 'feed:view', label: 'Feed: ver' },
-  { id: 'feed:create', label: 'Feed: publicar' },
-  { id: 'feed:publish', label: 'Feed: publicar avisos' },
-  { id: 'feed:share', label: 'Feed: compartilhar' },
-  { id: 'feed:comment', label: 'Feed: comentar' },
-  { id: 'feed:update', label: 'Feed: editar' },
-  { id: 'bible:view', label: 'Bíblia: ver' },
-  { id: 'pastoral:view', label: 'Pastoral: ver' },
-  { id: 'settings:update', label: 'Configurações: editar' },
-] as const;
 
 const roleLabels: Record<MemberRole, string> = {
   ADMIN: 'Admin',
@@ -220,20 +188,18 @@ export default function MemberDetailsPage() {
     <div className="space-y-4 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <Button variant="ghost" className="h-8 w-fit px-0 text-muted-foreground" onClick={() => router.push('/members')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar para membros
-          </Button>
           <div>
-            <h2 className="text-xl font-bold">{member.name}</h2>
+            <h2 className="flex flex-wrap items-center gap-2 text-xl font-bold">
+              {member.name}
+              <Badge variant={member.role ? 'outline' : 'secondary'} className="text-xs font-normal">
+                {member.role ? roleLabels[member.role] : 'Sem acesso'}
+              </Badge>
+            </h2>
             <p className="text-sm text-muted-foreground">{member.email} • <WhatsAppPhone phone={member.phone} /></p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant={member.approved ? 'success' : 'secondary'}>
               {member.approved ? 'Aprovado' : 'Pendente'}
-            </Badge>
-            <Badge variant={member.role ? 'outline' : 'secondary'}>
-              {member.role ? roleLabels[member.role] : 'Sem acesso'}
             </Badge>
             <Badge variant="outline">{member.permissions.length} permissões</Badge>
           </div>
@@ -244,7 +210,7 @@ export default function MemberDetailsPage() {
             <Pencil className="mr-2 h-4 w-4" />
             Editar
           </Button> : null}
-          {canManageAccess ? <Button variant="outline" onClick={() => setAccessOpen(true)}>
+          {canManageAccess ? <Button variant="outline" onClick={() => router.push(`/members/${member.id}/access`)}>
             <Shield className="mr-2 h-4 w-4" />
             Acesso
           </Button> : null}

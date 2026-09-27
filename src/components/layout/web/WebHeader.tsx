@@ -1,6 +1,7 @@
 "use client";
 
-import { Monitor, Moon, Sun } from "lucide-react";
+import { ArrowLeft, Monitor, Moon, Sun } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { WebUserMenu } from "@/components/layout/web/WebUserMenu";
@@ -12,6 +13,11 @@ import { WebBreadcrumbs } from "@/components/shared/web";
 export function WebHeader() {
   const { user } = useAuth();
   const { settings, updateSettings } = useAppSettings();
+  const pathname = usePathname();
+  const router = useRouter();
+  const isFeedDetailsPage = /^\/feed\/[^/]+$/.test(pathname);
+  const isFeedCommentPage = /^\/feed\/[^/]+\/comments\/new$/.test(pathname);
+  const feedPostId = isFeedCommentPage ? pathname.split('/')[2] : null;
 
   const isMember = user?.role === "MEMBER";
   const handleCycleThemeMode = () => {
@@ -35,6 +41,12 @@ export function WebHeader() {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
+        {isFeedDetailsPage || isFeedCommentPage ? (
+          <Button variant="ghost" size="sm" className="gap-2 px-2" onClick={() => router.push(feedPostId ? `/feed/${feedPostId}` : '/feed')}>
+            <ArrowLeft className="h-4 w-4" />
+            <span>{feedPostId ? 'Voltar à publicação' : 'Voltar ao Feed'}</span>
+          </Button>
+        ) : null}
         <WebBreadcrumbs />
       </div>
       <div className="flex items-center gap-2">

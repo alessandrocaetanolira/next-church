@@ -15,7 +15,8 @@ export async function handleSettingsGet() {
   try {
     const session = await auth();
     if (!session?.user?.tenantId) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    if (!hasActionPermission(session.user, 'settings', 'view')) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+    // O branding é necessário para renderizar o shell de qualquer usuário do
+    // tenant. A permissão de settings continua obrigatória para PATCH.
     const repository = new BrandingRepository(getGlobalClient());
     const row = await repository.findByTenant(session.user.tenantId, session.user.tenantSlug);
     if (!row) return NextResponse.json({ error: 'Igreja não encontrada.' }, { status: 404 });

@@ -17,11 +17,13 @@ export interface User {
   permissions: string[];
   churchId: string;
   tenantId: string;
+  tenantSlug?: string;
   linkedMemberId?: string | null;
   teamIds: string[];
   isPlatformAdmin?: boolean;
   planCode?: string;
   planFeatures?: string[];
+  accessUpdatedAt?: number;
   accessibleModules: AppModule[];
 }
 
@@ -55,7 +57,7 @@ export const useAuthStore = create<AuthState>()(
 
       updateAccess: (access) => set((state) => {
         if (!state.user) return state;
-        const user = { ...state.user, ...access };
+        const user = { ...state.user, ...access, accessUpdatedAt: Date.now() };
         return { user: { ...user, accessibleModules: [...getAccessibleModules(user)] } };
       }),
 
@@ -71,11 +73,14 @@ export const useAuthStore = create<AuthState>()(
       name: 'church-auth-storage', // Nome da chave no localStorage
       storage: createJSONStorage(() => localStorage),
       // Opcional: Filtra o que deve ser persistido
-      partialize: (state) => ({ 
-        user: state.user, 
-        tenantId: state.tenantId, 
-        isAuthenticated: state.isAuthenticated 
-      }),
+      partialize: (state) => {
+        const { accessUpdatedAt: _accessUpdatedAt, ...persistedUser } = state.user ?? {};
+        return {
+          user: persistedUser,
+          tenantId: state.tenantId,
+          isAuthenticated: state.isAuthenticated,
+        };
+      },
     }
   )
 );

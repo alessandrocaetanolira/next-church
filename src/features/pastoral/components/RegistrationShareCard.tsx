@@ -15,13 +15,15 @@ interface RegistrationShareCardProps {
 }
 
 export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps) {
+  const normalizedTenantSlug = tenantSlug.trim().toLowerCase();
+
   const registrationLink = useMemo(() => {
-    return `${getPublicShareBaseUrl()}/cadastro?igreja=${encodeURIComponent(tenantSlug)}`;
-  }, [tenantSlug]);
+    return `${getPublicShareBaseUrl()}/cadastro?igreja=${encodeURIComponent(normalizedTenantSlug)}`;
+  }, [normalizedTenantSlug]);
 
   const loginLink = useMemo(() => {
-    return `${getPublicShareBaseUrl()}/auth/login?igreja=${encodeURIComponent(tenantSlug)}`;
-  }, [tenantSlug]);
+    return `${getPublicShareBaseUrl()}/auth/login?igreja=${encodeURIComponent(normalizedTenantSlug)}`;
+  }, [normalizedTenantSlug]);
 
   const registrationQrCodeUrl = useMemo(() => {
     const encodedLink = encodeURIComponent(registrationLink);
@@ -34,8 +36,12 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
   }, [loginLink]);
 
   const handleCopy = async (value: string, label: string) => {
-    await navigator.clipboard.writeText(value);
-    toast.success(`${label} copiado.`);
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copiado.`);
+    } catch {
+      toast.error(`Não foi possível copiar ${label.toLowerCase()}.`);
+    }
   };
 
   const handleShare = async (value: string, title: string, text: string) => {
@@ -51,6 +57,27 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
     await handleCopy(value, `Link de ${title.toLowerCase()}`);
   };
 
+  if (!normalizedTenantSlug) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Convite por QR Code
+          </CardTitle>
+          <CardDescription>
+            O slug público da igreja ainda não está disponível para gerar o convite.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-muted-foreground">
+            Atualize a sessão e tente novamente. O QR Code não será gerado com um identificador inválido.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -62,7 +89,7 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">Slug: {tenantSlug}</Badge>
+          <Badge variant="outline">Slug: {normalizedTenantSlug}</Badge>
         </div>
 
         <Tabs defaultValue="register" className="space-y-4">
@@ -74,12 +101,12 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
           <TabsContent value="register" className="space-y-3 rounded-xl border p-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Cadastro</Badge>
-              <Badge variant="outline">/cadastro?igreja={tenantSlug}</Badge>
+              <Badge variant="outline">/cadastro?igreja={normalizedTenantSlug}</Badge>
             </div>
               <div className="rounded-xl border border-border bg-card p-3">
               <AppImage
                 src={registrationQrCodeUrl}
-                alt={`QR Code do cadastro da igreja ${tenantSlug}`}
+                alt={`QR Code do cadastro da igreja ${normalizedTenantSlug}`}
                 width={220}
                 height={220}
                 className="mx-auto h-56 w-56 rounded-lg"
@@ -103,12 +130,12 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
           <TabsContent value="login" className="space-y-3 rounded-xl border p-3">
             <div className="flex items-center gap-2">
               <Badge variant="secondary">Login</Badge>
-              <Badge variant="outline">/auth/login?igreja={tenantSlug}</Badge>
+              <Badge variant="outline">/auth/login?igreja={normalizedTenantSlug}</Badge>
             </div>
               <div className="rounded-xl border border-border bg-card p-3">
               <AppImage
                 src={loginQrCodeUrl}
-                alt={`QR Code do login da igreja ${tenantSlug}`}
+                alt={`QR Code do login da igreja ${normalizedTenantSlug}`}
                 width={220}
                 height={220}
                 className="mx-auto h-56 w-56 rounded-lg"

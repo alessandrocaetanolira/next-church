@@ -27,6 +27,7 @@ export interface User {
   role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
   /** Identificador da igreja (Tenant) ao qual o usuário pertence */
   tenantId: string;
+  tenantSlug?: string;
   /** Membro vinculado ao usuário autenticado */
   linkedMemberId?: string | null;
   teamIds: string[];
@@ -35,6 +36,7 @@ export interface User {
   isPlatformAdmin?: boolean;
   planCode?: string;
   planFeatures?: string[];
+  accessUpdatedAt?: number;
 }
 
 /**
@@ -55,16 +57,26 @@ export function useAuth() {
     email: session.user.email || '',
     role: (session.user as any).role || 'MEMBER',
     tenantId: (session.user as any).tenantId || '',
+    tenantSlug: (session.user as any).tenantSlug || '',
     linkedMemberId: (session.user as any).linkedMemberId || null,
     teamIds: (session.user as any).teamIds || [],
     permissions: (session.user as any).permissions || [],
     isPlatformAdmin: Boolean((session.user as any).isPlatformAdmin),
     planCode: (session.user as any).planCode,
     planFeatures: (session.user as any).planFeatures,
+    accessUpdatedAt: undefined,
   } as User : null;
   const user = sessionUser
     ? (storedUser && storedUser.email === sessionUser.email && storedUser.tenantId === sessionUser.tenantId
-      ? { ...sessionUser, ...storedUser }
+      ? {
+          ...sessionUser,
+          ...(storedUser.accessUpdatedAt ? {
+            role: storedUser.role,
+            permissions: storedUser.permissions,
+            teamIds: storedUser.teamIds,
+            planFeatures: storedUser.planFeatures,
+          } : {}),
+        }
       : sessionUser)
     : null;
 

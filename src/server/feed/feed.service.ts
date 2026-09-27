@@ -1,7 +1,8 @@
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
-import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished } from '@/lib/server/notification-service';
+import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, publishFeedPostCreated } from '@/lib/server/notification-service';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { FeedRepository } from './feed.repository';
+import type { FeedComment } from '@/lib/db';
 
 type FeedUser = { email?: string | null; name?: string | null; image?: string | null; role?: string | null; linkedMemberId?: string | null };
 
@@ -72,6 +73,13 @@ export class FeedService {
       pinnedUntil: pinDays > 0 ? new Date(Date.now() + pinDays * 86400000).toISOString() : null,
       targetUserIds: canTargetFeed && visibility === 'individual' && Array.isArray(body.targetUserIds) ? body.targetUserIds.filter((item): item is string => typeof item === 'string') : [],
     });
+    await publishFeedPostCreated(this.prisma, this.tenantId, {
+      postId: id,
+      actorEmail: user.email as string,
+      actorName: user.name || 'Usuário',
+      title: typeof body.title === 'string' ? body.title : null,
+      content,
+    });
     if (type === 'announcement') await notifyAnnouncementPublished(this.prisma, this.tenantId, { postId: id, actorEmail: user.email as string, actorName: user.name || 'Usuário', title: typeof body.title === 'string' ? body.title : null, content, visibility: effectiveVisibility, groupId, targetUserIds: [], notifyResponsibles: false });
     else if (postAsGroup && group) await notifyGroupFeedPublished(this.prisma, this.tenantId, { postId: id, actorEmail: user.email as string, groupId: group.id, groupName: group.name, title: typeof body.title === 'string' ? body.title : null, content });
     return post ? FeedRepository.serialize(post) : null;
@@ -89,16 +97,21 @@ export class FeedService {
   }
 
   async addComment(id: string, actorEmail: string, actorName: string, input: unknown) {
-    const content = input && typeof input === 'object' && typeof (input as { content?: unknown }).content === 'string'
-      ? (input as { content: string }).content.trim()
+    const body = input && typeof input === 'object' ? input as { content?: unknown; parentId?: unknown } : {};
+    const content = typeof body.content === 'string'
+      ? body.content.trim()
       : '';
     if (!content) throw new ValidationError('Comentário obrigatório.');
     const post = await this.repository.findById(id);
     if (!post || post.deletedAt) throw new NotFoundError('Publicação não encontrada.');
     const serialized = FeedRepository.serialize(post);
-    const comment = { id: FeedRepository.generateId(), userId: actorEmail, userName: actorName, content, createdAt: new Date().toISOString() };
-    const updated = await this.repository.updateEngagement(id, serialized.likes as string[], [...serialized.comments as unknown[], comment]);
-    await notifyFeedComment(this.prisma, this.tenantId, { postId: id, actorEmail, actorName, content });
+    const parentId = typeof body.parentId === 'string' && body.parentId.trim() ? body.parentId.trim() : undefined;
+    const existingComments = serialized.comments as FeedComment[];
+    const parentExists = parentId ? existingComments.some((item) => item.id === parentId) : true;
+    if (!parentExists) throw new ValidationError('Comentário de referência não encontrado.');
+    const comment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, content, createdAt: new Date().toISOString() };
+    const updated = await this.repository.updateEngagement(id, serialized.likes as string[], [...existingComments, comment]);
+    await notifyFeedComment(this.prisma, this.tenantId, { postId: id, parentId, actorEmail, actorName, content });
     return updated ? FeedRepository.serialize(updated) : null;
   }
 

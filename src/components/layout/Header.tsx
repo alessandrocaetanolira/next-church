@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, Info, WifiOff, Monitor, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, LogOut, Info, WifiOff, Monitor, Sun, Moon, Wallet } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { AppImage } from '@/components/shared';
+import { getAccessibleModules } from '@/lib/access-control';
 
 const CHANGELOG = [
   {
@@ -91,6 +93,8 @@ const CHANGELOG = [
 
 export function Header() {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const { settings, updateSettings } = useAppSettings();
   const [showAbout, setShowAbout] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -120,6 +124,7 @@ export function Header() {
     : 'U';
 
   const isMember = user?.role === 'MEMBER';
+  const canAccessWallet = getAccessibleModules(user).has('wallet');
 
   const handleCycleThemeMode = () => {
     const nextMode =
@@ -139,25 +144,45 @@ export function Header() {
 
   const ThemeIcon = themeButton.icon;
 
+  const mobileBackTarget = (() => {
+    if (/^\/feed\/[^/]+\/comments\/new$/.test(pathname)) return { href: `/feed/${pathname.split('/')[2]}`, label: 'Publicação' };
+    if (/^\/feed\/[^/]+$/.test(pathname)) return { href: '/feed', label: 'Feed' };
+    if (pathname === '/members/new') return { href: '/members', label: 'Membros' };
+    if (/^\/members\/[^/]+\/(edit|access)$/.test(pathname)) return { href: `/members/${pathname.split('/')[2]}`, label: 'Membro' };
+    if (/^\/members\/[^/]+$/.test(pathname)) return { href: '/members', label: 'Membros' };
+    if (/^\/groups\/[^/]+$/.test(pathname)) return { href: '/groups', label: 'Grupos' };
+    if (pathname === '/cantina/products/new') return { href: '/cantina', label: 'Cantina' };
+    if (/^\/cantina\/products\/[^/]+\/edit$/.test(pathname)) return { href: `/cantina/products/${pathname.split('/')[3]}`, label: 'Produto' };
+    if (/^\/cantina\/products\/[^/]+$/.test(pathname)) return { href: '/cantina', label: 'Cantina' };
+    return null;
+  })();
+
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-40 items-center justify-start">
-              <AppImage
-                src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
-                alt={settings.appName}
-                className="h-full w-full object-contain object-left dark:hidden"
-                onError={() => setLogoFailed(true)}
-              />
-              <AppImage
-                src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
-                alt={settings.appName}
-                className="hidden h-full w-full object-contain object-left dark:block"
-                onError={() => setLogoFailed(true)}
-              />
-            </div>
+          <div className="flex min-w-0 items-center gap-2">
+            {mobileBackTarget ? (
+              <Button variant="ghost" className="h-9 gap-1 px-1.5 text-sm" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
+                <ArrowLeft className="h-5 w-5" />
+                <span className="max-w-28 truncate">{mobileBackTarget.label}</span>
+              </Button>
+            ) : (
+              <div className="flex h-9 w-40 items-center justify-start">
+                <AppImage
+                  src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                  alt={settings.appName}
+                  className="h-full w-full object-contain object-left dark:hidden"
+                  onError={() => setLogoFailed(true)}
+                />
+                <AppImage
+                  src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                  alt={settings.appName}
+                  className="hidden h-full w-full object-contain object-left dark:block"
+                  onError={() => setLogoFailed(true)}
+                />
+              </div>
+            )}
           </div>
 
           <TooltipProvider>
@@ -215,6 +240,13 @@ export function Header() {
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
+                  {canAccessWallet ? (
+                    <DropdownMenuItem onClick={() => { window.location.href = '/carteira'; }}>
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Carteira
+                    </DropdownMenuItem>
+                  ) : null}
+                  {canAccessWallet ? <DropdownMenuSeparator /> : null}
                   <DropdownMenuItem onClick={() => setShowAbout(true)}>
                     <Info className="w-4 h-4 mr-2" />
                     Sobre

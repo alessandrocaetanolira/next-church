@@ -75,29 +75,35 @@ function hexToHsl(value?: string | null) {
 
 const SETTINGS_KEY = 'church-app-settings';
 
+function settingsStorageKey(tenantKey?: string | null) {
+  return tenantKey ? `${SETTINGS_KEY}:${tenantKey}` : `${SETTINGS_KEY}:default`;
+}
+
 const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined);
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const tenantKey = (session?.user as { tenantSlug?: string; tenantId?: string } | undefined)?.tenantSlug
+    || (session?.user as { tenantId?: string } | undefined)?.tenantId
+    || null;
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     try {
-      const stored = localStorage.getItem(SETTINGS_KEY);
-      if (stored) {
-        setSettings(prev => ({ ...prev, ...JSON.parse(stored) }));
-      }
+      const stored = localStorage.getItem(settingsStorageKey(tenantKey));
+      setSettings(stored ? { ...defaultSettings, ...JSON.parse(stored) } : { ...defaultSettings });
     } catch {
-      localStorage.removeItem(SETTINGS_KEY);
+      localStorage.removeItem(settingsStorageKey(tenantKey));
+      setSettings({ ...defaultSettings });
     }
-  }, []);
+  }, [tenantKey]);
 
   useEffect(() => {
     if (!mounted) return;
     
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(settingsStorageKey(tenantKey), JSON.stringify(settings));
 
     const root = document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -136,11 +142,12 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
     mediaQuery.addListener(handleChange);
     return () => mediaQuery.removeListener(handleChange);
-  }, [settings, mounted]);
+  }, [settings, mounted, tenantKey]);
 
   useEffect(() => {
     const tenantId = (session?.user as { tenantId?: string } | undefined)?.tenantId;
-    if (!tenantId) return;
+    if (!tenantId || !tenantKey) return;
+    document.cookie = `church-tenant-slug=${encodeURIComponent(tenantKey)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 
     const loadBranding = async () => {
       try {
@@ -170,7 +177,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     };
 
     void loadBranding();
-  }, [session?.user]);
+  }, [session?.user, tenantKey]);
 
   const updateSettings = (updates: Partial<AppSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));

@@ -22,28 +22,30 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const themeColor = branding?.themeColor ?? branding?.primaryColor ?? '#0f172a';
   const backgroundColor = branding?.backgroundColor ?? branding?.secondaryColor ?? '#0f172a';
   return {
+    id: '/',
     name,
     short_name: shortName,
     description: 'Gestão completa para igrejas, com uso offline e notificações.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
+    display_override: ['standalone', 'minimal-ui'],
     background_color: backgroundColor,
     theme_color: themeColor,
     orientation: 'portrait',
     lang: 'pt-BR',
     icons: [
       {
-        src: branding?.icon192Url ?? '/pwa-192x192.png',
+        src: branding?.icon192Url ?? branding?.mobileIconUrl ?? '/pwa-192x192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any',
       },
       {
         src: branding?.icon512Url ?? '/pwa-512x512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any',
       },
       {
         src: '/pwa-512x512.svg',

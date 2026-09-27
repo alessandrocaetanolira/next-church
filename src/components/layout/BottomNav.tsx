@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { NavLink } from '@/components/NavLink';
-import { LayoutDashboard, Calendar, ShoppingCart, Wallet, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
+import { LayoutDashboard, Calendar, ShoppingCart, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { getAccessibleModules } from '@/lib/access-control';
@@ -22,7 +22,6 @@ export function BottomNav() {
 
   const drawerItems = [
     { to: '/schedules', icon: Calendar, label: 'Escalas', show: accessibleModules.has('schedules') },
-    { to: '/carteira', icon: Wallet, label: 'Carteira', show: accessibleModules.has('wallet') },
     { to: '/jogos-novos', icon: Gamepad2, label: 'Jogos', show: accessibleModules.has('games') },
     { to: '/groups', icon: Layers, label: 'Grupos', show: accessibleModules.has('groups') },
     { to: '/kids', icon: Baby, label: 'Infantil', show: accessibleModules.has('kids') },

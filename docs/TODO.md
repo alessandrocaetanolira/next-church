@@ -127,6 +127,8 @@ cache por tenant/usuário e sincronização resiliente.
 ## Prioridade 8 — Módulos de baixa prioridade
 
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
+- [ ] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
+- [ ] Criar desafios entre membros nos jogos, incluindo convite, aceite/recusa, partida em dupla e resultado persistido.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
 
 ## Documentos detalhados

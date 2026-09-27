@@ -45,11 +45,13 @@ function SessionCacheBridge() {
         permissions: user.permissions ?? [],
         churchId: user.tenantId ?? '',
         tenantId: user.tenantId ?? '',
+        tenantSlug: user.tenantSlug,
         linkedMemberId: user.linkedMemberId,
         teamIds: user.teamIds ?? [],
         isPlatformAdmin: user.isPlatformAdmin,
         planCode: user.planCode,
         planFeatures: user.planFeatures,
+        accessUpdatedAt: undefined,
         accessibleModules: [...getAccessibleModules(user)],
       };
       // A store é atualizada sempre que o Auth.js renova ou altera a sessão,

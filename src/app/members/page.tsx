@@ -16,17 +16,20 @@ import { WebPageLayout } from '@/components/shared/web';
 import { hasActionPermission } from '@/lib/access-control';
 import { listMembers } from '@/services/members/members-api';
 import { MembersWebTable } from '@/features/members/components/MembersWebTable';
-import { roleLabels, type ManagedMember } from '@/features/members/components/member-display';
+import { maritalStatusLabels, roleLabels, type ManagedMember } from '@/features/members/components/member-display';
+import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 
 export default function MembersPage() {
   const router = useRouter();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { user } = useAuth();
   const canCreate = hasActionPermission(user, 'members', 'create');
+  const canUpdate = hasActionPermission(user, 'members', 'update');
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [inviteDrawerOpen, setInviteDrawerOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<ManagedMember | null>(null);
 
   useEffect(() => {
     setPageTitle('Membros');
@@ -107,7 +110,7 @@ export default function MembersPage() {
                       {member.role ? roleLabels[member.role] : 'Sem acesso'}
                     </Badge>
                   </div>
-                  <Button className="w-full" variant="outline" onClick={() => router.push(`/members/${member.id}`)}>
+                  <Button className="w-full" variant="outline" onClick={() => setSelectedMember(member)}>
                     <Eye className="mr-2 h-4 w-4" />
                     Ver detalhes
                   </Button>
@@ -118,7 +121,7 @@ export default function MembersPage() {
           </div>
 
           <div className="hidden lg:block">
-            <MembersWebTable members={filteredMembers} onOpenMember={(member) => router.push(`/members/${member.id}`)} />
+            <MembersWebTable members={filteredMembers} onOpenMember={setSelectedMember} />
           </div>
         </>
       )}
@@ -129,10 +132,41 @@ export default function MembersPage() {
             <DrawerTitle>Convidar Novo Membro</DrawerTitle>
           </DrawerHeader>
           <div className="overflow-y-auto px-4 pb-6">
-            <p className="text-sm text-muted-foreground">
-              O link e o QR Code do cadastro da igreja agora ficam em Configurações.
-            </p>
+            <RegistrationShareCard tenantSlug={user?.tenantSlug || ''} />
           </div>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={Boolean(selectedMember)} onOpenChange={(open) => { if (!open) setSelectedMember(null); }}>
+        <DrawerContent className="max-h-[90dvh]">
+          {selectedMember ? (
+            <>
+              <DrawerHeader className="text-left">
+                <DrawerTitle className="flex flex-wrap items-center gap-2">
+                  {selectedMember.name}
+                  <Badge variant={selectedMember.role ? 'outline' : 'secondary'} className="text-xs font-normal">
+                    {selectedMember.role ? roleLabels[selectedMember.role] : 'Sem acesso'}
+                  </Badge>
+                </DrawerTitle>
+                <p className="text-sm text-muted-foreground">{selectedMember.email} • {selectedMember.phone || 'Sem telefone'}</p>
+              </DrawerHeader>
+              <div className="space-y-4 overflow-y-auto px-4 pb-8">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={selectedMember.approved ? 'success' : 'secondary'}>{selectedMember.approved ? 'Aprovado' : 'Pendente'}</Badge>
+                  <Badge variant="outline">{selectedMember.permissions.length} permissões</Badge>
+                </div>
+                <div className="grid gap-3 rounded-xl border border-border/50 p-4 text-sm sm:grid-cols-2">
+                  <div><span className="text-muted-foreground">Responsável</span><p>{selectedMember.parentPhone || '-'}</p></div>
+                  <div><span className="text-muted-foreground">Estado civil</span><p>{selectedMember.maritalStatus ? maritalStatusLabels[selectedMember.maritalStatus] ?? selectedMember.maritalStatus : '-'}</p></div>
+                  <div><span className="text-muted-foreground">Nascimento</span><p>{selectedMember.birthDate ? new Date(selectedMember.birthDate).toLocaleDateString('pt-BR') : '-'}</p></div>
+                  <div><span className="text-muted-foreground">Igreja anterior</span><p>{selectedMember.previousChurch || '-'}</p></div>
+                  <div className="sm:col-span-2"><span className="text-muted-foreground">Sobre</span><p>{selectedMember.aboutMe || '-'}</p></div>
+                </div>
+                {canUpdate ? <Button className="w-full" onClick={() => router.push(`/members/${selectedMember.id}/edit`)}>Editar membro</Button> : null}
+                <Button variant="outline" className="w-full" onClick={() => router.push(`/members/${selectedMember.id}/access`)}>Acesso e permissões</Button>
+              </div>
+            </>
+          ) : null}
         </DrawerContent>
       </Drawer>
     </WebPageLayout>
