@@ -45,13 +45,7 @@ Este documento cobre os dois fluxos atuais:
 
 ## Desafios online entre membros
 
-- [ ] Definir o modelo de desafio: criador, convidado, jogo, status, prazo e tenant.
-- [ ] Permitir convidar outro membro para jogar em dupla ou competir na mesma partida.
-- [ ] Criar fluxo de convite, aceite, recusa, cancelamento e expiração.
-- [ ] Criar sala/estado de partida sincronizado em tempo real, com fallback de reconexão.
-- [ ] Notificar o convidado e o criador via SSE e Web Push.
-- [ ] Validar permissões, vínculo ao tenant e participação exclusiva dos jogadores.
-- [ ] Persistir resultado, pontuação e histórico da partida sem duplicidades.
+- [ ] Seguir o plano independente em [game-challenges-todo.md](./game-challenges-todo.md).
 - [ ] Definir se cada jogo terá modo cooperativo, competitivo ou ambos.
 
 ## Testes e aceite

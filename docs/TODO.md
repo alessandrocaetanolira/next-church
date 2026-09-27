@@ -129,6 +129,7 @@ cache por tenant/usuário e sincronização resiliente.
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
 - [ ] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
 - [ ] Criar desafios entre membros nos jogos, incluindo convite, aceite/recusa, partida em dupla e resultado persistido.
+- [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
 
 ## Documentos detalhados
