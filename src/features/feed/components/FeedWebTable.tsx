@@ -23,9 +23,10 @@ type FeedWebTableProps = {
   onComment: (post: FeedPost) => void;
   onToggleComment: (postId: string | number | null) => void;
   onCommentTextChange: (value: string) => void;
+  onOpenPost: (post: FeedPost) => void;
 };
 
-export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, commentingOn, commentText, onLike, onComment, onToggleComment, onCommentTextChange }: FeedWebTableProps) {
+export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, commentingOn, commentText, onLike, onComment, onToggleComment, onCommentTextChange, onOpenPost }: FeedWebTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <Table>
@@ -42,7 +43,7 @@ export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, comm
                   <TableCell><Badge variant="outline">{post.type}</Badge></TableCell>
                   <TableCell>{post.visibility === 'group' ? 'Grupo' : post.visibility === 'individual' ? 'Individual' : 'Todos'}</TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}</TableCell>
-                  <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" aria-label="Visualizar publicação"><Eye className="h-4 w-4" /></Button>{canUpdateFeed ? <><Button size="sm" variant="ghost" className={liked ? 'text-pink-500' : ''} onClick={() => onLike(post)}><Heart className={liked ? 'fill-current' : ''} /><span>{post.likes.length}</span></Button><Button size="sm" variant="ghost" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle /><span>{post.comments.length}</span></Button></> : null}</div></TableCell>
+                  <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" aria-label="Visualizar publicação" onClick={() => onOpenPost(post)}><Eye className="h-4 w-4" /></Button>{canUpdateFeed ? <><Button size="sm" variant="ghost" className={liked ? 'text-pink-500' : ''} onClick={() => onLike(post)}><Heart className={liked ? 'fill-current' : ''} /><span>{post.likes.length}</span></Button><Button size="sm" variant="ghost" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle /><span>{post.comments.length}</span></Button></> : null}</div></TableCell>
                 </TableRow>
                 {canUpdateFeed && commentingOn === post.id ? <TableRow key={`${String(post.id)}-comment`}><TableCell colSpan={6}><div className="flex gap-2"><Textarea value={commentText} onChange={(event) => onCommentTextChange(event.target.value)} placeholder="Escreva um comentário..." rows={1} className="min-h-[36px] resize-none" /><Button size="icon" onClick={() => onComment(post)} disabled={!commentText.trim()}><Send className="h-4 w-4" /></Button></div></TableCell></TableRow> : null}
               </Fragment>

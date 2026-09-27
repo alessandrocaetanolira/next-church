@@ -17,6 +17,10 @@ export function listFeedPosts(page: number, limit: number, type: string) {
   return apiRequest<FeedPage>(`/api/feed?${params.toString()}`);
 }
 
+export function getFeedPost(postId: string | number) {
+  return apiRequest<FeedPost>(`/api/feed/${postId}`);
+}
+
 export function createFeedPost(input: unknown) {
   return apiRequest<FeedPost>('/api/feed', { method: 'POST', body: JSON.stringify(input) });
 }

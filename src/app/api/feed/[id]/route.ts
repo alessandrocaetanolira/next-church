@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { getTenantClient } from '@/lib/prisma-factory';
 import { jsonError, jsonOk } from '@/lib/http/response';
 import { UnauthenticatedError, ValidationError } from '@/lib/http/errors';
-import { addFeedComment, deleteFeedPost, toggleFeedLike } from '@/server/feed/feed.controller';
+import { addFeedComment, deleteFeedPost, getFeedPost, toggleFeedLike } from '@/server/feed/feed.controller';
 import { FeedRepository } from '@/server/feed/feed.repository';
 import { FeedService } from '@/server/feed/feed.service';
 
@@ -22,6 +22,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (body?.action === 'toggle-like') return jsonOk(await toggleFeedLike({ user: context.session.user, repository: context.repository, service: context.service }, id));
     if (body?.action === 'add-comment') return jsonOk(await addFeedComment({ user: context.session.user, repository: context.repository, service: context.service }, id, body));
     throw new ValidationError('Ação inválida.');
+  } catch (error) { return jsonError(error); }
+}
+
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const context = await getContext();
+    return jsonOk(await getFeedPost({ user: context.session.user, repository: context.repository, service: context.service }, (await params).id));
   } catch (error) { return jsonError(error); }
 }
 

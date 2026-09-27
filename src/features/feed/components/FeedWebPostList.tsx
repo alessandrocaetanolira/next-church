@@ -43,6 +43,7 @@ type FeedWebPostListProps = {
   commentingOn: string | number | null;
   onLike: (post: FeedPost) => void;
   onToggleComment: (postId: string | number | null) => void;
+  onOpenPost: (post: FeedPost) => void;
 };
 
 export function FeedWebPostList({
@@ -53,6 +54,7 @@ export function FeedWebPostList({
   commentingOn,
   onLike,
   onToggleComment,
+  onOpenPost,
 }: FeedWebPostListProps) {
   return (
     <>
@@ -63,7 +65,7 @@ export function FeedWebPostList({
 
         return (
           <div key={String(post.id)} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Card className="overflow-hidden rounded-[22px] border-border/70 bg-card shadow-sm">
+            <Card className="cursor-pointer overflow-hidden rounded-[22px] border-border/70 bg-card shadow-sm transition-colors hover:border-primary/40" role="link" tabIndex={0} onClick={() => onOpenPost(post)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPost(post); } }}>
               <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="flex items-start gap-3">
                   <Avatar className="h-12 w-12"><AvatarFallback className="bg-primary/10 text-base text-primary">{post.userName[0]}</AvatarFallback></Avatar>
@@ -74,7 +76,7 @@ export function FeedWebPostList({
                       <Badge variant="outline" className={cn('h-6 gap-1 rounded-full px-2 text-xs font-medium', POST_TYPE_BADGE_CLASS[post.type])}><Icon className="h-3.5 w-3.5" />{config.label}</Badge>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-5 w-5" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-5 w-5" /></Button>
                   <div className="hidden flex-wrap justify-end gap-1">
                     {post.pinnedUntil && new Date(post.pinnedUntil).getTime() > Date.now() ? <Badge variant="outline" className="h-6 text-xs"><Pin className="mr-1 h-3 w-3" />Fixado</Badge> : null}
                     <Badge variant="secondary" className="h-6 gap-1 px-2 text-xs"><Icon className={cn('h-3 w-3', config.color)} />{config.label}</Badge>
@@ -88,13 +90,13 @@ export function FeedWebPostList({
                   {post.title ? <h3 className="mb-2 text-lg font-semibold text-primary">{post.title}</h3> : null}
                   {post.type === 'verse' && post.reference ? <p className="mb-1 text-base font-medium text-primary">{post.reference}</p> : null}
                   <p className="whitespace-pre-wrap text-base leading-7 text-foreground/90">{post.content}</p>
-                  {post.mediaUrl ? <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-muted/20">{post.mediaType === 'video' ? <video src={post.mediaUrl} controls className="h-full w-full bg-black object-cover" /> : <AppImage src={post.mediaUrl} alt={post.title || 'Mídia da publicação'} width={1200} height={800} className="h-full w-full object-cover" />}</div> : null}
+                  {post.mediaUrl ? <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-muted/20" onClick={(event) => event.stopPropagation()}>{post.mediaType === 'video' ? <video src={post.mediaUrl} controls className="h-full w-full bg-black object-cover" /> : <AppImage src={post.mediaUrl} alt={post.title || 'Mídia da publicação'} width={1200} height={800} className="h-full w-full object-cover" />}</div> : null}
                 </div>
 
                 {canUpdateFeed ? <div className="mt-1 flex items-center gap-2 border-t-0 pt-0">
-                  <Button size="sm" variant="ghost" className={cn('h-10 gap-2 px-2 text-sm', liked && 'text-pink-500 hover:text-pink-600')} onClick={() => onLike(post)}><Heart className={cn('h-6 w-6', liked && 'fill-current')} />{post.likes.length > 0 && post.likes.length}</Button>
-                  <Button size="sm" variant="ghost" className="h-10 gap-2 px-2 text-sm" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle className="h-6 w-6" />{post.comments.length > 0 && post.comments.length}</Button>
-                  <Button size="icon" variant="ghost" className="ml-auto h-10 w-10"><Bookmark className="h-6 w-6" /></Button>
+                  <Button size="sm" variant="ghost" className={cn('h-10 gap-2 px-2 text-sm', liked && 'text-pink-500 hover:text-pink-600')} onClick={(event) => { event.stopPropagation(); onLike(post); }}><Heart className={cn('h-6 w-6', liked && 'fill-current')} />{post.likes.length > 0 && post.likes.length}</Button>
+                  <Button size="sm" variant="ghost" className="h-10 gap-2 px-2 text-sm" onClick={(event) => { event.stopPropagation(); onToggleComment(commentingOn === post.id ? null : post.id ?? null); }}><MessageCircle className="h-6 w-6" />{post.comments.length > 0 && post.comments.length}</Button>
+                  <Button size="icon" variant="ghost" className="ml-auto h-10 w-10" onClick={(event) => event.stopPropagation()}><Bookmark className="h-6 w-6" /></Button>
                 </div> : null}
 
               </CardContent>

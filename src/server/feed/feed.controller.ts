@@ -12,6 +12,12 @@ export async function listFeed({ user, repository, service }: Context, options: 
   return service.list(user.email as string, groupIds, options.page, options.limit, options.type, options.groupId);
 }
 
+export async function getFeedPost({ user, repository, service }: Context, id: string) {
+  FeedPolicy.assertView(user);
+  const groupIds = await repository.accessibleGroupIds(user.linkedMemberId);
+  return service.getById(user.email as string, groupIds, id);
+}
+
 export async function createFeedPost({ user, repository, service }: Context, input: unknown) {
   const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
   const postAsGroup = body.postAsGroup === true;

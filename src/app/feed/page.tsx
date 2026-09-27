@@ -23,6 +23,7 @@ import { WebPageLayout } from '@/components/shared/web';
 import { MobileFeedComposer } from '@/features/feed/components/MobileFeedComposer';
 import { SharedFlatList } from '@/components/SharedFlatList';
 import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
+import { useRouter } from 'next/navigation';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -54,6 +55,7 @@ function sortFeedPosts(items: FeedPost[]) {
 }
 
 export default function FeedPage() {
+  const router = useRouter();
   const { user, isOffline } = useAuth();
   const role = user?.role?.toUpperCase() ?? 'MEMBER';
   const canPostAnnouncement = ['ADMIN', 'PASTOR'].includes(role);
@@ -505,7 +507,7 @@ export default function FeedPage() {
           </Card>
         ) : (
           <>
-            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} /></div>
+            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} onOpenPost={(post) => router.push(`/feed/${post.id}`)} /></div>
             <div className="md:hidden">
               <SharedFlatList
                 data={sortedPosts}
@@ -514,7 +516,7 @@ export default function FeedPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 className="gap-4"
-                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} />}
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} />}
               />
             </div>
           </>

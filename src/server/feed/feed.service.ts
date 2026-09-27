@@ -31,6 +31,20 @@ export class FeedService {
     return { items, hasMore: skip + items.length < visible.length, page };
   }
 
+  async getById(email: string, groupIds: string[], id: string) {
+    const post = await this.repository.findById(id);
+    if (!post || post.deletedAt) throw new NotFoundError('Publicação não encontrada.');
+
+    const visibility = String(post.visibility ?? 'public');
+    const serialized = FeedRepository.serialize(post);
+    const canView = visibility === 'public'
+      || (visibility === 'group' && typeof post.groupId === 'string' && groupIds.includes(post.groupId))
+      || (visibility === 'individual' && serialized.targetUserIds.includes(email));
+    if (!canView) throw new NotFoundError('Publicação não encontrada.');
+
+    return serialized;
+  }
+
   async create(user: FeedUser, input: unknown) {
     const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
     const content = String(body.content ?? '').trim();
