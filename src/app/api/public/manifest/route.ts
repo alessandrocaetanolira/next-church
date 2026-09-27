@@ -20,11 +20,11 @@ export async function GET(request: NextRequest) {
   const icon192 = getTenantPwaIconUrl(branding.slug, 192, branding.brandingVersion);
   const icon512 = getTenantPwaIconUrl(branding.slug, 512, branding.brandingVersion);
   const manifest: MetadataRoute.Manifest = {
-    id: '/',
+    id: '/pwa-start',
     name,
     short_name: branding.pwaShortName ?? name,
     description: 'Gestão completa para igrejas, com uso offline e notificações.',
-    start_url: '/',
+    start_url: '/pwa-start',
     scope: '/',
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],

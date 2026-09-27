@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export type SettingsTab = 'appearance' | 'offline' | 'notifications' | 'church' | 'admin';
+export type SettingsTab = 'appearance' | 'offline' | 'notifications' | 'church';
 
 export function SettingsTabs({ value, onChange }: { value: SettingsTab; onChange: (value: SettingsTab) => void }) {
   return (
@@ -11,7 +11,6 @@ export function SettingsTabs({ value, onChange }: { value: SettingsTab; onChange
         ['offline', 'Bíblia offline'],
         ['notifications', 'Notificações'],
         ['church', 'Igreja'],
-        ['admin', 'Administração'],
       ] as const).map(([tab, label]) => (
         <button
           key={tab}
@@ -30,5 +29,5 @@ export function SettingsTabs({ value, onChange }: { value: SettingsTab; onChange
 }
 
 export function SettingsTabPanel({ active, value, children }: { active: boolean; value: SettingsTab; children: ReactNode }) {
-  return <div className={cn(active ? (value === 'admin' ? 'space-y-4' : 'block') : 'hidden')}>{children}</div>;
+  return <div className={cn(active ? 'space-y-4' : 'hidden')}>{children}</div>;
 }

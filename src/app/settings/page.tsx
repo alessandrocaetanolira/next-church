@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
+import { PendingMembersCard } from '@/features/pastoral/components/PendingMembersCard';
 import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
@@ -24,7 +25,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { AppImage, MobileThemePreview } from '@/components/shared';
 import { WebPageLayout } from '@/components/shared/web';
 import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
-import { AdministracaoTab } from './tabs/administracaoTab';
 import { AparenciaTab } from './tabs/aparenciaTab';
 import { BibliaOfflineTab } from './tabs/bibliaOfflineTab';
 import { IgrejaTab } from './tabs/igrejaTab';
@@ -437,40 +437,38 @@ export default function SettingsPage() {
 
       <IgrejaTab active={settingsTab === 'church'} value="church">
         {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && session?.user?.tenantId ? (
-          <CollapsibleSection icon={ImageIcon} title="Cadastro da Igreja">
+          <>
+          <CollapsibleSection icon={ImageIcon} title="Igreja e membros">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Compartilhe o link ou o QR Code corretos do cadastro público da sua igreja.
               </p>
               <RegistrationShareCard tenantSlug={session.user.tenantSlug ?? ''} />
+              <PendingMembersCard />
             </div>
           </CollapsibleSection>
-        ) : <Card className="p-4 text-sm text-muted-foreground">Você não possui permissão para configurar o cadastro da igreja.</Card>}
-      </IgrejaTab>
+          {session?.user?.role === 'ADMIN' ? (
+            <>
+              <CollapsibleSection icon={Gift} title="Programa de Fidelidade">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Configurações avançadas de fidelidade para membros.</p>
+                  <Button variant="outline" className="w-full">Gerenciar Regras</Button>
+                </div>
+              </CollapsibleSection>
 
-      <AdministracaoTab active={settingsTab === 'admin'} value="admin">
-        {/* Admin Features */}
-        {session?.user?.role === 'ADMIN' && (
-          <>
-            <CollapsibleSection icon={Gift} title="Programa de Fidelidade">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Configurações avançadas de fidelidade para membros.</p>
-                <Button variant="outline" className="w-full">Gerenciar Regras</Button>
-              </div>
-            </CollapsibleSection>
-
-            <CollapsibleSection icon={Lock} title="Gerenciar Usuários">
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
-                <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
-                  Listar Usuários
-                </Button>
-              </div>
-            </CollapsibleSection>
+              <CollapsibleSection icon={Lock} title="Gerenciar usuários">
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
+                  <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
+                    Listar usuários
+                  </Button>
+                </div>
+              </CollapsibleSection>
+            </>
+          ) : null}
           </>
-        )}
-
-        {/* Danger Zone */}
+        ) : <Card className="p-4 text-sm text-muted-foreground">Você não possui permissão para configurar o cadastro da igreja.</Card>}
+        {/* Dados locais e sessão */}
         <Card className="border-border shadow-sm">
         <Button
           variant="ghost"
@@ -497,7 +495,7 @@ export default function SettingsPage() {
         }}>
           <LogOut className="w-4 h-4" /> Sair da conta
         </Button>
-      </AdministracaoTab>
+      </IgrejaTab>
     </WebPageLayout>
   );
 }

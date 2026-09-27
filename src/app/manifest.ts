@@ -26,11 +26,11 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const icon192 = tenantSlug ? getTenantPwaIconUrl(tenantSlug, 192, branding?.brandingVersion) : '/pwa-192x192.png';
   const icon512 = tenantSlug ? getTenantPwaIconUrl(tenantSlug, 512, branding?.brandingVersion) : '/pwa-512x512.png';
   return {
-    id: '/',
+    id: '/pwa-start',
     name,
     short_name: shortName,
     description: 'Gestão completa para igrejas, com uso offline e notificações.',
-    start_url: '/',
+    start_url: '/pwa-start',
     scope: '/',
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],

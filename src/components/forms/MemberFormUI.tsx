@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { maskPhone } from '@/lib/utils';
 import type { MemberFormValues } from './member-form.schema';
 
 export function MemberFormUI({ form, editing, onSubmit }: { form: UseFormReturn<MemberFormValues>; editing: boolean; onSubmit: (values: MemberFormValues) => void | Promise<void> }) {
@@ -15,8 +16,8 @@ export function MemberFormUI({ form, editing, onSubmit }: { form: UseFormReturn<
   return <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
     <div className="space-y-2"><Label>Nome</Label><Input {...register('name')} />{fieldError('name')}</div>
     <div className="space-y-2"><Label>Email</Label><Input type="email" {...register('email')} />{fieldError('email')}</div>
-    <div className="space-y-2"><Label>Telefone</Label><Input {...register('phone')} />{fieldError('phone')}</div>
-    <div className="space-y-2"><Label>Telefone do Responsável</Label><Input {...register('parentPhone')} /></div>
+    <div className="space-y-2"><Label>Telefone</Label><Input type="tel" inputMode="tel" autoComplete="tel" maxLength={15} {...register('phone')} onChange={(event) => setValue('phone', maskPhone(event.target.value), { shouldValidate: true })} placeholder="(00) 00000-0000" />{fieldError('phone')}</div>
+    <div className="space-y-2"><Label>Telefone do Responsável</Label><Input type="tel" inputMode="tel" autoComplete="tel" maxLength={15} {...register('parentPhone')} onChange={(event) => setValue('parentPhone', maskPhone(event.target.value))} placeholder="(00) 00000-0000" /></div>
     <div className="grid gap-4 md:grid-cols-2"><div className="min-w-0 space-y-2"><Label>Nascimento</Label><Input type="date" className={dateInputClassName} {...register('birthDate')} /></div><div className="min-w-0 space-y-2"><Label>Estado Civil</Label><Select value={watch('maritalStatus')} onValueChange={(value) => setValue('maritalStatus', value as MemberFormValues['maritalStatus'], { shouldValidate: true })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent></Select></div></div>
     <div className="grid gap-4 md:grid-cols-2"><div className="min-w-0 space-y-2"><Label>Data de Conversão</Label><Input type="date" className={dateInputClassName} {...register('conversionDate')} /></div><div className="min-w-0 space-y-2"><Label>Data de Batismo</Label><Input type="date" className={dateInputClassName} {...register('baptismDate')} /></div></div>
     <div className="space-y-2"><Label>Igreja Anterior</Label><Input {...register('previousChurch')} /></div>

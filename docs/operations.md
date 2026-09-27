@@ -41,8 +41,8 @@ npx tsx prisma/provision.ts
 
 O `provision.ts` deve ser executado depois do banco global e do administrador
 estrutural. Ele registra o tenant, aplica as migrations do tenant e cria o usuário
-administrador da igreja. Não execute `db:tenant:migrate:all` logo depois: ele é para
-tenants já existentes que receberam uma nova migration.
+administrador da igreja. O setup inicial executa depois `db:tenant:migrate:all` para
+alinhar tenants existentes; esse orquestrador cria backup antes de cada migration.
 
 Se o `bible.db` ainda não existir, inicialize-o separadamente, antes de iniciar o app:
 

@@ -28,6 +28,7 @@ export async function proxy(request: NextRequest) {
     nextUrl.pathname.startsWith("/api/public") ||
     nextUrl.pathname === "/enviar-sse" ||
     nextUrl.pathname === "/enviar-push" ||
+    nextUrl.pathname.startsWith("/pwa-start") ||
     nextUrl.pathname.startsWith("/cadastro");
 
   if (isPublicRoute) {

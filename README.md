@@ -19,9 +19,9 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 ## Estado do projeto
 
 As Prioridades 1 (estabilização), 2 (template Web) e 3 (permissões e experiência
-de acesso) estão concluídas. O próximo foco é a Prioridade 4: validar e fortalecer
-o fluxo offline-first em dispositivos reais, mantendo sessão, cache, sincronização
-e branding isolados por tenant e usuário. O acompanhamento detalhado está em
+de acesso) estão concluídas. O próximo foco é validar o fluxo offline-first em
+dispositivos reais, manter o branding dinâmico por tenant e concluir a evolução
+dos jogos online. O acompanhamento detalhado está em
 [docs/TODO.md](docs/TODO.md).
 
 ## Requisitos
@@ -117,13 +117,14 @@ O script executa, nesta ordem:
 3. seed dos planos;
 4. seed do administrador global;
 5. migration da Bíblia e importação idempotente de AA, ACF e NVI;
-6. provisionamento do tenant `igreja-teste`;
-7. seed do branding inicial.
+6. provisionamento do tenant `igreja-teste`, quando ainda não existir;
+7. migrations pendentes dos tenants, com backup individual;
+8. seed do branding inicial.
 
 O `bible.db` existente é preservado. A migration e a importação são idempotentes e
 não fazem reset do catálogo. O script não deve ser usado para apagar um ambiente em
-produção; ele prepara um ambiente novo e ignora o provisionamento se o tenant já
-existir.
+produção; ele prepara um ambiente novo e mantém tenants já existentes, aplicando
+somente migrations pendentes com backup.
 
 ### Reset local sem apagar a Bíblia
 
@@ -203,8 +204,9 @@ npx tsx prisma/provision.ts
 
 O `provision.ts` cria a igreja `igreja-teste`, aplica as migrations do tenant e cria o
 usuário inicial da igreja. O seed de administrador global vem antes porque esse usuário
-pertence ao banco global. Não rode `db:tenant:migrate:all` logo depois de provisionar
-um tenant novo; esse comando é para atualizar tenants já existentes.
+pertence ao banco global. O setup inicial executa depois o orquestrador
+`db:tenant:migrate:all`, que também cobre tenants já existentes e cria backup antes
+de cada alteração.
 
 Se os bancos dos tenants já existirem e apenas as migrations precisarem ser aplicadas:
 
@@ -294,8 +296,8 @@ o app com o administrador padrão.
 npm run dev
 ```
 
-Abra `http://localhost:3000/auth/login` para usuários da igreja ou
-`http://localhost:3000/admin/login` para o administrador global.
+Abra `http://localhost:3000/auth/login` para usuários da igreja. O administrador
+global usa a mesma tela deixando o campo de slug vazio.
 
 ## Organizacao
 
@@ -331,21 +333,17 @@ As validações devem ser executadas na raiz do projeto:
 - `npx tsc --noEmit` concluiu sem erros na última verificação.
 - `npx eslint src/app src/components src/features src/server src/lib src/auth.ts`
   concluiu sem erros e sem warnings.
-- `npx next build --webpack` concluiu com sucesso, incluindo TypeScript e geração
-  das 73 páginas.
-- `npm run build` usando Turbopack concluiu com sucesso, incluindo TypeScript,
-  geração das 73 páginas e o service worker. A configuração fixa a raiz do
-  projeto e mantém uma única configuração PostCSS.
-- O build reporta apenas avisos de rastreamento dinâmico nos clientes Prisma;
-  eles não impedem a compilação.
-- `npm test` concluiu com sucesso fora do sandbox: 36 arquivos e 118 testes
-  passaram. O binding opcional do Rolldown foi reinstalado com `npm install
-  --include=optional`.
+- `npm run build` usa Webpack e deve ser o build oficial enquanto a integração
+  Turbopack/Serwist não for validada para produção.
+- `npm run dev` também usa Webpack para evitar falhas de HMR e chunks obsoletos
+  observadas no desenvolvimento com Turbopack.
+- `npm test` passou na última validação fora do sandbox: 41 arquivos, 136 testes
+  aprovados e nenhum teste ignorado.
 - O escopo de líderes foi aplicado para grupos, materiais e tarefas. `teamIds`
   agora percorre login, JWT, sessão, store e cache offline; administradores e
   pastores mantêm acesso global, incluindo a Cantina.
 - As Prioridades 1, 2 e 3 do [TODO principal](docs/TODO.md) estão concluídas; a
-  Prioridade 4 é o próximo ciclo de implementação e validação.
+  validação offline em dispositivos reais e os desafios online são os próximos ciclos.
 - A sessão offline agora usa cache separado por `tenantId + userId`, migra o
   formato legado com segurança e remove o contexto local no logout explícito.
 - O sincronismo persiste o cursor em `offlineMetadata` e filtra a fila de saída

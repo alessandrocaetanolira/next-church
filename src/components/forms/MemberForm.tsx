@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { createMember, updateMember } from '@/services/members/members-api';
 import { memberFormSchema, type MemberFormValues } from './member-form.schema';
 import { MemberFormUI } from './MemberFormUI';
+import { maskPhone } from '@/lib/utils';
 
 export interface MemberFormMember {
   id: string; name: string; email?: string; phone?: string; parentPhone?: string | null;
@@ -17,7 +18,7 @@ export function MemberForm({ onSuccess, member }: { onSuccess: () => void; membe
   const form = useForm<MemberFormValues>({
     resolver: zodResolver(memberFormSchema),
     defaultValues: {
-      name: member?.name ?? '', email: member?.email ?? '', phone: member?.phone ?? '', parentPhone: member?.parentPhone ?? '',
+      name: member?.name ?? '', email: member?.email ?? '', phone: maskPhone(member?.phone), parentPhone: maskPhone(member?.parentPhone),
       birthDate: member?.birthDate?.slice(0, 10) ?? '', conversionDate: member?.conversionDate?.slice(0, 10) ?? '', baptismDate: member?.baptismDate?.slice(0, 10) ?? '',
       previousChurch: member?.previousChurch ?? '', aboutMe: member?.aboutMe ?? '', maritalStatus: (member?.maritalStatus as MemberFormValues['maritalStatus']) ?? 'single', approved: member?.approved === false ? 'false' : 'true',
     },

@@ -122,16 +122,16 @@ export function canAccessRoute(user: AppUser | null | undefined, pathname: strin
     (pathname === '/' && hasPlanFeature(user, 'dashboard')) ||
     (pathname.startsWith('/carteira') && hasPlanFeature(user, 'members')) ||
     pathname.startsWith('/minha-conta') ||
-    (pathname.startsWith('/notifications') && hasPlanFeature(user, 'notifications')) ||
-    (pathname.startsWith('/feed') && hasPlanFeature(user, 'feed')) ||
-    (pathname.startsWith('/groups') && hasPlanFeature(user, 'groups')) ||
+    (pathname.startsWith('/notifications') && hasActionPermission(user, 'notifications', 'view')) ||
+    (pathname.startsWith('/feed') && hasActionPermission(user, 'feed', 'view')) ||
+    (pathname.startsWith('/groups') && hasAnyActionPermission(user, 'groups', ['view', 'request'])) ||
     (pathname.startsWith('/social-projects') && hasPlanFeature(user, 'social_projects')) ||
     (pathname.startsWith('/kids') && hasPlanFeature(user, 'kids')) ||
     (pathname.startsWith('/parking') && hasPlanFeature(user, 'parking')) ||
-    (pathname.startsWith('/bible') && hasPlanFeature(user, 'bible')) ||
-    (pathname.startsWith('/games') && hasPlanFeature(user, 'games')) ||
-    (pathname.startsWith('/jogos-novos') && hasPlanFeature(user, 'games')) ||
-    (pathname.startsWith('/quiz') && hasPlanFeature(user, 'games')) ||
+    (pathname.startsWith('/bible') && hasActionPermission(user, 'bible', 'view')) ||
+    (pathname.startsWith('/games') && hasActionPermission(user, 'games', 'view')) ||
+    (pathname.startsWith('/jogos-novos') && hasActionPermission(user, 'games', 'view')) ||
+    (pathname.startsWith('/quiz') && hasActionPermission(user, 'games', 'view')) ||
     (pathname.startsWith('/equipes') && hasPlanFeature(user, 'groups')) ||
     (pathname.startsWith('/teams') && hasPlanFeature(user, 'groups'))
   ) {

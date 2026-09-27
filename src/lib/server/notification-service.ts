@@ -402,6 +402,28 @@ export async function notifyCanteenNewOrder(
   });
 }
 
+/** Notifica quem pode aprovar novos cadastros públicos de membros. */
+export async function notifyPendingMemberRegistration(
+  prisma: PrismaClient,
+  tenantId: string,
+  member: { id: string; name: string },
+) {
+  const recipients = await getAdminAndPastorEmails(prisma);
+  if (!recipients.length) return;
+
+  await sendNotification(prisma, tenantId, {
+    recipients,
+    content: {
+      type: 'member-registration-pending',
+      title: 'Novo cadastro aguardando aprovação',
+      message: `${member.name} solicitou cadastro na igreja.`,
+      href: '/settings',
+      sourceType: 'member',
+      sourceId: member.id,
+    },
+  });
+}
+
 /** Avisa os operadores conectados para remover uma venda arquivada da fila local. */
 export async function publishCanteenOrderArchived(
   prisma: PrismaClient,

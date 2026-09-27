@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Copy, QrCode, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -59,35 +58,35 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
 
   if (!normalizedTenantSlug) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <div className="space-y-3">
+        <div>
+          <h4 className="flex items-center gap-2 text-sm font-semibold">
             <QrCode className="h-5 w-5" />
             Convite por QR Code
-          </CardTitle>
-          <CardDescription>
+          </h4>
+          <p className="mt-1 text-sm text-muted-foreground">
             O slug público da igreja ainda não está disponível para gerar o convite.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div>
           <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-muted-foreground">
             Atualize a sessão e tente novamente. O QR Code não será gerado com um identificador inválido.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <div className="space-y-4">
+      <div>
+        <h4 className="flex items-center gap-2 text-sm font-semibold">
           <QrCode className="h-5 w-5" />
           Cadastro da Igreja
-        </CardTitle>
-        <CardDescription>Compartilhe o link ou o QR Code para novos membros.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        </h4>
+        <p className="mt-1 text-sm text-muted-foreground">Compartilhe o link ou o QR Code para novos membros.</p>
+      </div>
+      <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">Slug: {normalizedTenantSlug}</Badge>
         </div>
@@ -103,7 +102,7 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="secondary">Cadastro</Badge>
               <Badge variant="outline">/cadastro?igreja={normalizedTenantSlug}</Badge>
             </div>
-              <div className="rounded-xl border border-border bg-card p-3">
+              <div className="flex justify-center p-2">
               <AppImage
                 src={registrationQrCodeUrl}
                 alt={`QR Code do cadastro da igreja ${normalizedTenantSlug}`}
@@ -111,16 +110,16 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
                 height={220}
                 className="mx-auto h-56 w-56 rounded-lg"
               />
-            </div>
+              </div>
               <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
               {registrationLink}
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => void handleCopy(registrationLink, 'Link de cadastro')} variant="outline" className="flex-1">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+              <Button onClick={() => void handleCopy(registrationLink, 'Link de cadastro')} variant="outline" className="min-w-0 flex-1 whitespace-normal">
                 <Copy className="mr-2 h-4 w-4" />
                 Copiar
               </Button>
-              <Button onClick={() => void handleShare(registrationLink, 'Cadastro da Igreja', 'Use este link para solicitar cadastro.')} className="flex-1">
+              <Button onClick={() => void handleShare(registrationLink, 'Cadastro da Igreja', 'Use este link para solicitar cadastro.')} className="min-w-0 flex-1 whitespace-normal">
                 <Share2 className="mr-2 h-4 w-4" />
                 Compartilhar
               </Button>
@@ -132,7 +131,7 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
               <Badge variant="secondary">Login</Badge>
               <Badge variant="outline">/auth/login?igreja={normalizedTenantSlug}</Badge>
             </div>
-              <div className="rounded-xl border border-border bg-card p-3">
+              <div className="flex justify-center p-2">
               <AppImage
                 src={loginQrCodeUrl}
                 alt={`QR Code do login da igreja ${normalizedTenantSlug}`}
@@ -141,22 +140,22 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
                 className="mx-auto h-56 w-56 rounded-lg"
               />
             </div>
-              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground break-all">
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm break-all text-muted-foreground">
               {loginLink}
             </div>
-            <div className="flex gap-2">
-              <Button onClick={() => void handleCopy(loginLink, 'Link de login')} variant="outline" className="flex-1">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+              <Button onClick={() => void handleCopy(loginLink, 'Link de login')} variant="outline" className="min-w-0 flex-1 whitespace-normal">
                 <Copy className="mr-2 h-4 w-4" />
                 Copiar
               </Button>
-              <Button onClick={() => void handleShare(loginLink, 'Login da Igreja', 'Use este link para acessar a área de login da sua igreja.')} className="flex-1">
+              <Button onClick={() => void handleShare(loginLink, 'Login da Igreja', 'Use este link para acessar a área de login da sua igreja.')} className="min-w-0 flex-1 whitespace-normal">
                 <Share2 className="mr-2 h-4 w-4" />
                 Compartilhar
               </Button>
             </div>
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

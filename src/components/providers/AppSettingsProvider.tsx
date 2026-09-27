@@ -73,6 +73,26 @@ function hexToHsl(value?: string | null) {
   return `${h} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+function themedSurfaceColor(value: string, dark: boolean) {
+  const hsl = hexToHsl(value);
+  if (!hsl) return null;
+  const [hue, saturation] = hsl.split(' ');
+  // A cor secundária é usada como superfície de badges, chips e estados
+  // neutros. Nunca usamos a cor bruta do tenant como fundo para preservar
+  // contraste no tema claro e evitar superfícies quase pretas no dark.
+  return `${hue} ${Math.min(Number.parseInt(saturation, 10), 62)}% ${dark ? 18 : 94}%`;
+}
+
+function isUsableBrandColor(value?: string | null) {
+  if (!value || !/^#[0-9a-f]{6}$/i.test(value)) return false;
+  const n = Number.parseInt(value.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255; const g = ((n >> 8) & 255) / 255; const b = (n & 255) / 255;
+  // Evita que uma configuração de tenant transforme ações globais em preto
+  // ou em uma cor quase preta, especialmente no tema claro.
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance >= 0.16 && luminance <= 0.94;
+}
+
 const SETTINGS_KEY = 'church-app-settings';
 
 function settingsStorageKey(tenantKey?: string | null) {
@@ -121,10 +141,18 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       } else {
         root.setAttribute('data-theme', settings.themeVariant);
       }
-      const primary = hexToHsl(settings.primaryColor);
-      const secondary = hexToHsl(settings.secondaryColor);
+      const primary = isUsableBrandColor(settings.primaryColor) ? hexToHsl(settings.primaryColor) : null;
+      const secondary = isUsableBrandColor(settings.secondaryColor)
+        ? themedSurfaceColor(settings.secondaryColor!, useDark)
+        : null;
       if (primary) root.style.setProperty('--primary', primary); else root.style.removeProperty('--primary');
-      if (secondary) root.style.setProperty('--secondary', secondary); else root.style.removeProperty('--secondary');
+      if (secondary) {
+        root.style.setProperty('--secondary', secondary);
+        root.style.setProperty('--secondary-foreground', useDark ? '213 31% 91%' : '220 13% 18%');
+      } else {
+        root.style.removeProperty('--secondary');
+        root.style.removeProperty('--secondary-foreground');
+      }
     };
 
     applyTheme();

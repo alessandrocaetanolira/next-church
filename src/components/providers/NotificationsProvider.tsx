@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { initializeNotificationCenter, upsertNotification } from '@/lib/notification-center';
 import { openNotificationStream } from '@/services/notification-stream';
 import { useAuthStore } from '@/features/auth/store';
+import { playNotificationBeep } from '@/lib/notification-sound';
 
 type NotificationEventPayload = {
   id: string;
@@ -28,6 +29,12 @@ export function NotificationsProvider() {
     if (!isAuthenticated) return;
 
     void initializeNotificationCenter();
+
+    const handleServiceWorkerMessage = (event: MessageEvent<{ type?: string; notificationId?: string }>) => {
+      if (event.data?.type !== 'church:push-notification') return;
+      playNotificationBeep(event.data.notificationId ?? 'push-notification');
+    };
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
 
     const refresh = () => { void initializeNotificationCenter(true); };
     const close = openNotificationStream((data) => {
@@ -68,6 +75,7 @@ export function NotificationsProvider() {
 
     return () => {
       close();
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
       window.removeEventListener('online', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };

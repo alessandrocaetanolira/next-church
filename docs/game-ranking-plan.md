@@ -4,6 +4,16 @@
 
 Adicionar ranking persistido para `/jogos-novos` sem misturar jogos novos com `QuizAttempt`.
 
+## Estado atual
+
+A primeira etapa foi implementada com a entidade `GameScore` no schema do tenant.
+O endpoint autenticado `POST /api/engagement/scores` valida o jogador, o jogo e a
+pontuação antes de persistir o resultado. O perfil de engajamento já agrega essas
+pontuações ao ranking geral da igreja junto com devocionais e quiz.
+
+Ainda não há ranking por jogo exposto em uma API própria, deduplicação por execução
+do cliente ou integração completa de todos os jogos solo.
+
 ## Decisao
 
 Criar uma entidade propria, como `GameAttempt` ou `GameRun`.
@@ -39,9 +49,9 @@ Campos:
 
 ## APIs
 
-- `POST /api/games/attempts`: registra tentativa concluida.
-- `GET /api/games/attempts`: lista tentativas do usuario ou do tenant.
-- `GET /api/games/ranking`: ranking por jogo e ranking geral.
+- Implementado: `POST /api/engagement/scores` registra pontuação autenticada no tenant.
+- Pendente: `GET /api/games/attempts` para histórico do usuário ou do tenant.
+- Pendente: `GET /api/games/ranking` para ranking por jogo e ranking geral.
 
 ## Ranking
 
@@ -51,20 +61,20 @@ Campos:
 
 ## Implementacao Incremental
 
-1. Criar tabela no Prisma e fallback em `tenant-schema`.
-2. Criar APIs.
-3. Criar helper cliente compartilhado para submissao.
-4. Integrar tres jogos piloto.
-5. Expor ranking no hub.
+1. ~~Criar tabela no Prisma e fallback em `tenant-schema`.~~
+2. ~~Criar API inicial de registro.~~
+3. Criar helper cliente compartilhado com `clientRunId` e idempotência.
+4. Integrar três jogos piloto.
+5. Expor ranking por jogo e histórico no hub.
 6. Expandir para os demais jogos.
 
 ## Checklist
 
-- [ ] Schema criado.
-- [ ] Fallback tenant criado.
-- [ ] POST implementado.
+- [x] Schema `GameScore` criado no tenant.
+- [x] Migration tenant criada e aplicada pelo orquestrador.
+- [x] POST inicial implementado em `/api/engagement/scores`.
 - [ ] GET de ranking implementado.
 - [ ] Deduplicacao por `clientRunId`.
-- [ ] Integracao com engagement profile.
+- [x] Integracao com engagement profile.
 - [ ] Jogos piloto integrados.
-- [ ] UI de ranking adicionada.
+- [x] UI inicial do ranking geral adicionada ao dashboard do membro.

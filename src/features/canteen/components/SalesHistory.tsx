@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Banknote, CreditCard, DollarSign, FileSpreadsheet, FileText, MessageSquare, Receipt, Search, Smartphone, TrendingUp, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, maskPhone } from "@/lib/utils";
 import { getMemberLedger, registerMemberPayment } from "@/services/canteen/operations-api";
 import { exportDebtExcel, exportDebtPDF, exportSalesExcel, exportSalesPDF, sendWhatsApp } from "../services/export";
 import { toast } from "sonner";
@@ -373,7 +373,7 @@ export function SalesHistory() {
           </div>
 
           <div className="hidden md:block">
-            <DebtWebTable members={membersWithDebt} onShare={(member) => { setShareDebtMemberId(member.id); setDebtPhone(member.phone || ''); }} onReceive={(member) => { setSelectedMemberId(member.id); setPaymentAmount(member.creditBalance ?? 0); }} onDetails={(member) => void loadLedger(member.id)} />
+            <DebtWebTable members={membersWithDebt} onShare={(member) => { setShareDebtMemberId(member.id); setDebtPhone(maskPhone(member.phone)); }} onReceive={(member) => { setSelectedMemberId(member.id); setPaymentAmount(member.creditBalance ?? 0); }} onDetails={(member) => void loadLedger(member.id)} />
           </div>
           <div className="space-y-3 md:hidden">
             {membersWithDebt.map((member) => (
@@ -391,7 +391,7 @@ export function SalesHistory() {
                         variant="outline"
                         onClick={() => {
                           setShareDebtMemberId(member.id);
-                          setDebtPhone(member.phone || "");
+                          setDebtPhone(maskPhone(member.phone));
                         }}
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -457,10 +457,7 @@ export function SalesHistory() {
                 variant="outline"
                 onClick={() => {
                   setShareReceiptSaleId(selectedSale.id);
-                  setReceiptPhone(
-                    members.find((member) => member.id === selectedSale.memberId)?.phone ||
-                      ""
-                  );
+                  setReceiptPhone(maskPhone(members.find((member) => member.id === selectedSale.memberId)?.phone));
                 }}
               >
                 <MessageSquare className="h-4 w-4" /> Enviar via WhatsApp
@@ -499,7 +496,7 @@ export function SalesHistory() {
               </p>
               <div className="space-y-2">
                 <Label>Número do WhatsApp</Label>
-                <Input value={receiptPhone} onChange={(event) => setReceiptPhone(event.target.value)} placeholder="(11) 99999-9999" type="tel" />
+                <Input value={receiptPhone} onChange={(event) => setReceiptPhone(maskPhone(event.target.value))} placeholder="(11) 99999-9999" type="tel" inputMode="tel" maxLength={15} />
               </div>
               <Button className="w-full gap-2" onClick={handleShareReceipt}>
                 <MessageSquare className="h-4 w-4" /> Enviar Comprovante
@@ -519,7 +516,7 @@ export function SalesHistory() {
               </p>
               <div className="space-y-2">
                 <Label>Número do WhatsApp</Label>
-                <Input value={debtPhone} onChange={(event) => setDebtPhone(event.target.value)} placeholder="(11) 99999-9999" type="tel" />
+                <Input value={debtPhone} onChange={(event) => setDebtPhone(maskPhone(event.target.value))} placeholder="(11) 99999-9999" type="tel" inputMode="tel" maxLength={15} />
               </div>
               <Button className="w-full gap-2" onClick={handleShareDebt}>
                 <MessageSquare className="h-4 w-4" /> Enviar Cobrança

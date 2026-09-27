@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGlobalClient, getTenantClient } from '@/lib/prisma-factory';
 import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
 import { generateId } from '@/lib/id';
+import { notifyPendingMemberRegistration } from '@/lib/server/notification-service';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
     now,
     null
   );
+
+  try {
+    await notifyPendingMemberRegistration(prisma, databaseKey, {
+      id: memberId,
+      name: normalized.name,
+    });
+  } catch (error) {
+    // A criação do cadastro não deve falhar caso Push/SSE esteja indisponível.
+    console.warn('[public-register] notificação de aprovação ignorada:', error instanceof Error ? error.message : String(error));
+  }
 
   return NextResponse.json(
     {

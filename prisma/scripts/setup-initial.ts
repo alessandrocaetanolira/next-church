@@ -21,6 +21,9 @@ function main() {
   run('npm', ['run', 'db:import:bible']);
   if (fs.existsSync(tenantFile)) console.log('[setup] Tenant igreja-teste já existe; provisionamento ignorado.');
   else run('npx', ['tsx', 'prisma/provision.ts']);
+  // Mantém tenants existentes alinhados com o schema sem tocar no global.db
+  // nem no bible.db. O script cria backup antes de aplicar cada migration.
+  run('npm', ['run', 'db:tenant:migrate:all']);
   run('npx', ['tsx', 'prisma/scripts/seed-initial-branding.ts']);
   console.log('[setup] Ambiente inicial pronto.');
 }

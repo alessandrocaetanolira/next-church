@@ -87,13 +87,19 @@ self.addEventListener('push', (event: Event) => {
   const title = payload.title ?? payload.titulo ?? String(data.titulo ?? 'Church App');
   const body = payload.body ?? payload.mensagem ?? String(data.mensagem ?? 'Você recebeu uma nova notificação.');
   const targetUrl = payload.url ?? String(data.url ?? data.mobileLink ?? data.webLink ?? data.link ?? '/notifications');
-  pushEvent.waitUntil(self.registration.showNotification(title, {
+  const notificationId = String(data.notificationId ?? payload.tag ?? data.type ?? 'push-notification');
+  const notifyOpenClients = self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    clients.forEach((client) => client.postMessage({ type: 'church:push-notification', notificationId }));
+  });
+  const showNotification = self.registration.showNotification(title, {
     body,
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: payload.tag ?? String(data.tipo ?? data.type ?? ''),
-    data: { ...data, url: targetUrl },
-  }));
+    vibrate: [80, 40, 80],
+    data: { ...data, url: targetUrl, notificationId },
+  } as NotificationOptions & { vibrate: number[] });
+  pushEvent.waitUntil(Promise.all([notifyOpenClients, showNotification]));
 });
 
 self.addEventListener('notificationclick', (event: Event) => {

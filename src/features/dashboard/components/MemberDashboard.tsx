@@ -53,7 +53,9 @@ import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sa
 import { generateId } from '@/lib/id';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
 import { getEngagementProfile, updateEngagementProfile } from '@/services/engagement/engagement-api';
+import type { EngagementProfile } from '@/services/engagement/engagement-api';
 import { createMemberSale } from '@/services/canteen/member-sales-api';
+import { useBibleReadingStore } from '@/features/bible/store';
 
 export function MemberDashboard() {
   const router = useRouter();
@@ -62,6 +64,12 @@ export function MemberDashboard() {
   const tenantId = user?.tenantId ?? '';
   const canBrowseCanteen = hasAnyActionPermission(user, 'canteen', ['view', 'catalog', 'order']);
   const canOrder = hasActionPermission(user, 'canteen', 'order');
+  const canPlayGames = hasActionPermission(user, 'games', 'view');
+  const canReadBible = hasActionPermission(user, 'bible', 'view');
+  const canViewFeed = hasActionPermission(user, 'feed', 'view');
+  const canViewGroups = hasAnyActionPermission(user, 'groups', ['view', 'request']);
+  const setBibleBook = useBibleReadingStore((state) => state.setBook);
+  const setBibleChapter = useBibleReadingStore((state) => state.setChapter);
   const products = useProducts(canBrowseCanteen);
   const { notifications } = useNotificationCenter();
 
@@ -70,6 +78,7 @@ export function MemberDashboard() {
   const [streak, setStreak] = useState(() => getDevotionalStreak());
   const [points, setPoints] = useState(() => getTotalPoints());
   const [rank, setRank] = useState<number | null>(null);
+  const [leaderboard, setLeaderboard] = useState<NonNullable<EngagementProfile['leaderboard']>>([]);
   const [challengeDone, setChallengeDone] = useState(false);
   const [devotionalRead, setDevotionalRead] = useState(() => hasReadDevotionalToday());
   const [orderOpen, setOrderOpen] = useState(false);
@@ -129,12 +138,14 @@ export function MemberDashboard() {
         setStreak(Number(data.devotionalStreak) || 0);
         setPoints(Number(data.points) || 0);
         setRank(typeof data.rank === 'number' ? data.rank : null);
+        setLeaderboard(data.leaderboard ?? []);
         setDevotionalRead(Boolean(data.devotionalReadToday));
         setChallengeDone(Array.isArray(data.completedChallengeIds) && data.completedChallengeIds.includes(devotional.id));
       } catch {
         setStreak(getDevotionalStreak());
         setPoints(getTotalPoints());
         setRank(null);
+        setLeaderboard([]);
         setDevotionalRead(hasReadDevotionalToday());
       }
     };
@@ -183,6 +194,7 @@ export function MemberDashboard() {
         setStreak(Number(data.devotionalStreak) || 0);
         setPoints(Number(data.points) || 0);
         setRank(typeof data.rank === 'number' ? data.rank : null);
+        setLeaderboard(data.leaderboard ?? []);
         setDevotionalRead(Boolean(data.devotionalReadToday));
       } catch {
         const newStreak = markDevotionalRead();
@@ -367,6 +379,12 @@ export function MemberDashboard() {
     }
   };
 
+  const openDevotionalVerse = () => {
+    setBibleBook(devotional.bookAbbrev);
+    setBibleChapter(devotional.chapter);
+    router.push(`/bible?book=${encodeURIComponent(devotional.bookAbbrev)}&chapter=${devotional.chapter}&verse=${devotional.verseNumber}`);
+  };
+
   if (!devotional) return <div>Carregando...</div>;
 
   return (
@@ -388,6 +406,26 @@ export function MemberDashboard() {
         </div>
       </Card>
 
+      <Card className="animate__animated animate__fadeIn border-border">
+        <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-warning" />
+            <h3 className="text-sm font-semibold">Ranking da igreja</h3>
+          </div>
+          <span className="text-[10px] text-muted-foreground">Desafios + jogos</span>
+        </div>
+        <div className="space-y-2 p-3 sm:p-4">
+          {leaderboard.slice(0, 5).map((member, index) => (
+            <div key={member.memberId} className={`flex items-center gap-2 rounded-lg px-2.5 py-2 ${member.userEmail === user?.email ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-muted/40'}`}>
+              <span className="w-5 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium">{member.memberName}</span>
+              <Badge variant={index < 3 ? 'default' : 'secondary'} className="text-[10px]">{member.points} pts</Badge>
+            </div>
+          ))}
+          {leaderboard.length === 0 ? <p className="py-2 text-center text-xs text-muted-foreground">Nenhum membro aprovado no ranking.</p> : null}
+        </div>
+      </Card>
+
       {/* Devotional Card */}
       <Card className="animate__animated animate__zoomIn overflow-hidden border-border">
           <div className="flex items-center justify-between bg-primary/5 p-3 sm:p-4">
@@ -406,7 +444,12 @@ export function MemberDashboard() {
           <blockquote className="border-l-4 border-primary pl-3 italic text-sm text-foreground/90">
             "{devotional.verse}"
           </blockquote>
-          <p className="text-xs font-semibold text-primary">{devotional.reference}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-primary">{devotional.reference}</p>
+            {canReadBible ? <Button type="button" variant="link" size="sm" className="h-auto gap-1 p-0 text-xs" onClick={openDevotionalVerse}>
+              <BookOpen className="h-3.5 w-3.5" /> Ler agora
+            </Button> : null}
+          </div>
           
           {!devotionalRead ? (
             <>
@@ -453,26 +496,26 @@ export function MemberDashboard() {
           <ShoppingBag className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Fazer Pedido</span>
         </Button> : null}
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/quiz')}>
+        {canPlayGames ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/quiz')}>
           <Trophy className="h-6 w-6 text-warning" />
           <span className="text-xs font-medium">Quiz Bíblico</span>
-        </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/jogos-novos')}>
+        </Button> : null}
+        {canPlayGames ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/jogos-novos')}>
           <Gamepad2 className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Jogos</span>
-        </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/bible')}>
+        </Button> : null}
+        {canReadBible ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/bible')}>
           <BookOpen className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Ler Bíblia</span>
-        </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/feed')}>
+        </Button> : null}
+        {canViewFeed ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/feed')}>
           <MessageCircle className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Comunidade</span>
-        </Button>
-        <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/groups?type=team')}>
+        </Button> : null}
+        {canViewGroups ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/groups?type=team')}>
           <UserPlus className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Entrar em Grupo</span>
-        </Button>
+        </Button> : null}
       </div>
 
       {canOrder ? <Drawer open={orderOpen} onOpenChange={(open) => {

@@ -316,6 +316,22 @@ model EngagementProfile {
   deletedAt              DateTime?
 }
 
+model GameScore {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String
+  gameId      String
+  score       Int
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([userId])
+  @@index([gameId])
+  @@index([completedAt])
+}
+
 model CanteenSettings {
   id        String   @id
   isOpen    Boolean  @default(false)

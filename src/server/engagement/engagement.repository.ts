@@ -19,5 +19,40 @@ export class EngagementRepository {
     await this.prisma.$executeRawUnsafe(`UPDATE "EngagementProfile" SET devotionalStreak = ?, devotionalLastDate = ?, completedChallengeIds = ?, updatedAt = ? WHERE id = ?`, devotionalStreak, devotionalLastDate, JSON.stringify(completedChallengeIds), new Date().toISOString(), id);
   }
 
-  listScores() { return this.prisma.quizAttempt.findMany({ where: { deletedAt: null }, select: { userId: true, score: true } }); }
+  listQuizScores() { return this.prisma.quizAttempt.findMany({ where: { deletedAt: null }, select: { userId: true, score: true } }); }
+
+  listGameScores() {
+    return this.prisma.$queryRawUnsafe<Array<{ userId: string; score: number }>>(
+      `SELECT userId, score FROM "GameScore" WHERE deletedAt IS NULL`,
+    );
+  }
+
+  listApprovedMembers() {
+    return this.prisma.$queryRawUnsafe<Array<{ memberId: string; memberName: string; memberEmail: string; userEmail: string }>>(
+      `
+        SELECT m.id AS memberId, m.name AS memberName, m.email AS memberEmail,
+               COALESCE(u.email, m.email) AS userEmail
+        FROM "Member" m
+        LEFT JOIN "User" u ON u.linkedMemberId = m.id AND u.active = 1 AND u.deletedAt IS NULL
+        WHERE m.approved = 1 AND m.active = 1 AND m.deletedAt IS NULL
+        ORDER BY m.name COLLATE NOCASE ASC
+      `,
+    );
+  }
+
+  listEngagementProfiles() {
+    return this.prisma.$queryRawUnsafe<Array<{ userEmail: string; completedChallengeIds: string }>>(
+      `SELECT userEmail, completedChallengeIds FROM "EngagementProfile" WHERE deletedAt IS NULL`,
+    );
+  }
+
+  async createGameScore(data: { userId: string; userName: string; gameId: string; score: number; completedAt: Date }) {
+    const id = generateId();
+    const now = new Date().toISOString();
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "GameScore" (id, userId, userName, gameId, score, completedAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, data.userId, data.userName, data.gameId, data.score, data.completedAt.toISOString(), now, now,
+    );
+    return { id, ...data };
+  }
 }

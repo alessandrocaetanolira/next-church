@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ArrowLeft, Camera, Save } from 'lucide-react';
+import { Camera, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageShell, LoadingState } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getProfile, updateProfile, uploadProfileAvatar, type UserProfile } from '@/services/profile/profile-api';
+import { maskPhone } from '@/lib/utils';
 
 type ProfileForm = Pick<UserProfile, 'name' | 'phone' | 'birthDate' | 'aboutMe' | 'maritalStatus'>;
 
@@ -30,7 +30,6 @@ function readDataUrl(file: File) {
 }
 
 export default function UserProfilePage() {
-  const router = useRouter();
   const { update: updateSession } = useSession();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>({ name: '', phone: '', birthDate: '', aboutMe: '', maritalStatus: 'single' });
@@ -43,7 +42,7 @@ export default function UserProfilePage() {
     void getProfile()
       .then((value) => {
         setProfile(value);
-        setForm({ name: value.name, phone: value.phone ?? '', birthDate: value.birthDate ? value.birthDate.slice(0, 10) : '', aboutMe: value.aboutMe ?? '', maritalStatus: value.maritalStatus || 'single' });
+        setForm({ name: value.name, phone: maskPhone(value.phone), birthDate: value.birthDate ? value.birthDate.slice(0, 10) : '', aboutMe: value.aboutMe ?? '', maritalStatus: value.maritalStatus || 'single' });
         setAvatarPreview(value.avatarUrl ?? null);
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : 'Não foi possível carregar seu perfil.'))
@@ -96,16 +95,6 @@ export default function UserProfilePage() {
 
   return (
     <PageShell size="narrow">
-      <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Perfil do usuário</h1>
-          <p className="text-sm text-muted-foreground">Atualize suas informações pessoais e sua foto.</p>
-        </div>
-        <Button type="button" variant="ghost" className="-ml-2 self-start sm:ml-0 sm:self-auto" onClick={() => router.push('/minha-conta')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />Voltar para minha conta
-        </Button>
-      </div>
-
       <form onSubmit={save} className="space-y-5">
         <div className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 sm:flex-row">
           <Avatar className="h-24 w-24 border border-border">
@@ -114,7 +103,7 @@ export default function UserProfilePage() {
           </Avatar>
           <div className="text-center sm:text-left">
             <p className="font-medium">Foto do perfil</p>
-            <p className="mt-1 text-xs text-muted-foreground">A imagem será convertida automaticamente para WebP.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Sua foto ficará visível para outros membros da igreja.</p>
             <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline">
               <Camera className="h-4 w-4" />Alterar foto
               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -124,7 +113,7 @@ export default function UserProfilePage() {
 
         <div className="space-y-2"><Label htmlFor="profile-name">Nome</Label><Input id="profile-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></div>
         <div className="space-y-2"><Label>E-mail</Label><Input value={profile.email} disabled /><p className="text-xs text-muted-foreground">O e-mail de acesso não pode ser alterado nesta tela.</p></div>
-        <div className="space-y-2"><Label htmlFor="profile-phone">Telefone</Label><Input id="profile-phone" value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></div>
+        <div className="space-y-2"><Label htmlFor="profile-phone">Telefone</Label><Input id="profile-phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={15} value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="(00) 00000-0000" /></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="profile-birth-date">Nascimento</Label><Input id="profile-birth-date" type="date" value={form.birthDate ?? ''} onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))} /></div>
           <div className="space-y-2"><Label>Estado civil</Label><Select value={form.maritalStatus} onValueChange={(value) => setForm((current) => ({ ...current, maritalStatus: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent></Select></div>

@@ -170,9 +170,9 @@
     --info-foreground: 0 0% 100%;
     --info-light: 199 89% 12%;
 
-    /* Bordas discretas, alinhadas aos cards do dashboard no tema escuro. */
-    --border: 216 24% 13%;
-    --input: 216 24% 13%;
+    /* Bordas sutis, alinhadas à superfície dos cards do dashboard. */
+    --border: 224 30% 10%;
+    --input: 224 30% 10%;
     --ring: 221 83% 53%;
 
     --sidebar-background: 224 71% 6%;
@@ -181,7 +181,7 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 47% 11%;
     --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 216 24% 13%;
+    --sidebar-border: 224 30% 10%;
     --sidebar-ring: 221 83% 53%;
   }
 

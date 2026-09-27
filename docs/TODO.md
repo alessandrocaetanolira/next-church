@@ -5,13 +5,13 @@ detalhamento técnico; este arquivo contém apenas o estado e a ordem de execuç
 
 ## Próximo foco
 
-As Prioridades 1, 2 e 3 estão concluídas. A próxima etapa é a Prioridade 4,
-dedicada à validação do fluxo offline-first em dispositivo real, isolamento do
-cache por tenant/usuário e sincronização resiliente.
+As Prioridades 1, 2 e 3 estão concluídas. A próxima etapa é validar o fluxo
+offline-first em dispositivos reais, manter o branding dinâmico isolado por tenant
+e concluir o módulo independente de desafios online.
 
 ## Estado atual
 
-- [x] Next.js 16 + Turbopack + TypeScript.
+- [x] Next.js 16 + Webpack oficial + TypeScript; Turbopack permanece em avaliação.
 - [x] Prisma separado em global, tenant e Bíblia compartilhada.
 - [x] Arquitetura Route → Controller → Service → Repository aplicada aos principais módulos.
 - [x] Cantina com produtos, PDV, preparo, pedidos, fiado, pagamentos e notificações.
@@ -19,7 +19,14 @@ cache por tenant/usuário e sincronização resiliente.
 - [x] PWA com Serwist, manifest, fallback `/offline` e precache gerado no build.
 - [x] Bíblia com Dexie, favoritos, anotações e download opcional.
 - [x] Notificações internas, SSE e Web Push.
+- [x] Beep moderno e vibração para eventos recebidos em primeiro plano, com vibração
+      nativa no Web Push quando suportada pelo dispositivo.
 - [x] Branding por tenant, cores, logos e configuração do PWA.
+- [x] Manifest, ícones e tela de entrada PWA dinâmicos por tenant.
+- [x] Perfil do próprio usuário com avatar WebP e atualização de dados pessoais.
+- [x] Permissões padrão para novos membros aprovados, incluindo Feed e Bíblia.
+- [x] Ranking geral da igreja agregando devocional, quiz e pontuações persistidas de jogos.
+- [x] Link do devocional para abrir diretamente livro, capítulo e verso na Bíblia.
 - [ ] E-mail transacional ainda não implementado.
 
 ## Prioridade 1 — Estabilização
@@ -92,6 +99,7 @@ cache por tenant/usuário e sincronização resiliente.
 - [x] Tratar sessão expirada e retry manual de falha parcial no indicador de sincronização.
 - [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
 - [ ] Validar branding e manifest sem mistura entre tenants.
+- [ ] Confirmar instalação PWA em Android real, incluindo ícone e manifest do tenant.
 
 ## Prioridade 5 — Cantina
 
@@ -121,12 +129,15 @@ cache por tenant/usuário e sincronização resiliente.
 
 - [x] Broker SSE, persistência interna e Web Push.
 - [x] Eventos compartilhados para Cantina e demais módulos principais.
+- [x] Reproduzir beep e vibração em notificações SSE e Push recebidas com o app aberto.
 - [ ] Adicionar testes para remetente, entrega e eventos de crédito.
 - [ ] Implementar e-mail transacional com provider, templates, fila, retry e idempotência.
 
 ## Prioridade 8 — Módulos de baixa prioridade
 
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
+- [x] Criar persistência inicial de pontuação de jogos e integrar o ranking ao perfil de engajamento.
+- [ ] Integrar todos os jogos solo ao endpoint de pontuação com `clientRunId`/idempotência.
 - [ ] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
 - [ ] Criar desafios entre membros nos jogos, incluindo convite, aceite/recusa, partida em dupla e resultado persistido.
 - [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.

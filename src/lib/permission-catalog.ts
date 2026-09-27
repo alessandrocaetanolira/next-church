@@ -22,6 +22,16 @@ export type PermissionModule = typeof PERMISSION_MODULES[number];
 
 export type PermissionKey = `${PermissionModule}:${PermissionAction}`;
 
+/** Acesso básico concedido a um membro após a aprovação do cadastro. */
+export const DEFAULT_MEMBER_PERMISSIONS = [
+  'feed:view',
+  'bible:view',
+  'games:view',
+  'groups:view',
+  'groups:request',
+  'notifications:view',
+] as const;
+
 export const PERMISSION_CATALOG: Record<PermissionModule, readonly PermissionAction[]> = {
   members: ['view', 'create', 'update', 'delete', 'approve', 'manage_access', 'export'],
   groups: ['view', 'create', 'update', 'delete', 'manage_access', 'request'],

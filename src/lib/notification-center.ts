@@ -1,6 +1,7 @@
 'use client';
 
 import { showBrowserNotification, getNotificationPermission } from '@/lib/pushNotifications';
+import { playNotificationBeep } from '@/lib/notification-sound';
 import {
   listNotifications,
   markAllNotificationsReadRequest,
@@ -17,41 +18,6 @@ type Listener = () => void;
 const listeners = new Set<Listener>();
 let cache: NotificationRecord[] = [];
 let initialized = false;
-
-function playNotificationSound() {
-  if (typeof window === 'undefined') return;
-
-  try {
-    const AudioContextCtor = window.AudioContext || (window as typeof window & {
-      webkitAudioContext?: typeof AudioContext;
-    }).webkitAudioContext;
-
-    if (!AudioContextCtor) return;
-
-    const ctx = new AudioContextCtor();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.08);
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.16);
-
-    gainNode.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.32);
-
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.32);
-
-    void ctx.close().catch(() => undefined);
-  } catch {
-    // Áudio é opcional; falha silenciosamente.
-  }
-}
 
 function emit() {
   listeners.forEach((listener) => listener());
@@ -95,7 +61,7 @@ export function upsertNotification(notification: NotificationRecord, options?: {
 
   cache = sortNotifications([notification, ...cache]).slice(0, 100);
   emit();
-  playNotificationSound();
+  playNotificationBeep(notification.id);
 
   if (options?.toast !== false && document.hidden && getNotificationPermission() === 'granted') {
     showBrowserNotification(notification.title, {

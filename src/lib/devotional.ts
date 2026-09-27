@@ -4,6 +4,9 @@ export interface Devotional {
   id: number;
   verse: string;
   reference: string;
+  bookAbbrev: string;
+  chapter: number;
+  verseNumber: number;
   reflection: string;
   challenge: string;
   challengePoints?: number; // For future gamification
@@ -14,6 +17,7 @@ const devotionals: Devotional[] = [
     id: 1,
     verse: "Porque Deus tanto amou o mundo que deu o seu Filho Unigênito, para que todo o que nele crer não pereça, mas tenha a vida eterna.",
     reference: "João 3:16",
+    bookAbbrev: "jo", chapter: 3, verseNumber: 16,
     reflection: "O amor de Deus é incondicional e eterno. Ele nos amou primeiro, antes mesmo de merecermos.",
     challenge: "Demonstre amor a alguém que você normalmente não demonstraria hoje.",
     challengePoints: 10,
@@ -22,6 +26,7 @@ const devotionals: Devotional[] = [
     id: 2,
     verse: "Tudo posso naquele que me fortalece.",
     reference: "Filipenses 4:13",
+    bookAbbrev: "fp", chapter: 4, verseNumber: 13,
     reflection: "Nossa força não vem de nós mesmos, mas de Cristo que habita em nós.",
     challenge: "Enfrente um desafio que você vem adiando, confiando em Deus.",
     challengePoints: 15,
@@ -30,6 +35,7 @@ const devotionals: Devotional[] = [
     id: 3,
     verse: "O Senhor é o meu pastor; nada me faltará.",
     reference: "Salmos 23:1",
+    bookAbbrev: "sl", chapter: 23, verseNumber: 1,
     reflection: "Quando confiamos no Senhor como nosso pastor, encontramos provisão e paz.",
     challenge: "Liste 5 coisas pelas quais você é grato hoje e compartilhe com alguém.",
     challengePoints: 10,
@@ -38,6 +44,7 @@ const devotionals: Devotional[] = [
     id: 4,
     verse: "Confie no Senhor de todo o seu coração e não se apoie em seu próprio entendimento.",
     reference: "Provérbios 3:5",
+    bookAbbrev: "pv", chapter: 3, verseNumber: 5,
     reflection: "Deus vê o quadro completo. Confiar Nele é a decisão mais sábia que podemos tomar.",
     challenge: "Entregue uma preocupação a Deus em oração e não a retome hoje.",
     challengePoints: 20,
@@ -46,6 +53,7 @@ const devotionals: Devotional[] = [
     id: 5,
     verse: "Alegrem-se sempre no Senhor. Novamente direi: alegrem-se!",
     reference: "Filipenses 4:4",
+    bookAbbrev: "fp", chapter: 4, verseNumber: 4,
     reflection: "A alegria no Senhor não depende das circunstâncias, mas da nossa fé.",
     challenge: "Espalhe alegria: sorria para 10 pessoas hoje e diga algo encorajador.",
     challengePoints: 10,
@@ -54,6 +62,7 @@ const devotionals: Devotional[] = [
     id: 6,
     verse: "Sejam fortes e corajosos. Não tenham medo nem fiquem apavorados, pois o Senhor, o seu Deus, vai com vocês; nunca os deixará, nunca os abandonará.",
     reference: "Deuteronômio 31:6",
+    bookAbbrev: "dt", chapter: 31, verseNumber: 6,
     reflection: "Coragem não é ausência de medo, mas a certeza de que Deus está conosco.",
     challenge: "Converse com alguém que está passando por dificuldades e ofereça seu apoio.",
     challengePoints: 15,
@@ -62,6 +71,7 @@ const devotionals: Devotional[] = [
     id: 7,
     verse: "E sabemos que todas as coisas cooperam para o bem daqueles que amam a Deus.",
     reference: "Romanos 8:28",
+    bookAbbrev: "rm", chapter: 8, verseNumber: 28,
     reflection: "Mesmo nos momentos difíceis, Deus está trabalhando a nosso favor.",
     challenge: "Relembre uma dificuldade passada e identifique como Deus agiu nela.",
     challengePoints: 10,
@@ -70,6 +80,7 @@ const devotionals: Devotional[] = [
     id: 8,
     verse: "Mas os que esperam no Senhor renovarão as suas forças; subirão com asas como águias.",
     reference: "Isaías 40:31",
+    bookAbbrev: "is", chapter: 40, verseNumber: 31,
     reflection: "Esperar em Deus não é inatividade — é uma postura de fé ativa.",
     challenge: "Dedique 15 minutos hoje apenas para orar e ouvir a voz de Deus.",
     challengePoints: 20,
@@ -78,6 +89,7 @@ const devotionals: Devotional[] = [
     id: 9,
     verse: "Lâmpada para os meus pés é a tua palavra, e luz para o meu caminho.",
     reference: "Salmos 119:105",
+    bookAbbrev: "sl", chapter: 119, verseNumber: 105,
     reflection: "A Palavra de Deus ilumina cada passo, mesmo quando o caminho parece escuro.",
     challenge: "Leia um capítulo da Bíblia que você nunca leu antes.",
     challengePoints: 15,
@@ -86,6 +98,7 @@ const devotionals: Devotional[] = [
     id: 10,
     verse: "Portanto, não se preocupem com o amanhã, pois o amanhã trará suas próprias preocupações.",
     reference: "Mateus 6:34",
+    bookAbbrev: "mt", chapter: 6, verseNumber: 34,
     reflection: "Viver o presente com fé é a melhor forma de honrar a Deus.",
     challenge: "Pratique a presença de Deus: a cada hora, pause e agradeça.",
     challengePoints: 10,
@@ -94,6 +107,7 @@ const devotionals: Devotional[] = [
     id: 11,
     verse: "Bem-aventurados os pacificadores, pois serão chamados filhos de Deus.",
     reference: "Mateus 5:9",
+    bookAbbrev: "mt", chapter: 5, verseNumber: 9,
     reflection: "Ser pacificador é uma marca dos filhos de Deus no mundo.",
     challenge: "Resolva ou ajude a resolver um conflito hoje com amor e sabedoria.",
     challengePoints: 20,
@@ -102,6 +116,7 @@ const devotionals: Devotional[] = [
     id: 12,
     verse: "Deem graças em todas as circunstâncias, pois esta é a vontade de Deus para vocês.",
     reference: "1 Tessalonicenses 5:18",
+    bookAbbrev: "1ts", chapter: 5, verseNumber: 18,
     reflection: "Gratidão transforma nossa perspectiva e nos aproxima de Deus.",
     challenge: "Escreva uma carta de agradecimento para alguém que impactou sua vida.",
     challengePoints: 15,
@@ -110,6 +125,7 @@ const devotionals: Devotional[] = [
     id: 13,
     verse: "Antes de tudo, porém, tenham amor intenso uns pelos outros, porque o amor cobre uma multidão de pecados.",
     reference: "1 Pedro 4:8",
+    bookAbbrev: "1pe", chapter: 4, verseNumber: 8,
     reflection: "O amor é a marca mais forte do cristão e cobre falhas.",
     challenge: "Perdoe alguém que te magoou e ore por essa pessoa.",
     challengePoints: 25,
@@ -118,6 +134,7 @@ const devotionals: Devotional[] = [
     id: 14,
     verse: "Não fui eu que ordenei a você? Seja forte e corajoso! Não se apavore, nem se desanime.",
     reference: "Josué 1:9",
+    bookAbbrev: "js", chapter: 1, verseNumber: 9,
     reflection: "Deus nos ordena coragem porque Ele já garantiu a vitória.",
     challenge: "Comece algo novo que você vem querendo fazer há tempo.",
     challengePoints: 15,

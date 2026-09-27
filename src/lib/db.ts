@@ -334,9 +334,13 @@ export const db = new ChurchDB();
  * Alimenta o banco local com questões de quiz se estiver vazio.
  */
 export async function seedQuizQuestions() {
-  const count = await db.quizQuestions.count();
-  if (count > 0) return;
-  await db.quizQuestions.bulkAdd(initialQuizQuestions);
+  const existing = await db.quizQuestions.toArray();
+  const knownQuestions = new Set(existing.map((item) => item.question));
+  const missingQuestions = initialQuizQuestions.filter((item) => !knownQuestions.has(item.question));
+
+  // O seed também precisa atualizar instalações existentes; checar apenas
+  // count deixava usuários antigos presos ao primeiro conjunto de perguntas.
+  if (missingQuestions.length > 0) await db.quizQuestions.bulkAdd(missingQuestions);
 }
 
 /**

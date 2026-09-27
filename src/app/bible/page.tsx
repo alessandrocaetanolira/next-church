@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -27,6 +28,10 @@ export default function BiblePage() {
   const user = session?.user;
   const userEmail = user?.email;
   const tenantId = user?.tenantId ?? '';
+  const searchParams = useSearchParams();
+  const requestedBook = searchParams.get('book');
+  const requestedChapter = Number(searchParams.get('chapter'));
+  const requestedVerse = Number(searchParams.get('verse'));
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, setTenant, setTranslation, setBook, setChapter: setSelectedChapter } = useBibleReadingStore();
@@ -98,6 +103,16 @@ export default function BiblePage() {
     setPageTitle('Bíblia');
     fetchBooks();
   }, [fetchBooks, setPageTitle]);
+
+  useEffect(() => {
+    if (!requestedBook || !books.length) return;
+    const targetBook = books.find((book) => book.abbrev === requestedBook);
+    if (!targetBook) return;
+    setSelectedBook(targetBook);
+    setBook(targetBook.abbrev);
+    if (Number.isInteger(requestedChapter) && requestedChapter > 0) setSelectedChapter(requestedChapter);
+    if (Number.isInteger(requestedVerse) && requestedVerse > 0) setSelectedVerses([requestedVerse - 1]);
+  }, [books, requestedBook, requestedChapter, requestedVerse, setBook, setSelectedChapter]);
 
   useEffect(() => {
     if (selectedBook) {

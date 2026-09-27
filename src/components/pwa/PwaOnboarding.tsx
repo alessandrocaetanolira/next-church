@@ -21,6 +21,11 @@ function isIosBrowser() {
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+function isAndroidBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
 function isStandalone() {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(display-mode: standalone)').matches
@@ -47,6 +52,7 @@ export function PwaOnboarding() {
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
 
   const ios = useMemo(() => isIosBrowser(), []);
+  const android = useMemo(() => isAndroidBrowser(), []);
   const production = process.env.NODE_ENV === 'production';
 
   useEffect(() => {
@@ -80,7 +86,7 @@ export function PwaOnboarding() {
     void navigator.serviceWorker.ready.then(() => setServiceWorkerReady(true)).catch(() => setServiceWorkerReady(false));
   }, [isAuthenticated, mounted, production]);
 
-  const canOfferInstall = production && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios);
+  const canOfferInstall = production && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios || android);
   const canOfferNotifications = production && mounted && isAuthenticated && installResolved && serviceWorkerReady && push.supported && push.permission === 'default' && !push.subscribed && !notificationsDismissed;
 
   const dismissInstall = () => {
@@ -122,7 +128,7 @@ export function PwaOnboarding() {
   return (
     <>
       <Dialog open={canOfferInstall} onOpenChange={(open) => { if (!open) dismissInstall(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Download className="h-5 w-5 text-primary" />Instalar o Church App</DialogTitle>
             <DialogDescription>Tenha acesso rápido à igreja, notificações e recursos offline.</DialogDescription>
@@ -132,19 +138,24 @@ export function PwaOnboarding() {
               <p>No iPhone ou iPad, toque em <Share className="mx-1 inline h-4 w-4 text-foreground" /> <strong className="text-foreground">Compartilhar</strong> e depois em <PlusSquare className="mx-1 inline h-4 w-4 text-foreground" /> <strong className="text-foreground">Adicionar à Tela de Início</strong>.</p>
               <p>Depois de instalado, o app poderá receber notificações neste dispositivo.</p>
             </div>
+          ) : android && !installPrompt ? (
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>Para instalar no Android, abra o menu <strong className="text-foreground">⋮</strong> do Chrome e toque em <strong className="text-foreground">Instalar app</strong> ou <strong className="text-foreground">Adicionar à tela inicial</strong>.</p>
+              <p>Se essa opção não aparecer, abra o menu do navegador depois de carregar a página completamente e confirme que está usando HTTPS.</p>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">Instale o app para abrir a igreja diretamente pela tela inicial, com uma experiência mais rápida e preparada para uso offline.</p>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={dismissInstall}>Agora não</Button>
-            <Button variant="secondary" onClick={openInApp}>Abrir no app</Button>
-            <Button onClick={() => void install()}>{ios ? 'Entendi' : 'Instalar app'}</Button>
+            <Button variant="outline" onClick={openInApp}>Abrir no app</Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => void install()}>{ios || (android && !installPrompt) ? 'Entendi' : 'Instalar app'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={canOfferNotifications} onOpenChange={(open) => { if (!open) dismissNotifications(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />Ativar notificações</DialogTitle>
             <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>

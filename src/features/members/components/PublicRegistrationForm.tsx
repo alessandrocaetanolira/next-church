@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle2, Church, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { MaritalStatus } from '@/features/members/lib/member-registration';
-import { registerPublicMember } from '@/services/auth/public-auth-api';
+import { registerPublicMember, getPublicChurchBranding, type PublicChurchBranding } from '@/services/auth/public-auth-api';
+import { AppImage } from '@/components/shared';
+import { maskPhone } from '@/lib/utils';
 
 interface RegistrationState {
   name: string;
@@ -51,6 +53,25 @@ export function PublicRegistrationForm() {
   const [form, setForm] = useState<RegistrationState>(initialState);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState<PublicChurchBranding | null>(null);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    if (!churchSlug) {
+      setBranding(null);
+      return;
+    }
+    let active = true;
+    void getPublicChurchBranding(churchSlug).then((value) => {
+      if (active) {
+        setBranding(value);
+        setLogoFailed(false);
+      }
+    }).catch(() => {
+      if (active) setBranding(null);
+    });
+    return () => { active = false; };
+  }, [churchSlug]);
 
   const updateField = <K extends keyof RegistrationState>(key: K, value: RegistrationState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -120,8 +141,25 @@ export function PublicRegistrationForm() {
   return (
     <div className="mx-auto w-full max-w-lg min-w-0 space-y-5">
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-          <Church className="h-8 w-8" />
+        <div className="mx-auto mb-3 flex h-16 w-56 items-center justify-center">
+          {branding?.logoLightUrl || branding?.logoUrl ? (
+            <AppImage
+              src={!logoFailed ? (branding.logoLightUrl || branding.logoUrl || '') : (branding.mobileIconUrl || branding.icon192Url || '/pwa-192x192.png')}
+              alt={branding.name || 'Logo da igreja'}
+              width={224}
+              height={80}
+              className={logoFailed ? 'h-14 w-14 rounded-xl object-contain' : 'h-full w-full object-contain'}
+              onError={() => setLogoFailed(true)}
+            />
+          ) : (
+            <AppImage
+              src={branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png'}
+              alt={branding?.name || 'Ícone da igreja'}
+              width={64}
+              height={64}
+              className="h-14 w-14 rounded-xl object-contain"
+            />
+          )}
         </div>
         <h1 className="text-xl font-bold">Cadastro de Membro</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -147,7 +185,7 @@ export function PublicRegistrationForm() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Telefone *</Label>
-                <Input id="phone" required value={form.phone} onChange={(event) => updateField('phone', event.target.value)} />
+                <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={15} required value={form.phone} onChange={(event) => updateField('phone', maskPhone(event.target.value))} placeholder="(00) 00000-0000" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="birthDate">Nascimento</Label>
