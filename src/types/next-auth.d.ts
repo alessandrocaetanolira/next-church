@@ -8,6 +8,7 @@ declare module "next-auth" {
       tenantId: string;
       tenantSlug: string;
       id: string;
+      image?: string | null;
       linkedMemberId?: string | null;
       teamIds: string[];
       version: number;
@@ -23,6 +24,7 @@ declare module "next-auth" {
     tenantId: string;
     tenantSlug: string;
     id: string;
+    image?: string | null;
     linkedMemberId?: string | null;
     teamIds: string[];
     version: number;
@@ -34,6 +36,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    picture?: string | null;
     role: string;
     permissions: string[];
     tenantId: string;

@@ -2,11 +2,12 @@
 
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, LocalTeam } from '@/lib/db';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { filterByTenant } from '@/lib/offline-tenant';
+import { apiRequest } from '@/services/api/client';
 
 export function useTeams() {
   const { user } = useAuth();
@@ -22,6 +23,29 @@ export function useTeams() {
     },
     [tenantId]
   );
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    let cancelled = false;
+    void apiRequest<LocalTeam[]>('/api/schedules/teams', { cache: 'no-store' })
+      .then(async (payload) => {
+        if (cancelled || !Array.isArray(payload)) return;
+        await db.teams.bulkPut(payload.map((team) => ({
+          ...team,
+          tenantId,
+          deletedAt: team.deletedAt ?? null,
+          _status: 'synced' as const,
+        })));
+      })
+      .catch(() => {
+        // O cache local continua disponível quando o usuário está offline.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
 
   const addTeam = useCallback(async (team: Omit<LocalTeam, 'id' | 'createdAt' | 'updatedAt'>) => {
     const id = generateId();

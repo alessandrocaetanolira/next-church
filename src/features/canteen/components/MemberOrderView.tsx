@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useProducts } from '@/features/canteen/hooks/use-products';
 import { useCartStore } from '@/features/canteen/store/useCartStore';
 import { createCanteenSale } from '@/services/canteen/sales-api';
+import { isNetworkError } from '@/services/api/client';
 import { db } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { formatCurrency } from '@/lib/utils';
@@ -32,7 +33,8 @@ export function MemberOrderView() {
       try {
         await createCanteenSale(payload);
         await db.sales.put({ ...payload, _status: 'synced' });
-      } catch {
+      } catch (error) {
+        if (!isNetworkError(error)) throw error;
         await db.sales.put({ ...payload, _status: 'pending' });
         await db.syncOutbox.add({ module: 'sales', action: 'create', data: payload, timestamp: new Date().toISOString() });
       }

@@ -175,13 +175,34 @@ export class TenantService {
    */
   static async updateTenant(
     id: string,
-    data: { name?: string, active?: boolean, plan?: string },
+    data: { name?: string, slug?: string, active?: boolean, plan?: string },
     options: { databaseDirectory?: string } = {}
   ) {
     const globalClient = getGlobalClient(options.databaseDirectory);
+    const current = await globalClient.church.findUnique({ where: { id } });
+    if (!current) throw new Error('Igreja não encontrada.');
+
+    const updateData: { name?: string; slug?: string; active?: boolean; plan?: string } = {};
+    if (data.name !== undefined) {
+      const name = data.name.trim();
+      if (!name) throw new Error('O nome da igreja é obrigatório.');
+      updateData.name = name;
+    }
+    if (data.slug !== undefined) {
+      const slug = TenantService.normalizeSlug(data.slug);
+      if (!slug) throw new Error('Slug inválido. Use letras, números e hífens.');
+      if (slug !== current.slug) {
+        const conflict = await globalClient.church.findUnique({ where: { slug } });
+        if (conflict && conflict.id !== id) throw new Error(`O slug "${slug}" já está em uso.`);
+      }
+      updateData.slug = slug;
+    }
+    if (data.active !== undefined) updateData.active = data.active;
+    if (data.plan !== undefined) updateData.plan = data.plan;
+
     return globalClient.church.update({
       where: { id },
-      data
+      data: updateData,
     });
   }
 

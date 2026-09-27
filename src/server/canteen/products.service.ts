@@ -43,7 +43,11 @@ export class CanteenProductsService {
   }
 
   async remove(id: string) {
-    await this.assertExists(id);
+    // Exclusões podem ser reenviadas pela fila offline. Se o produto já foi
+    // removido por outro dispositivo ou por uma tentativa anterior, a operação
+    // já atingiu o estado desejado e deve ser considerada bem-sucedida.
+    const product = await this.repository.findById(id);
+    if (!product) return { success: true, alreadyRemoved: true };
     await this.repository.softDelete(id);
     return { success: true };
   }

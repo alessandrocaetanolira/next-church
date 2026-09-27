@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut, Settings, UserRound } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ export function WebUserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full" aria-label="Abrir menu do usuário">
           <Avatar className="h-9 w-9">
+            {user?.image ? <AvatarImage src={user.image} alt={user.name || "Usuário"} /> : null}
             <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">{initials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -38,6 +39,10 @@ export function WebUserMenu() {
         <DropdownMenuItem onClick={() => router.push("/minha-conta")}>
           <UserRound className="mr-2 h-4 w-4" />
           Minha conta
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/minha-conta/perfil")}>
+          <UserRound className="mr-2 h-4 w-4" />
+          Perfil do usuário
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push("/settings")}>
           <Settings className="mr-2 h-4 w-4" />

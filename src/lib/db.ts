@@ -126,6 +126,7 @@ export interface QuizAttempt {
   tenantId?: string;
   userId: string;
   userName: string;
+  userAvatar?: string | null;
   score: number;
   totalQuestions: number;
   correctAnswers: number;
@@ -163,6 +164,7 @@ export interface FeedComment {
   parentId?: string;
   userId: string;
   userName: string;
+  userAvatar?: string | null;
   content: string;
   createdAt: string;
 }

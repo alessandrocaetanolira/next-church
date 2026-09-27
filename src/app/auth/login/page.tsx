@@ -2,7 +2,7 @@
  * app/auth/login/page.tsx
  * 
  * Página de Login (Next.js App Router).
- * Centraliza o LoginForm para autenticação multi-tenant.
+ * Login universal: tenant com slug ou administrador global sem slug.
  */
 
 import { LoginForm } from "@/features/auth/components/LoginForm";

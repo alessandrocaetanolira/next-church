@@ -13,13 +13,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ThemeVariant } from "@/components/providers/AppSettingsProvider";
-import { getPublicChurchBranding } from '@/services/auth/public-auth-api';
+import { getPublicChurchBranding, type PublicChurchBranding } from '@/services/auth/public-auth-api';
 import { AppImage } from '@/components/shared';
 
 /**
@@ -27,27 +28,56 @@ import { AppImage } from '@/components/shared';
  * 
  * Gerencia o estado dos campos de login e lida com a autenticação via NextAuth.
  */
-export function LoginForm() {
+export function LoginForm({
+  initialSlug = '',
+  initialBranding = null,
+  lockTenant = false,
+  globalOnly = false,
+}: {
+  initialSlug?: string;
+  initialBranding?: PublicChurchBranding | null;
+  lockTenant?: boolean;
+  globalOnly?: boolean;
+}) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [churchSlug, setChurchSlug] = useState(searchParams.get('igreja')?.trim().toLowerCase() ?? "");
+  const [showPassword, setShowPassword] = useState(false);
+  const [churchSlug, setChurchSlug] = useState(globalOnly ? '' : (initialSlug || (searchParams.get('igreja')?.trim().toLowerCase() ?? "")));
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [branding, setBranding] = useState<{
-    name: string;
-    pwaName?: string | null;
-    logoUrl?: string | null;
-    themeVariant?: ThemeVariant;
-  } | null>(null);
+  const [branding, setBranding] = useState<PublicChurchBranding | null>(initialBranding);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const registerHref = churchSlug ? `/cadastro?igreja=${encodeURIComponent(churchSlug)}` : '/cadastro';
+
+  const rememberedTenantSlug = () => {
+    if (typeof document === 'undefined') return '';
+    const cookieSlug = document.cookie
+      .split('; ')
+      .find((entry) => entry.startsWith('church-tenant-slug='))
+      ?.split('=')[1];
+    if (cookieSlug) {
+      try { return decodeURIComponent(cookieSlug).trim().toLowerCase(); } catch { return cookieSlug.trim().toLowerCase(); }
+    }
+    try {
+      return localStorage.getItem('church-last-tenant-slug')?.trim().toLowerCase() ?? '';
+    } catch {
+      return '';
+    }
+  };
 
   useEffect(() => {
     const nextSlug = searchParams.get('igreja')?.trim().toLowerCase() ?? '';
-    if (nextSlug) {
-      setChurchSlug(nextSlug);
-    }
-  }, [searchParams]);
+    const rememberedSlug = nextSlug || rememberedTenantSlug();
+    setChurchSlug(globalOnly ? '' : lockTenant ? initialSlug.trim().toLowerCase() : rememberedSlug);
+  }, [globalOnly, initialSlug, lockTenant, searchParams]);
+
+  useEffect(() => {
+    const normalized = initialSlug.trim().toLowerCase();
+    if (!normalized) return;
+    document.cookie = `church-tenant-slug=${encodeURIComponent(normalized)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+  }, [initialSlug]);
 
   useEffect(() => {
     const normalized = churchSlug.trim().toLowerCase();
@@ -59,12 +89,7 @@ export function LoginForm() {
     const timeout = window.setTimeout(async () => {
       try {
         const payload = await getPublicChurchBranding(normalized);
-        setBranding({
-          name: payload.name,
-          pwaName: payload.pwaName ?? null,
-          logoUrl: payload.logoUrl ?? null,
-          themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? 'default',
-        });
+        setBranding(payload);
       } catch {
         setBranding(null);
       }
@@ -72,6 +97,11 @@ export function LoginForm() {
 
     return () => window.clearTimeout(timeout);
   }, [churchSlug]);
+
+  useEffect(() => {
+    setLogoFailed(false);
+    setLogoLoaded(false);
+  }, [branding?.logoUrl, branding?.logoLightUrl, branding?.logoDarkUrl, branding?.mobileIconUrl]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -102,13 +132,17 @@ export function LoginForm() {
       return;
     }
     setLoading(true);
+    const resolvedChurchSlug = (globalOnly ? '' : lockTenant ? initialSlug : churchSlug).trim().toLowerCase();
 
     try {
-      if (churchSlug.trim()) document.cookie = `church-tenant-slug=${encodeURIComponent(churchSlug.trim().toLowerCase())}; Path=/; Max-Age=31536000; SameSite=Lax`;
+      if (resolvedChurchSlug) {
+        document.cookie = `church-tenant-slug=${encodeURIComponent(resolvedChurchSlug)}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        try { localStorage.setItem('church-last-tenant-slug', resolvedChurchSlug); } catch { /* memória opcional */ }
+      }
       const result = await signIn("credentials", {
         email,
         password,
-        churchSlug,
+        churchSlug: resolvedChurchSlug,
         redirect: false,
       });
 
@@ -121,7 +155,7 @@ export function LoginForm() {
       } else {
         toast.success("Login realizado com sucesso!");
         // Forçar redirecionamento via location para garantir limpeza de estados de cache do Next.js
-        window.location.href = churchSlug.trim() ? "/" : "/admin/tenants";
+        window.location.href = resolvedChurchSlug ? "/" : "/admin/tenants";
       }
     } catch (err) {
       console.error("Erro durante o login:", err);
@@ -136,11 +170,27 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md shadow-lg border-border">
       <CardHeader className="text-center">
-        {branding?.logoUrl ? (
-          <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/30 p-2">
-            <AppImage src={branding.logoUrl} alt={branding.name} width={96} height={96} className="h-full w-full object-contain" />
-          </div>
-        ) : null}
+        <div className="relative mx-auto mb-3 flex h-24 w-56 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/30 px-4 py-3">
+          {!logoLoaded && !logoFailed && <Loader2 className="absolute h-6 w-6 animate-spin text-primary" aria-label="Carregando logo" />}
+          <AppImage
+            src={logoFailed ? (branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png') : (branding?.logoLightUrl || branding?.logoUrl || branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png')}
+            alt={branding?.name || 'Church App'}
+            width={224}
+            height={80}
+            className={`h-full w-full object-contain dark:hidden ${!logoLoaded ? 'opacity-0' : 'opacity-100'}`}
+            onLoad={() => setLogoLoaded(true)}
+            onError={() => { setLogoFailed(true); setLogoLoaded(true); }}
+          />
+          <AppImage
+            src={logoFailed ? (branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png') : (branding?.logoDarkUrl || branding?.logoUrl || branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png')}
+            alt={branding?.name || 'Church App'}
+            width={224}
+            height={80}
+            className={`hidden h-full w-full object-contain dark:block ${!logoLoaded ? 'opacity-0' : 'opacity-100'}`}
+            onLoad={() => setLogoLoaded(true)}
+            onError={() => { setLogoFailed(true); setLogoLoaded(true); }}
+          />
+        </div>
         <CardTitle className="text-3xl font-bold text-primary">{branding?.pwaName || branding?.name || 'Church App'}</CardTitle>
         <CardDescription>Acesse sua conta para continuar</CardDescription>
       </CardHeader>
@@ -148,17 +198,30 @@ export function LoginForm() {
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           {errorMessage && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorMessage}</p>}
-          <div className="space-y-2">
-            <Label htmlFor="churchSlug">Igreja (Slug) <span className="font-normal text-muted-foreground">(deixe vazio para administrador global)</span></Label>
-            <Input
-              id="churchSlug"
-              type="text"
-              value={churchSlug}
-              onChange={(e) => setChurchSlug(e.target.value.toLowerCase())}
-              placeholder="ex: igreja-central"
-              disabled={loading}
-            />
-          </div>
+          {globalOnly ? null : lockTenant ? (
+            <div className="space-y-2">
+              <Label htmlFor="tenantName">Igreja</Label>
+              <Input
+                id="tenantName"
+                value={branding?.name || churchSlug}
+                readOnly
+                aria-readonly="true"
+                className="bg-muted/40 font-medium"
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="churchSlug">Igreja (Slug) <span className="font-normal text-muted-foreground">(deixe vazio para administrador global)</span></Label>
+              <Input
+                id="churchSlug"
+                type="text"
+                value={churchSlug}
+                onChange={(e) => setChurchSlug(e.target.value.toLowerCase())}
+                placeholder="ex: igreja-central"
+                disabled={loading}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
@@ -175,15 +238,28 @@ export function LoginForm() {
 
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••"
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword((visible) => !visible)}
+                disabled={loading}
+                className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
         </CardContent>
 
@@ -196,7 +272,7 @@ export function LoginForm() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
           <div className="text-center text-xs text-muted-foreground">
-            <p>Informe o slug para acessar uma igreja. Sem slug, somente o administrador global pode entrar.</p>
+            <p>{globalOnly ? 'Acesso restrito ao administrador global.' : 'O acesso da igreja é definido pelo slug desta rota.'}</p>
           </div>
           <Button asChild variant="ghost" className="w-full">
             <Link href={registerHref}>Solicitar cadastro</Link>

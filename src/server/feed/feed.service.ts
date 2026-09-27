@@ -97,7 +97,7 @@ export class FeedService {
     return updated ? FeedRepository.serialize(updated) : null;
   }
 
-  async addComment(id: string, actorEmail: string, actorName: string, input: unknown) {
+  async addComment(id: string, actorEmail: string, actorName: string, actorAvatar: string | null | undefined, input: unknown) {
     const body = input && typeof input === 'object' ? input as { content?: unknown; parentId?: unknown } : {};
     const content = typeof body.content === 'string'
       ? body.content.trim()
@@ -110,7 +110,7 @@ export class FeedService {
     const existingComments = serialized.comments as FeedComment[];
     const parentExists = parentId ? existingComments.some((item) => item.id === parentId) : true;
     if (!parentExists) throw new ValidationError('Comentário de referência não encontrado.');
-    const comment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, content, createdAt: new Date().toISOString() };
+    const comment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, userAvatar: actorAvatar || null, content, createdAt: new Date().toISOString() };
     const updated = await this.repository.updateEngagement(id, serialized.likes as string[], [...existingComments, comment]);
     await notifyFeedComment(this.prisma, this.tenantId, { postId: id, parentId, actorEmail, actorName, content });
     return updated ? FeedRepository.serialize(updated) : null;

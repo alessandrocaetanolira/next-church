@@ -27,6 +27,13 @@ export function updateAdminTenantStatus(id: string, active: boolean) {
   });
 }
 
+export function updateAdminTenant(id: string, input: { name?: string; slug?: string; active?: boolean; plan?: string }) {
+  return apiRequest<AdminTenant>(`/api/admin/tenants/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
 export function getAdminTenant<T = AdminTenant>(id: string) {
   return apiRequest<T>(`/api/admin/tenants/${id}`);
 }

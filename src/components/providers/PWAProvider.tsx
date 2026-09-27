@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useSync } from '@/features/sync/hooks/use-sync';
+import { PwaOnboarding } from '@/components/pwa/PwaOnboarding';
 
 function PWASyncEffect() {
   const { performFullSync, isAuthenticated } = useSync();
@@ -33,5 +34,5 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  return <>{children}{mounted ? <PWASyncEffect /> : null}</>;
+  return <>{children}{mounted ? <PWASyncEffect /> : null}{mounted ? <PwaOnboarding /> : null}</>;
 }

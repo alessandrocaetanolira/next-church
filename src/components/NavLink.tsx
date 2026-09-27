@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CSSProperties, forwardRef, ReactNode } from "react";
+import { CSSProperties, forwardRef, MouseEventHandler, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 interface NavLinkProps {
@@ -11,14 +11,16 @@ interface NavLinkProps {
   className?: string;
   activeClassName?: string;
   end?: boolean;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
   style?: CSSProperties;
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
   ({ className, activeClassName, to, children, end, onClick, ...props }, ref) => {
     const pathname = usePathname();
-    const isActive = end ? pathname === to : pathname.startsWith(to);
+    const isActive = end || to === "/"
+      ? pathname === to
+      : pathname === to || pathname.startsWith(`${to}/`);
 
     return (
       <Link

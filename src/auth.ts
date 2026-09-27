@@ -22,7 +22,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         churchSlug: { label: "Igreja (Slug)", type: "text" },
-        platformAdmin: { label: "Platform admin", type: "text" },
       },
       /**
        * Função de autorização que valida as credenciais contra os bancos Global e Tenant.
@@ -40,29 +39,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = credentials.password as string;
         const globalClient = getGlobalClient();
 
-        if (String(credentials.platformAdmin) === 'true') {
-          const platformAdmin = await globalClient.platformAdmin.findUnique({ where: { email } });
-          if (!platformAdmin || !platformAdmin.active || !(await bcrypt.compare(password, platformAdmin.passwordHash))) {
-            return null;
-          }
-
-          return {
-            id: platformAdmin.id,
-            name: platformAdmin.name,
-            email: platformAdmin.email,
-            role: platformAdmin.role,
-            permissions: platformAdmin.permissions?.split(',').map((permission) => permission.trim()).filter(Boolean) ?? [],
-            tenantId: '',
-            tenantSlug: '',
-            linkedMemberId: null,
-            teamIds: [],
-            version: platformAdmin.version,
-            isPlatformAdmin: true,
-          };
-        }
-
-        // Sem slug, somente o administrador global pode autenticar. Isso permite
-        // usar uma única tela sem misturar contas de tenant e plataforma.
+        // Sem slug, somente o administrador global pode autenticar. O contexto
+        // global é decidido pelo servidor; nenhum sinal enviado pelo cliente
+        // concede privilégios de plataforma.
         if (!credentials?.churchSlug || !String(credentials.churchSlug).trim()) {
           const platformAdmin = await globalClient.platformAdmin.findUnique({ where: { email } });
           if (!platformAdmin || !platformAdmin.active || !(await bcrypt.compare(password, platformAdmin.passwordHash))) {
@@ -130,6 +109,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 select: { teamIds: true },
               })
             : null;
+          const [userProfile] = await tenantClient.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
+            `SELECT avatarUrl FROM "User" WHERE id = ? LIMIT 1`,
+            user.id,
+          );
           const teamIds = linkedMember?.teamIds?.split(',').map((teamId) => teamId.trim()).filter(Boolean) ?? [];
 
           // Retorna o objeto padronizado para a sessão
@@ -137,6 +120,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: user.id,
             name: user.name,
             email: user.email,
+            image: userProfile?.avatarUrl ?? null,
             role: user.role,
             permissions: user.permissions ? user.permissions.split(',') : [],
             tenantId: databaseKey,
@@ -166,6 +150,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.permissions = (user as any).permissions;
         token.tenantId = (user as any).tenantId;
         token.tenantSlug = (user as any).tenantSlug;
+        token.picture = (user as any).image ?? null;
         token.linkedMemberId = (user as any).linkedMemberId;
         token.teamIds = (user as any).teamIds;
         token.version = (user as any).version;
@@ -193,6 +178,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               token.role = currentUser.role;
               token.permissions = currentUser.permissions?.split(',').map((permission: string) => permission.trim()).filter(Boolean) ?? [];
               token.linkedMemberId = currentUser.linkedMemberId;
+              const [userProfile] = await tenantClient.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
+                `SELECT avatarUrl FROM "User" WHERE id = ? LIMIT 1`,
+                currentUser.id,
+              );
+              token.picture = userProfile?.avatarUrl ?? null;
               token.version = currentUser.version;
               const linkedMember = currentUser.linkedMemberId
                 ? await tenantClient.member.findUnique({ where: { id: currentUser.linkedMemberId }, select: { teamIds: true } })
@@ -217,6 +207,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).permissions = (token.permissions as string[]) || [];
         (session.user as any).tenantId = token.tenantId as string;
         (session.user as any).tenantSlug = token.tenantSlug as string;
+        (session.user as any).image = (token.picture as string | null | undefined) ?? null;
         (session.user as any).linkedMemberId = token.linkedMemberId as string | null | undefined;
         (session.user as any).teamIds = (token.teamIds as string[]) || [];
         (session.user as any).version = token.version as number;

@@ -14,18 +14,24 @@ export class BrandingService {
 
   normalize(row: Record<string, any>) {
     const legacyLogo = row.brandingLogoUrl ?? row.logoUrl ?? null;
+    const brandingVersion = Number(row.brandingVersion ?? 1) || 1;
+    const versioned = (value: unknown) => {
+      if (typeof value !== 'string' || !value) return null;
+      const separator = value.includes('?') ? '&' : '?';
+      return `${value}${separator}v=${encodeURIComponent(String(brandingVersion))}`;
+    };
     return {
       slug: row.slug,
       name: row.name,
-      logoUrl: legacyLogo,
-      logoLightUrl: row.logoLightUrl ?? legacyLogo,
-      logoDarkUrl: row.logoDarkUrl ?? legacyLogo,
-      mobileIconUrl: row.mobileIconUrl ?? row.icon192Url ?? null,
-      sidebarLogoUrl: row.sidebarLogoUrl ?? legacyLogo,
-      sidebarOpenLightUrl: row.sidebarOpenLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo,
-      sidebarOpenDarkUrl: row.sidebarOpenDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo,
-      sidebarCollapsedLightUrl: row.sidebarCollapsedLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo,
-      sidebarCollapsedDarkUrl: row.sidebarCollapsedDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo,
+      logoUrl: versioned(legacyLogo),
+      logoLightUrl: versioned(row.logoLightUrl ?? legacyLogo),
+      logoDarkUrl: versioned(row.logoDarkUrl ?? legacyLogo),
+      mobileIconUrl: versioned(row.mobileIconUrl ?? row.icon192Url ?? null),
+      sidebarLogoUrl: versioned(row.sidebarLogoUrl ?? legacyLogo),
+      sidebarOpenLightUrl: versioned(row.sidebarOpenLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo),
+      sidebarOpenDarkUrl: versioned(row.sidebarOpenDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo),
+      sidebarCollapsedLightUrl: versioned(row.sidebarCollapsedLightUrl ?? row.logoLightUrl ?? row.sidebarLogoUrl ?? legacyLogo),
+      sidebarCollapsedDarkUrl: versioned(row.sidebarCollapsedDarkUrl ?? row.logoDarkUrl ?? row.sidebarLogoUrl ?? legacyLogo),
       sidebarUseImage: row.sidebarUseImage ?? true,
       sidebarTitle: row.sidebarTitle === undefined ? row.name : row.sidebarTitle ?? null,
       sidebarSubtitle: row.sidebarSubtitle === undefined ? 'Gestão de Tarefas' : row.sidebarSubtitle ?? null,
@@ -33,15 +39,15 @@ export class BrandingService {
       themeMode: row.themeMode ?? 'light',
       pwaName: row.pwaName ?? row.name,
       pwaShortName: row.pwaShortName ?? row.pwaName ?? row.name,
-      icon192Url: row.icon192Url ?? null,
-      icon512Url: row.icon512Url ?? null,
+      icon192Url: versioned(row.icon192Url),
+      icon512Url: versioned(row.icon512Url),
       primaryColor: row.primaryColor ?? null,
       secondaryColor: row.secondaryColor ?? null,
       themeColor: row.themeColor ?? row.primaryColor ?? null,
       backgroundColor: row.backgroundColor ?? row.secondaryColor ?? null,
       configJson: row.configJson ?? null,
       schemaVersion: row.schemaVersion ?? 1,
-      brandingVersion: row.brandingVersion ?? 1,
+      brandingVersion,
     };
   }
 

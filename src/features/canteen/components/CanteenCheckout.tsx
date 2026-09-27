@@ -16,6 +16,7 @@ import { db } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { formatCurrency } from '@/lib/utils';
 import { createCanteenSale } from '@/services/canteen/sales-api';
+import { isNetworkError } from '@/services/api/client';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useCartStore } from '../store/useCartStore';
 
@@ -52,6 +53,7 @@ export function CanteenCheckout() {
       id: generateId(),
       total,
       paymentMethod,
+      orderStatus: sendToPrep ? 'preparing' : null,
       items,
       memberId: paymentMethod === 'fiado' ? selectedMember : undefined,
       memberName: paymentMethod === 'fiado' ? member?.name : undefined,
@@ -65,7 +67,8 @@ export function CanteenCheckout() {
       try {
         await createCanteenSale(payload);
         await db.sales.put({ ...payload, orderStatus: sendToPrep ? 'preparing' : undefined, _status: 'synced' });
-      } catch {
+      } catch (error) {
+        if (!isNetworkError(error)) throw error;
         await db.sales.put({ ...payload, orderStatus: sendToPrep ? 'preparing' : undefined, _status: 'pending' });
         await db.syncOutbox.add({ module: 'sales', action: 'create', data: payload, timestamp: new Date().toISOString() });
       }

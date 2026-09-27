@@ -10,11 +10,11 @@ export async function POST(request: Request) {
     if (!session?.user?.tenantId || !tenantSlug) throw new UnauthenticatedError();
 
     const body = await request.json() as { module?: unknown; dataUrl?: unknown };
-    if (body.module !== 'feed' || typeof body.dataUrl !== 'string') {
-      throw new ValidationError('Arquivo de Feed inválido.');
+    if ((body.module !== 'feed' && body.module !== 'profile') || typeof body.dataUrl !== 'string') {
+      throw new ValidationError('Arquivo de perfil ou Feed inválido.');
     }
 
-    return jsonOk({ url: await saveTenantDataUrl(tenantSlug, 'feed', body.dataUrl) });
+    return jsonOk({ url: await saveTenantDataUrl(tenantSlug, body.module, body.dataUrl) });
   } catch (error) {
     return jsonError(error);
   }

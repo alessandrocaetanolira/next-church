@@ -4,21 +4,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { LoadingState } from '@/components/common';
 import { Toaster } from "@/components/ui/sonner";
 import { NotificationsProvider } from '@/components/providers/NotificationsProvider';
-import { useAppSettings } from '@/components/providers/AppSettingsProvider';
-import { AppImage } from '@/components/shared';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isAuthenticated, isLoading } = useAuth();
-  const { settings } = useAppSettings();
   const [authFallbackReady, setAuthFallbackReady] = useState(false);
-  const [loadingLogoFailed, setLoadingLogoFailed] = useState(false);
-
-  useEffect(() => {
-    setLoadingLogoFailed(false);
-  }, [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -34,30 +27,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos');
 
   if (isLoading && !authFallbackReady) {
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse">
-          <AppImage
-            src={settings.logoLightUrl && !loadingLogoFailed ? settings.logoLightUrl : settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
-            alt=""
-            aria-hidden="true"
-            width={192}
-            height={64}
-            className="h-9 w-40 object-contain object-left dark:hidden"
-            onError={() => setLoadingLogoFailed(true)}
-          />
-          <AppImage
-            src={settings.logoDarkUrl && !loadingLogoFailed ? settings.logoDarkUrl : settings.logoUrl && !loadingLogoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
-            alt=""
-            aria-hidden="true"
-            width={192}
-            height={64}
-            className="hidden h-9 w-40 object-contain object-left dark:block"
-            onError={() => setLoadingLogoFailed(true)}
-          />
-        </div>
-      </div>
-    );
+    return <LoadingState label="Carregando aplicação..." className="min-h-screen bg-background" />;
   }
 
   if (isAuthPage || !isAuthenticated) {

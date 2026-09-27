@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BookOpen, Calendar, Flame, Heart, MessageCircle, Megaphone, PenLine, Target, Trophy } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -56,7 +56,7 @@ export default function FeedPostPage() {
         <Card className="overflow-hidden rounded-[22px] border-border/70 shadow-sm">
           <CardContent className="space-y-5 p-4 sm:p-6">
             <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12"><AvatarFallback className="bg-primary/10 text-base text-primary">{post.userName[0]}</AvatarFallback></Avatar>
+              <Avatar className="h-12 w-12">{post.userAvatar ? <AvatarImage src={post.userAvatar} alt={post.userName} /> : null}<AvatarFallback className="bg-primary/10 text-base text-primary">{post.userName[0]}</AvatarFallback></Avatar>
               <div className="min-w-0 flex-1"><p className="text-base font-bold">{post.userName}</p><div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"><span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}</span><span>•</span><Badge variant="outline" className="gap-1 rounded-full"><Icon className="h-3.5 w-3.5" />{config.label}</Badge></div></div>
             </div>
             {post.title ? <h1 className="text-2xl font-bold text-primary">{post.title}</h1> : null}

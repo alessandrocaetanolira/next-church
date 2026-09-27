@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/auth";
 import { canAccessRoute, hasPlanFeature } from "@/lib/access-control";
 import { getPlanFeatureForPath } from "@/lib/plan-features";
 
@@ -34,10 +34,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-  });
+  const session = await auth();
+  const token = session?.user;
 
   if (nextUrl.pathname.startsWith("/api/")) {
     const planFeature = getPlanFeatureForPath(nextUrl.pathname);
@@ -48,7 +46,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL(nextUrl.pathname.startsWith("/admin") ? "/admin/login" : "/auth/login", nextUrl));
+    return NextResponse.redirect(new URL("/auth/login", nextUrl));
   }
 
   if (nextUrl.pathname.startsWith("/admin") && !token.isPlatformAdmin) {

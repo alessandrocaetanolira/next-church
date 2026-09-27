@@ -8,9 +8,7 @@ export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } =
   swSrc: "src/app/sw.ts",
   useNativeEsbuild: true,
   additionalPrecacheEntries: [
-    { url: "/", revision },
     { url: "/bible", revision },
-    { url: "/auth/login", revision },
     { url: "/offline", revision },
   ],
 });

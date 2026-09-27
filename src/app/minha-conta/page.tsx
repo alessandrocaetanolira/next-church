@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { db, type LocalProduct, type LocalSale, type CartItem } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
-  Wallet, ShoppingBag, Receipt, MessageCircle, QrCode, Plus, Minus, 
+  Wallet, ShoppingBag, Receipt, MessageCircle, QrCode, Plus, Minus, UserRound,
   ShoppingCart, AlertCircle, Gift, ArrowLeft, Package
 } from 'lucide-react';
 import { AppImage } from '@/components/shared';
@@ -31,6 +31,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { getMemberFinancials } from '@/services/members/member-account-api';
 import { createMemberSale } from '@/services/canteen/member-sales-api';
+import { isNetworkError } from '@/services/api/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
@@ -258,7 +259,7 @@ function MyAccountPageContent() {
         if (existing.quantity >= product.stock) { toast.error('Estoque insuficiente!'); return prev; }
         return prev.map(item =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.price }
+            ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.unitPrice }
             : item
         );
       }
@@ -311,9 +312,10 @@ function MyAccountPageContent() {
         await createMemberSale({
           id: saleId,
           items: sale.items,
-          total: sale.total,
-          paymentMethod: 'pending',
-          memberId: sale.memberId,
+        total: sale.total,
+        paymentMethod: 'pending',
+        orderStatus: 'pending',
+        memberId: sale.memberId,
           memberName: sale.memberName,
           createdBy: sale.createdBy,
           createdAt,
@@ -323,7 +325,8 @@ function MyAccountPageContent() {
           _status: 'synced',
         });
         toast.success('Pedido enviado para aprovação da cantina!');
-      } catch {
+      } catch (error) {
+        if (!isNetworkError(error)) throw error;
         await db.sales.add(sale);
         await db.syncOutbox.add({
           module: 'sales',
@@ -337,40 +340,7 @@ function MyAccountPageContent() {
       setCartOpen(false);
       setView('profile');
     } catch (error) {
-      try {
-        const sale: LocalSale = {
-          id: generateId(),
-          items: cart.map(({ product, ...item }) => ({
-            productId: item.productId,
-            name: item.productName,
-            quantity: item.quantity,
-            price: item.unitPrice
-          })),
-          total: cartTotal,
-          paymentMethod: 'pending',
-          memberId: linkedMember.id,
-          memberName: linkedMember.name,
-          createdBy: user?.email || 'unknown',
-          createdAt: new Date().toISOString(),
-          tenantId,
-          _status: 'pending'
-        };
-
-        await db.sales.add(sale);
-        await db.syncOutbox.add({
-          module: 'sales',
-          action: 'create',
-          data: sale,
-          timestamp: new Date().toISOString()
-        });
-        toast.success('Pedido salvo e aguardando sincronização!');
-        setCart([]);
-        setCartOpen(false);
-        setView('profile');
-      } catch (offlineError) {
-        toast.error('Erro ao processar pedido');
-        console.error(offlineError);
-      }
+      toast.error(error instanceof Error ? error.message : 'Erro ao processar pedido');
     }
   };
 
@@ -578,6 +548,15 @@ function MyAccountPageContent() {
   // --- PROFILE VIEW ---
   return (
     <div className="p-4 max-w-lg mx-auto space-y-6 pb-20">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold">Minha conta</h1>
+          <p className="text-sm text-muted-foreground">Carteira, pedidos e dados pessoais.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => router.push('/minha-conta/perfil')}>
+          <UserRound className="mr-2 h-4 w-4" />Perfil
+        </Button>
+      </div>
       {/* Balance & Loyalty Group */}
       <div className="grid gap-4">
         {/* Balance */}

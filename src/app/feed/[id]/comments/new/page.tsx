@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingState } from '@/components/common';
@@ -75,7 +75,7 @@ export default function NewFeedCommentPage() {
             {referencedComment ? (
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7"><AvatarFallback className="bg-primary/10 text-primary">{referencedComment.userName[0]}</AvatarFallback></Avatar>
+                  <Avatar className="h-7 w-7">{referencedComment.userAvatar ? <AvatarImage src={referencedComment.userAvatar} alt={referencedComment.userName} /> : null}<AvatarFallback className="bg-primary/10 text-primary">{referencedComment.userName[0]}</AvatarFallback></Avatar>
                   <span className="font-medium">{referencedComment.userName}</span>
                 </div>
                 <p className="mt-2 text-muted-foreground">{referencedComment.content}</p>

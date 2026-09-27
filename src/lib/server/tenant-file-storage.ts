@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 
 const FILES_ROOT = path.resolve(process.cwd(), 'files');
-const ALLOWED_MODULES = new Set(['products', 'materials', 'feed', 'branding']);
+const ALLOWED_MODULES = new Set(['products', 'materials', 'feed', 'branding', 'profile']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 function safeSegment(value: string, label: string) {

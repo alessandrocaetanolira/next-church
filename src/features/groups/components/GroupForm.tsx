@@ -50,7 +50,7 @@ export function GroupForm({ initialValue, groupId, onSaved }: { initialValue?: G
     finally { setSaving(false); }
   };
 
-  return <div className="space-y-5 rounded-xl border border-border bg-card p-4 sm:p-6">
+  return <div className="space-y-5">
     <div className="space-y-2"><Label>Nome</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nome do grupo" /></div>
     <div className="space-y-2"><Label>Descrição</Label><Textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} placeholder="Descreva a finalidade do grupo" /></div>
     <div className="space-y-2"><Label>Tipo</Label><Select value={form.type} onValueChange={(value) => setForm((current) => ({ ...current, type: value as GroupType }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{GROUP_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}</SelectContent></Select></div>

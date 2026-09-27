@@ -23,6 +23,7 @@ export interface User {
   name: string;
   /** E-mail do usuário */
   email: string;
+  image?: string | null;
   /** Nível de acesso/Papel do usuário no sistema */
   role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
   /** Identificador da igreja (Tenant) ao qual o usuário pertence */
@@ -55,6 +56,7 @@ export function useAuth() {
     id: (session.user as any).id,
     name: session.user.name || '',
     email: session.user.email || '',
+    image: session.user.image || null,
     role: (session.user as any).role || 'MEMBER',
     tenantId: (session.user as any).tenantId || '',
     tenantSlug: (session.user as any).tenantSlug || '',
@@ -89,10 +91,11 @@ export function useAuth() {
     refreshSession: update,
     /** Encerra a sessão e redireciona para a tela de login */
     logout: async () => {
+      const tenantSlug = user?.isPlatformAdmin ? '' : user?.tenantSlug?.trim().toLowerCase();
       clearCachedSession();
       useAuthStore.getState().logout();
       await signOut({ redirect: false });
-      window.location.replace('/auth/login');
+      window.location.replace(tenantSlug ? `/auth/login?igreja=${encodeURIComponent(tenantSlug)}` : '/auth/login');
     },
   };
 }

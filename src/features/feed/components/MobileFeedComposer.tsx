@@ -3,6 +3,7 @@
 import { Camera, Globe2, ImagePlus, Tag, X } from 'lucide-react';
 import type { FeedPost } from '@/lib/db';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
 
 type Option = { id: string; name: string; email?: string | null };
@@ -10,6 +11,7 @@ type Option = { id: string; name: string; email?: string | null };
 interface MobileFeedComposerProps {
   userName: string;
   userInitial: string;
+  userAvatar?: string | null;
   content: string;
   title: string;
   postType: FeedPost['type'];
@@ -77,7 +79,7 @@ export function MobileFeedComposer(props: MobileFeedComposerProps) {
       <main className="space-y-4 px-4 pb-8 pt-4">
         <div className="flex min-w-0 items-center justify-between gap-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">{props.userInitial}</div>
+            <Avatar className="h-9 w-9 shrink-0">{props.userAvatar ? <AvatarImage src={props.userAvatar} alt={props.userName} /> : null}<AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{props.userInitial}</AvatarFallback></Avatar>
             <span className="truncate text-sm font-medium">{props.userName}</span>
           </div>
           <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">

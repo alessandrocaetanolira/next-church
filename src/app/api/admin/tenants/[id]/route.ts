@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(updated);
   } catch (error) {
     console.error(`API Error (Update Tenant ${id}):`, error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return new NextResponse(error instanceof Error ? error.message : "Não foi possível atualizar o tenant.", { status: 400 });
   }
 }
 

@@ -1,5 +1,6 @@
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { generateId } from '@/lib/id';
+import { ConflictError } from '@/lib/http/errors';
 
 export type SaleItem = { productId?: string; name: string; quantity: number; price: number };
 export type SaleRecord = {
@@ -56,6 +57,9 @@ export class CanteenSalesRepository {
       if (data.paymentMethod !== 'pending') {
         for (const item of data.items) {
           if (!item.productId || item.quantity <= 0) continue;
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!product || product.deletedAt) throw new ConflictError(`Produto não encontrado: ${item.name}.`);
+          if (product.stock < item.quantity) throw new ConflictError(`Estoque insuficiente para ${item.name}.`);
           await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
         }
       }
@@ -88,11 +92,20 @@ export class CanteenSalesRepository {
   }
 
   async reject(id: string) {
+    const sale = await this.findById(id);
+    if (!sale) return null;
+    if (sale.paymentMethod !== 'pending' || sale.orderStatus !== 'pending') {
+      throw new ConflictError('Somente pedidos pendentes podem ser rejeitados.');
+    }
     await this.prisma.$executeRawUnsafe(`UPDATE "Sale" SET "paymentMethod" = ?, "orderStatus" = ?, "updatedAt" = ? WHERE id = ?`, 'cancelled', 'cancelled', new Date().toISOString(), id);
     return this.findById(id);
   }
 
   async updateStatus(id: string, orderStatus: string) {
+    const sale = await this.findById(id);
+    if (!sale) return null;
+    const validTransition = (sale.orderStatus === 'preparing' && ['ready', 'cancelled'].includes(orderStatus));
+    if (!validTransition) throw new ConflictError('A transição de status do pedido não é válida.');
     await this.prisma.$executeRawUnsafe(`UPDATE "Sale" SET "orderStatus" = ?, "updatedAt" = ? WHERE id = ?`, orderStatus, new Date().toISOString(), id);
     return this.findById(id);
   }
@@ -105,20 +118,30 @@ export class CanteenSalesRepository {
   async approve(id: string, paymentMethod: string, createdBy: string) {
     const sale = await this.findById(id);
     if (!sale) return null;
-    const items = JSON.parse(sale.items || '[]') as Array<{ productId?: string; quantity?: number }>;
 
     return this.prisma.$transaction(async (tx) => {
+      const current = await tx.sale.findUnique({ where: { id } });
+      if (!current) return null;
+      if (current.paymentMethod !== 'pending' || current.orderStatus !== 'pending') {
+        throw new ConflictError('Somente pedidos pendentes podem ser aprovados.');
+      }
+      const items = JSON.parse(current.items || '[]') as Array<{ productId?: string; name?: string; quantity?: number }>;
       await tx.$executeRawUnsafe(`UPDATE "Sale" SET "paymentMethod" = ?, "orderStatus" = ?, "updatedAt" = ? WHERE id = ?`, paymentMethod, 'preparing', new Date().toISOString(), id);
       for (const item of items) {
-        if (item.productId && item.quantity) await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
+        if (item.productId && item.quantity) {
+          const product = await tx.product.findUnique({ where: { id: item.productId } });
+          if (!product || product.deletedAt) throw new ConflictError(`Produto não encontrado: ${item.name ?? item.productId}.`);
+          if (product.stock < item.quantity) throw new ConflictError(`Estoque insuficiente para ${item.name ?? product.name}.`);
+          await tx.product.update({ where: { id: item.productId }, data: { stock: { decrement: item.quantity } } });
+        }
       }
-      if (paymentMethod === 'fiado' && sale.memberId) {
-        await tx.member.update({ where: { id: sale.memberId }, data: { creditBalance: { increment: sale.total } } });
+      if (paymentMethod === 'fiado' && current.memberId) {
+        await tx.member.update({ where: { id: current.memberId }, data: { creditBalance: { increment: current.total } } });
         const now = new Date().toISOString();
         await tx.$executeRawUnsafe(
           `INSERT INTO "CreditTransaction" (id, memberId, memberName, type, amount, saleId, notes, createdBy, createdAt, updatedAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          generateId(), sale.memberId, sale.memberName, 'debit', sale.total, sale.id, 'Pedido aprovado em fiado', createdBy, now, now,
+          generateId(), current.memberId, current.memberName, 'debit', current.total, current.id, 'Pedido aprovado em fiado', createdBy, now, now,
         );
       }
       const [updated] = await tx.$queryRawUnsafe<SaleRecord[]>(

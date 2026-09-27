@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { WebPageLayout } from '@/components/shared/web';
+import { PageShell } from '@/components/common';
 import { useTasks } from '@/features/schedules/hooks/use-tasks';
 import { useTeams } from '@/features/schedules/hooks/use-teams';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -56,11 +56,17 @@ export default function NewSchedulePage() {
   };
 
   return (
-    <WebPageLayout title="Nova Escala" description="Cadastre uma nova tarefa para uma equipe.">
-      <div className="mx-auto max-w-2xl space-y-5 rounded-xl border border-border bg-card p-4 sm:p-6">
-        <Button type="button" variant="ghost" className="-ml-2" onClick={() => router.push('/schedules')}>
+    <PageShell size="narrow">
+      <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold">Nova escala</h1>
+          <p className="text-sm text-muted-foreground">Cadastre uma nova tarefa para uma equipe.</p>
+        </div>
+        <Button type="button" variant="ghost" className="-ml-2 self-start sm:ml-0 sm:self-auto" onClick={() => router.push('/schedules')}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para escalas
         </Button>
+      </div>
+      <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="schedule-title">Título</Label>
           <Input id="schedule-title" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Ex.: Recepção do culto" />
@@ -100,6 +106,6 @@ export default function NewSchedulePage() {
           <Save className="mr-2 h-4 w-4" /> {saving ? 'Salvando...' : 'Criar escala'}
         </Button>
       </div>
-    </WebPageLayout>
+    </PageShell>
   );
 }

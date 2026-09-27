@@ -7,7 +7,7 @@ import { hasActionPermission } from '@/lib/access-control';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.tenantId || !hasActionPermission(session.user, 'groups', 'view')) {
+  if (!session?.user?.tenantId || (!hasActionPermission(session.user, 'groups', 'view') && !hasActionPermission(session.user, 'tasks', 'view'))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 

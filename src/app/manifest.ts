@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { getGlobalClient } from '@/lib/prisma-factory';
 import { BrandingRepository } from '@/server/branding/branding.repository';
 import { BrandingService } from '@/server/branding/branding.service';
+import { getTenantPwaIconUrl } from '@/lib/branding/pwa-assets';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const shortName = branding?.pwaShortName ?? name;
   const themeColor = branding?.themeColor ?? branding?.primaryColor ?? '#0f172a';
   const backgroundColor = branding?.backgroundColor ?? branding?.secondaryColor ?? '#0f172a';
+  const tenantSlug = branding?.slug;
+  const icon192 = tenantSlug ? getTenantPwaIconUrl(tenantSlug, 192, branding?.brandingVersion) : '/pwa-192x192.png';
+  const icon512 = tenantSlug ? getTenantPwaIconUrl(tenantSlug, 512, branding?.brandingVersion) : '/pwa-512x512.png';
   return {
     id: '/',
     name,
@@ -36,22 +40,22 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     lang: 'pt-BR',
     icons: [
       {
-        src: branding?.icon192Url ?? branding?.mobileIconUrl ?? '/pwa-192x192.png',
+        src: icon192,
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: branding?.icon512Url ?? '/pwa-512x512.png',
+        src: icon512,
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/pwa-512x512.svg',
+        src: icon512,
         sizes: '512x512',
-        type: 'image/svg+xml',
-        purpose: 'any',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   };

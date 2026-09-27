@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { FilterChip } from '@/components/ui/filter-chip';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { type FeedPost } from '@/lib/db';
 import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Image as ImageIcon, BarChart3, LayoutGrid } from 'lucide-react';
@@ -287,6 +287,7 @@ export default function FeedPage() {
           <CardContent className="flex items-center gap-2.5 p-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Avatar className="h-7 w-7 shrink-0">
+                {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
                 <AvatarFallback className="bg-primary/10 text-primary text-xs">{user?.name?.[0] || 'U'}</AvatarFallback>
               </Avatar>
               <span className="truncate text-sm text-muted-foreground">Compartilhe algo com a comunidade...</span>
@@ -301,6 +302,7 @@ export default function FeedPage() {
           <MobileFeedComposer
             userName={user?.name ?? 'Administrador'}
             userInitial={(user?.name?.[0] ?? 'A').toUpperCase()}
+            userAvatar={user?.image}
             content={newPostContent}
             title={newPostTitle}
             postType={newPostType}
@@ -330,6 +332,7 @@ export default function FeedPage() {
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Avatar className="w-8 h-8">
+                  {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
                   <AvatarFallback className="bg-primary/10 text-primary text-xs">{user?.name?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium">{user?.name}</span>

@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowLeft, LogOut, Info, WifiOff, Monitor, Sun, Moon, Wallet } from 'lucide-react';
+import { ArrowLeft, LogOut, Info, WifiOff, Monitor, Sun, Moon, Wallet, UserRound } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -149,6 +149,7 @@ export function Header() {
     if (/^\/feed\/[^/]+$/.test(pathname)) return { href: '/feed', label: 'Feed' };
     if (pathname === '/members/new') return { href: '/members', label: 'Membros' };
     if (pathname === '/groups/new') return { href: '/groups', label: 'Grupos' };
+    if (pathname === '/minha-conta/perfil') return { href: '/minha-conta', label: 'Minha conta' };
     if (/^\/groups\/[^/]+\/edit$/.test(pathname)) return { href: `/groups/${pathname.split('/')[2]}`, label: 'Grupo' };
     if (pathname === '/kids/new') return { href: '/kids', label: 'Infantil' };
     if (/^\/kids\/[^/]+\/edit$/.test(pathname)) return { href: '/kids', label: 'Infantil' };
@@ -234,6 +235,7 @@ export function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                     <Avatar className="h-9 w-9">
+                      {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
                       <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                         {initials}
                       </AvatarFallback>
@@ -247,11 +249,15 @@ export function Header() {
                   </div>
                   <DropdownMenuSeparator />
                   {canAccessWallet ? (
-                    <DropdownMenuItem onClick={() => { window.location.href = '/carteira'; }}>
+                    <DropdownMenuItem onClick={() => router.push('/carteira')}>
                       <Wallet className="mr-2 h-4 w-4" />
                       Carteira
                     </DropdownMenuItem>
                   ) : null}
+                  <DropdownMenuItem onClick={() => router.push('/minha-conta/perfil')}>
+                    <UserRound className="mr-2 h-4 w-4" />
+                    Perfil do usuário
+                  </DropdownMenuItem>
                   {canAccessWallet ? <DropdownMenuSeparator /> : null}
                   <DropdownMenuItem onClick={() => setShowAbout(true)}>
                     <Info className="w-4 h-4 mr-2" />

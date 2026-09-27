@@ -16,6 +16,7 @@ type RemoteSale = {
   memberName?: string | null;
   createdBy: string;
   createdAt: string;
+  deletedAt?: string | null;
 };
 
 function toLocalSale(sale: RemoteSale, tenantId?: string): LocalSale {
@@ -55,7 +56,12 @@ export async function syncCanteenSalesFromServer(tenantId?: string) {
 
   if (staleSyncedIds.length > 0) await db.sales.bulkDelete(staleSyncedIds);
 
-  await db.sales.bulkPut(normalized);
+  const deletedIds = Array.isArray(sales)
+    ? sales.filter((sale) => sale.deletedAt).map((sale) => sale.id)
+    : [];
+  if (deletedIds.length > 0) await db.sales.bulkDelete(deletedIds);
+
+  await db.sales.bulkPut(normalized.filter((sale) => !sales.find((remote) => remote.id === sale.id && remote.deletedAt)));
 
   return normalized;
 }

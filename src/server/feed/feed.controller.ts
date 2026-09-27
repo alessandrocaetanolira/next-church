@@ -43,7 +43,7 @@ export function toggleFeedLike({ user, service }: Context, id: string) {
 
 export function addFeedComment({ user, service }: Context, id: string, input: unknown) {
   FeedPolicy.assertComment(user);
-  return service.addComment(id, user.email as string, actorName(user), input);
+  return service.addComment(id, user.email as string, actorName(user), (user as User & { image?: string | null }).image, input);
 }
 
 export function deleteFeedPost({ user, service }: Context, id: string) {

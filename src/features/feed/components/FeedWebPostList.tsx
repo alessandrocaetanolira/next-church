@@ -7,7 +7,7 @@ import type { FeedPost } from '@/lib/db';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AppImage } from '@/components/shared';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
@@ -74,7 +74,7 @@ export function FeedWebPostList({
             <Card className="cursor-pointer overflow-hidden rounded-[22px] border-border/70 bg-card shadow-sm transition-colors hover:border-primary/40" role="link" tabIndex={0} onClick={() => onOpenPost(post)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPost(post); } }}>
               <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="flex items-start gap-2.5">
-                  <Avatar className="h-9 w-9 shrink-0"><AvatarFallback className="bg-primary/10 text-xs text-primary">{post.userName[0]}</AvatarFallback></Avatar>
+                  <Avatar className="h-9 w-9 shrink-0">{post.userAvatar ? <AvatarImage src={post.userAvatar} alt={post.userName} /> : null}<AvatarFallback className="bg-primary/10 text-xs text-primary">{post.userName[0]}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold leading-4">{post.userName}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">

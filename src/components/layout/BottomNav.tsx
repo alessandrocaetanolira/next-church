@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
 import { NavLink } from '@/components/NavLink';
 import { LayoutDashboard, Calendar, ShoppingCart, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,10 @@ export function BottomNav() {
   const { user } = useAuth();
   const accessibleModules = getAccessibleModules(user);
   const { openDrawer, closeDrawer } = useDrawer();
+
+  useEffect(() => {
+    closeDrawer();
+  }, [closeDrawer, pathname]);
   const mainItems = [
     { to: '/', icon: LayoutDashboard, label: 'Início', show: accessibleModules.has('dashboard') },
     { to: '/bible', icon: BookOpen, label: 'Bíblia', show: accessibleModules.has('bible') },
@@ -35,13 +40,14 @@ export function BottomNav() {
   ].filter(item => item.show);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-t border-border safe-bottom">
+    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 isolate border-t border-border bg-card/95 safe-bottom supports-[backdrop-filter]:bg-card/80">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {mainItems.map((item) => {
           const isActive = pathname === item.to;
           return (
             <NavLink key={item.to} to={item.to}
-              className={cn('flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-all duration-200',
+              onClick={closeDrawer}
+              className={cn('flex h-14 w-16 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-150',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
               <item.icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
               <span className="text-[10px] font-medium">{item.label}</span>
@@ -58,7 +64,7 @@ export function BottomNav() {
                   const isActive = pathname === item.to;
                   return (
                     <NavLink key={item.to} to={item.to} onClick={closeDrawer}
-                      className={cn('flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl bg-muted/40 p-4 text-center transition-all dark:bg-muted/30',
+                      className={cn('flex min-h-20 touch-manipulation flex-col items-center justify-center gap-2 rounded-xl bg-muted/40 p-4 text-center transition-colors dark:bg-muted/30',
                         'animate__animated animate__zoomIn',
                         isActive ? 'bg-primary/10 text-primary dark:bg-primary/15' : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground')}
                       style={{ animationDelay: `${Math.min(index * 35, 280)}ms` }}>
@@ -70,7 +76,8 @@ export function BottomNav() {
               </div>
             </>,
           })}
-          className="flex h-14 w-16 flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-all duration-200 hover:text-foreground"
+          aria-label="Mais opções"
+          className="flex h-14 w-16 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl text-muted-foreground transition-colors duration-150 hover:text-foreground"
         >
           <Menu className="h-5 w-5" />
           <span className="text-[10px] font-medium">Mais</span>
