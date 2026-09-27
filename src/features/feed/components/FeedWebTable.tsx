@@ -3,12 +3,13 @@
 import { formatDistanceToNow } from 'date-fns';
 import { Fragment } from 'react';
 import { ptBR } from 'date-fns/locale';
-import { Eye, Heart, MessageCircle, Send } from 'lucide-react';
+import { Eye, Heart, MessageCircle, MoreHorizontal, Send, Trash2 } from 'lucide-react';
 import type { FeedPost } from '@/lib/db';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type FeedGroup = { id: string; name: string };
 
@@ -24,9 +25,11 @@ type FeedWebTableProps = {
   onToggleComment: (postId: string | number | null) => void;
   onCommentTextChange: (value: string) => void;
   onOpenPost: (post: FeedPost) => void;
+  canDeletePost: (post: FeedPost) => boolean;
+  onDeletePost: (post: FeedPost) => void;
 };
 
-export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, commentingOn, commentText, onLike, onComment, onToggleComment, onCommentTextChange, onOpenPost }: FeedWebTableProps) {
+export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, commentingOn, commentText, onLike, onComment, onToggleComment, onCommentTextChange, onOpenPost, canDeletePost, onDeletePost }: FeedWebTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <Table>
@@ -43,7 +46,7 @@ export function FeedWebTable({ posts, groups, currentUserId, canUpdateFeed, comm
                   <TableCell><Badge variant="outline">{post.type}</Badge></TableCell>
                   <TableCell>{post.visibility === 'group' ? 'Grupo' : post.visibility === 'individual' ? 'Individual' : 'Todos'}</TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}</TableCell>
-                  <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" aria-label="Visualizar publicação" onClick={() => onOpenPost(post)}><Eye className="h-4 w-4" /></Button>{canUpdateFeed ? <><Button size="sm" variant="ghost" className={liked ? 'text-pink-500' : ''} onClick={() => onLike(post)}><Heart className={liked ? 'fill-current' : ''} /><span>{post.likes.length}</span></Button><Button size="sm" variant="ghost" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle /><span>{post.comments.length}</span></Button></> : null}</div></TableCell>
+                  <TableCell><div className="flex justify-end gap-1"><Button size="sm" variant="outline" aria-label="Visualizar publicação" onClick={() => onOpenPost(post)}><Eye className="h-4 w-4" /></Button>{canUpdateFeed ? <><Button size="sm" variant="ghost" className={liked ? 'text-pink-500' : ''} onClick={() => onLike(post)}><Heart className={liked ? 'fill-current' : ''} /><span>{post.likes.length}</span></Button><Button size="sm" variant="ghost" onClick={() => onToggleComment(commentingOn === post.id ? null : post.id ?? null)}><MessageCircle /><span>{post.comments.length}</span></Button></> : null}{canDeletePost(post) ? <DropdownMenu><DropdownMenuTrigger asChild><Button size="sm" variant="ghost" aria-label="Mais opções"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeletePost(post)}><Trash2 className="mr-2 h-4 w-4" />Apagar publicação</DropdownMenuItem></DropdownMenuContent></DropdownMenu> : null}</div></TableCell>
                 </TableRow>
                 {canUpdateFeed && commentingOn === post.id ? <TableRow key={`${String(post.id)}-comment`}><TableCell colSpan={6}><div className="flex gap-2"><Textarea value={commentText} onChange={(event) => onCommentTextChange(event.target.value)} placeholder="Escreva um comentário..." rows={1} className="min-h-[36px] resize-none" /><Button size="icon" onClick={() => onComment(post)} disabled={!commentText.trim()}><Send className="h-4 w-4" /></Button></div></TableCell></TableRow> : null}
               </Fragment>

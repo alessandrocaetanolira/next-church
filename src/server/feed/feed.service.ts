@@ -2,6 +2,7 @@ import { NotFoundError, ValidationError } from '@/lib/http/errors';
 import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, publishFeedPostCreated } from '@/lib/server/notification-service';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { FeedRepository } from './feed.repository';
+import { FeedPolicy } from './feed.policy';
 import type { FeedComment } from '@/lib/db';
 
 type FeedUser = { email?: string | null; name?: string | null; image?: string | null; role?: string | null; linkedMemberId?: string | null };
@@ -115,9 +116,10 @@ export class FeedService {
     return updated ? FeedRepository.serialize(updated) : null;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: FeedUser) {
     const post = await this.repository.findById(id);
     if (!post || post.deletedAt) throw new NotFoundError('Publicação não encontrada.');
+    FeedPolicy.assertDelete(user, typeof post.userId === 'string' ? post.userId : null);
     return this.repository.softDelete(id);
   }
 }

@@ -29,8 +29,10 @@ export class FeedPolicy {
     if (!hasActionPermission(user, 'feed', 'comment')) throw new ForbiddenError('Sem permissão para interagir no feed.');
   }
 
-  static assertDelete(user: PolicyUser) {
-    if (!['ADMIN', 'PASTOR'].includes(user.role?.toUpperCase() ?? '') || !hasActionPermission(user, 'feed', 'delete')) {
+  static assertDelete(user: PolicyUser, postUserId?: string | null) {
+    const isOwner = Boolean(user.email && postUserId && user.email.toLowerCase() === postUserId.toLowerCase());
+    const canModerate = ['ADMIN', 'PASTOR'].includes(user.role?.toUpperCase() ?? '') && hasActionPermission(user, 'feed', 'delete');
+    if (!isOwner && !canModerate) {
       throw new ForbiddenError('Sem permissão para excluir publicações.');
     }
   }

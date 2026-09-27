@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BookOpen, Calendar, Flame, Heart, MessageCircle, Megaphone, MoreHorizontal, PenLine, Pin, Target, Trophy } from 'lucide-react';
+import { BookOpen, Calendar, Flame, Heart, MessageCircle, Megaphone, MoreHorizontal, PenLine, Pin, Target, Trash2, Trophy } from 'lucide-react';
 import type { FeedPost } from '@/lib/db';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AppImage } from '@/components/shared';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -45,6 +46,8 @@ type FeedWebPostListProps = {
   onLike: (post: FeedPost) => void;
   onToggleComment: (postId: string | number | null) => void;
   onOpenPost: (post: FeedPost) => void;
+  canDeletePost: (post: FeedPost) => boolean;
+  onDeletePost: (post: FeedPost) => void;
 };
 
 export function FeedWebPostList({
@@ -56,6 +59,8 @@ export function FeedWebPostList({
   onLike,
   onToggleComment,
   onOpenPost,
+  canDeletePost,
+  onDeletePost,
 }: FeedWebPostListProps) {
   return (
     <>
@@ -77,7 +82,12 @@ export function FeedWebPostList({
                       <Badge variant="outline" className={cn('h-5 gap-1 rounded-full px-1.5 text-[11px] font-medium', POST_TYPE_BADGE_CLASS[post.type])}><Icon className="h-3 w-3" />{config.label}</Badge>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-5 w-5" /></Button>
+                  {canDeletePost(post) ? <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(event) => event.stopPropagation()} aria-label="Mais opções"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeletePost(post)}><Trash2 className="mr-2 h-4 w-4" />Apagar publicação</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu> : null}
                   <div className="hidden flex-wrap justify-end gap-1">
                     {post.pinnedUntil && new Date(post.pinnedUntil).getTime() > Date.now() ? <Badge variant="outline" className="h-6 text-xs"><Pin className="mr-1 h-3 w-3" />Fixado</Badge> : null}
                     <Badge variant="secondary" className="h-6 gap-1 px-2 text-xs"><Icon className={cn('h-3 w-3', config.color)} />{config.label}</Badge>

@@ -47,6 +47,5 @@ export function addFeedComment({ user, service }: Context, id: string, input: un
 }
 
 export function deleteFeedPost({ user, service }: Context, id: string) {
-  FeedPolicy.assertDelete(user);
-  return service.remove(id);
+  return service.remove(id, user);
 }

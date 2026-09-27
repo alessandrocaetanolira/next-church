@@ -39,3 +39,7 @@ export function toggleFeedLike(postId: string | number) {
 export function addFeedComment(postId: string | number, content: string, parentId?: string) {
   return apiRequest<FeedPost>(`/api/feed/${postId}`, { method: 'PATCH', body: JSON.stringify({ action: 'add-comment', content, parentId }) });
 }
+
+export function deleteFeedPost(postId: string | number) {
+  return apiRequest<{ success: boolean }>(`/api/feed/${postId}`, { method: 'DELETE' });
+}

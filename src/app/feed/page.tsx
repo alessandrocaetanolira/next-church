@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { addFeedComment, createFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
+import { addFeedComment, createFeedPost, deleteFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
 import { FeedWebTable } from '@/features/feed/components/FeedWebTable';
@@ -25,6 +25,7 @@ import { MobileFeedComposer } from '@/features/feed/components/MobileFeedCompose
 import { SharedFlatList } from '@/components/SharedFlatList';
 import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
 import { useRouter } from 'next/navigation';
+import { ConfirmDeleteDialog } from '@/components/common';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -86,6 +87,7 @@ export default function FeedPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [newPostsAvailable, setNewPostsAvailable] = useState(false);
+  const [postToDelete, setPostToDelete] = useState<FeedPost | null>(null);
   const latestPostIdRef = useRef<string | number | undefined>(undefined);
   const sortedPosts = useMemo(() => sortFeedPosts(posts), [posts]);
 
@@ -277,6 +279,20 @@ export default function FeedPage() {
     }
     setCommentText('');
     setCommentingOn(null);
+  };
+
+  const canDeletePost = (post: FeedPost) => Boolean(user?.email && post.userId?.toLowerCase() === user.email.toLowerCase()) || hasActionPermission(user, 'feed', 'delete');
+
+  const handleDeletePost = async () => {
+    if (!postToDelete?.id) return;
+    try {
+      await deleteFeedPost(postToDelete.id);
+      setPosts((current) => current.filter((item) => item.id !== postToDelete.id));
+      setPostToDelete(null);
+      toast.success('Publicação apagada.');
+    } catch {
+      toast.error('Não foi possível apagar a publicação.');
+    }
   };
 
   return (
@@ -526,7 +542,7 @@ export default function FeedPage() {
           </Card>
         ) : (
           <>
-            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} onOpenPost={(post) => router.push(`/feed/${post.id}`)} /></div>
+            <div className="hidden md:block"><FeedWebTable posts={sortedPosts} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} commentText={commentText} onLike={handleLike} onComment={handleComment} onToggleComment={setCommentingOn} onCommentTextChange={setCommentText} onOpenPost={(post) => router.push(`/feed/${post.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} /></div>
             <div className="md:hidden">
               <SharedFlatList
                 data={sortedPosts}
@@ -535,7 +551,7 @@ export default function FeedPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 className="gap-4"
-                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} />}
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
               />
             </div>
           </>
@@ -556,6 +572,7 @@ export default function FeedPage() {
         onReply={(post, commentId) => router.push(`/feed/${post.id}/comments/new?replyTo=${encodeURIComponent(commentId)}`)}
         onClose={() => setCommentingOn(null)}
       />
+      <ConfirmDeleteDialog open={Boolean(postToDelete)} onOpenChange={(open) => { if (!open) setPostToDelete(null); }} onConfirm={() => void handleDeletePost()} title="Apagar publicação?" description="A publicação será removida do Feed para todos os membros." />
     </WebPageLayout>
   );
 }
