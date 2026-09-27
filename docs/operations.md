@@ -81,15 +81,16 @@ npm run db:tenant:migrate:all -- --tenant ig2 --backup-dir /tmp/church-hub-migra
 
 Use `--output /caminho/relatorio.json` para persistir o relatorio. Uma falha em um tenant nao interrompe os demais, mas encerra o comando com codigo diferente de zero.
 
-Seed local principal:
+Seed local principal (slug público atual):
 
 ```text
-Igreja: igreja-teste
+Igreja: amesachurch
 Email: admin@igreja-teste.com
 Senha: 123456
 ```
 
-O usuário acima é do tenant `igreja-teste`. Na mesma tela `/auth/login`, deixe o
+O usuário acima é do tenant `amesachurch`, cujo `databaseKey` físico é
+`igreja-teste`; comandos de migration usam essa chave física. Na mesma tela `/auth/login`, deixe o
 campo de slug vazio para autenticar o administrador global; nesse caso o sistema
 redireciona para `/admin/tenants`. O administrador global não é um usuário de tenant.
 

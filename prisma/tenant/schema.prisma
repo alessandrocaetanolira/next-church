@@ -332,6 +332,28 @@ model GameScore {
   @@index([completedAt])
 }
 
+/// Convites persistidos para desafios entre membros. A execução da partida online
+/// permanece em um domínio próprio; este registro não reutiliza tentativas solo.
+model GameChallenge {
+  id                  String   @id @default(cuid())
+  gameType            String
+  status              String   @default("pending")
+  challengerUserEmail String
+  challengerName      String
+  opponentUserEmail   String
+  opponentName        String
+  expiresAt           DateTime
+  acceptedAt          DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  deletedAt           DateTime?
+
+  @@index([challengerUserEmail, status])
+  @@index([opponentUserEmail, status])
+  @@index([expiresAt])
+}
+
 model CanteenSettings {
   id        String   @id
   isOpen    Boolean  @default(false)

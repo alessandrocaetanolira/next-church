@@ -8,20 +8,20 @@ Permitir que um membro desafie outro membro em uma partida de Memória ou Quiz, 
 
 ## Regras de isolamento
 
-- [ ] Criar uma camada própria em `src/server/game-challenges`.
-- [ ] Criar serviços de cliente em `src/services/game-challenges`.
+- [x] Criar uma camada própria em `src/server/game-challenges`.
+- [x] Criar serviços de cliente em `src/services/game-challenges`.
 - [ ] Não reutilizar estado local dos jogos solo como estado da partida online.
 - [ ] Não alterar contratos existentes de `/api/events` para suportar jogadas.
 - [ ] Não alterar tabelas de Feed, Quiz solo ou Bíblia.
-- [ ] Usar somente o banco do tenant para desafios.
+- [x] Usar somente o banco do tenant para desafios.
 - [ ] Manter os jogos solo funcionando mesmo sem rede.
 - [ ] Ativar o modo online somente mediante `challengeId` válido.
 
 ## Fase 1 — Contrato e modelo de dados
 
-- [ ] Definir os tipos `memory` e `quiz`.
-- [ ] Definir os estados `pending`, `active`, `completed`, `declined`, `expired` e `cancelled`.
-- [ ] Criar migration no schema do tenant para `GameChallenge`.
+- [x] Definir o tipo inicial `quiz`; `memory` entra com a sala online.
+- [x] Persistir o estado inicial `pending`; os estados de sala entram nas próximas fases.
+- [x] Criar migration no schema do tenant para `GameChallenge`.
 - [ ] Criar tabela de participantes ou garantir duas participações por desafio.
 - [ ] Criar tabela de jogadas com sequência única por partida.
 - [ ] Persistir versão do estado para controle de concorrência.
@@ -36,9 +36,9 @@ Modelo mínimo sugerido:
 
 ## Fase 2 — Segurança e regras no servidor
 
-- [ ] Validar que os dois membros pertencem ao mesmo tenant.
-- [ ] Validar que o convidado está ativo e pode participar.
-- [ ] Impedir convite para si mesmo e partidas duplicadas pendentes.
+- [x] Validar que os dois membros pertencem ao mesmo tenant.
+- [x] Validar que o convidado está ativo e pode participar.
+- [x] Impedir convite para si mesmo e partidas duplicadas pendentes.
 - [ ] Não confiar em turno, pontuação, cartas ou respostas enviados pelo cliente.
 - [ ] Validar que somente os dois participantes podem consultar ou jogar.
 - [ ] Usar `version` e `sequence` para rejeitar jogadas antigas ou duplicadas.
@@ -94,9 +94,9 @@ Modelo mínimo sugerido:
 
 ## Fase 7 — Convites e notificações
 
-- [ ] Criar notificação persistente para o membro desafiado.
-- [ ] Enviar convite por SSE geral e Web Push, sem enviar cada jogada por Push.
-- [ ] Incluir link direto para a partida.
+- [x] Criar notificação persistente para o membro desafiado.
+- [x] Enviar convite por SSE geral e Web Push, sem enviar cada jogada por Push.
+- [x] Incluir link direto para o Quiz.
 - [ ] Notificar o desafiante quando o convite for aceito ou recusado.
 - [ ] Notificar os participantes ao concluir a partida.
 - [ ] Evitar notificações duplicadas usando chave de origem e desafio.

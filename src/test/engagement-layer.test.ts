@@ -10,7 +10,8 @@ function repositoryMock() {
   return {
     findOrCreate: vi.fn().mockResolvedValue({ id: 'profile-1', userEmail: 'member@test.local', devotionalStreak: 1, devotionalLastDate: null, completedChallengeIds: '[]' }),
     updateProfile: vi.fn().mockResolvedValue(undefined),
-    listScores: vi.fn().mockResolvedValue([{ userId: 'member@test.local', score: 20 }, { userId: 'other@test.local', score: 10 }]),
+    listQuizScores: vi.fn().mockResolvedValue([{ userId: 'member@test.local', score: 20 }, { userId: 'other@test.local', score: 10 }]),
+    listGameScores: vi.fn().mockResolvedValue([]),
   } as unknown as EngagementRepository;
 }
 

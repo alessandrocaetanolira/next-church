@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { db, seedQuizQuestions, type QuizQuestion } from '@/lib/db';
-import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Award, Flame, TrendingUp, Swords } from 'lucide-react';
+import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Award, Flame, TrendingUp, Swords, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createQuizAttempt, listQuizAttempts, type QuizAttempt } from '@/services/quiz/quiz-api';
+import { createQuizChallengeInvite, listQuizChallengeInvitees, type QuizChallengeInvitee } from '@/services/game-challenges/game-challenges-api';
 import { WebPageLayout } from '@/components/shared/web';
 
 export default function QuizPage() {
@@ -32,11 +34,11 @@ export default function QuizPage() {
   const [difficulty, setDifficulty] = useState<'all' | 'easy' | 'medium' | 'hard'>('all');
   const [category, setCategory] = useState<string>('all');
   const [streak, setStreak] = useState(0);
-  const [challengeMode, setChallengeMode] = useState(false);
-  
-  // Disabled Challenge Mode for now as we need API to fetch users
-  // const [challengeOpponent, setChallengeOpponent] = useState<string>('');
-  const [showChallenge, setShowChallenge] = useState(false);
+  const [challengeDrawerOpen, setChallengeDrawerOpen] = useState(false);
+  const [challengeInvitees, setChallengeInvitees] = useState<QuizChallengeInvitee[]>([]);
+  const [selectedChallengeInvitee, setSelectedChallengeInvitee] = useState<QuizChallengeInvitee | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState(false);
+  const [challengeSending, setChallengeSending] = useState(false);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
 
   useEffect(() => {
@@ -105,6 +107,35 @@ export default function QuizPage() {
     setAttempts((current) => [saved, ...current]);
   }, []);
 
+  const openChallengeDrawer = async () => {
+    setChallengeDrawerOpen(true);
+    setChallengeLoading(true);
+    setSelectedChallengeInvitee(null);
+    try {
+      const invitees = await listQuizChallengeInvitees();
+      setChallengeInvitees(Array.isArray(invitees) ? invitees : []);
+    } catch {
+      setChallengeInvitees([]);
+      toast.error('Não foi possível carregar os membros disponíveis para o desafio.');
+    } finally {
+      setChallengeLoading(false);
+    }
+  };
+
+  const sendChallengeInvite = async () => {
+    if (!selectedChallengeInvitee) return;
+    setChallengeSending(true);
+    try {
+      await createQuizChallengeInvite(selectedChallengeInvitee.email);
+      toast.success(`Convite enviado para ${selectedChallengeInvitee.name}.`);
+      setChallengeDrawerOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o convite.');
+    } finally {
+      setChallengeSending(false);
+    }
+  };
+
   const startGame = useCallback(async () => {
     let allQ = await db.quizQuestions.toArray();
     if (difficulty !== 'all') allQ = allQ.filter(q => q.difficulty === difficulty);
@@ -153,8 +184,12 @@ export default function QuizPage() {
           correctAnswers: correctCount,
           completedAt: new Date().toISOString(),
         };
-        await saveAttempt(attempt);
-        if (userStats && score > userStats.bestScore) toast.success('🏆 Novo recorde pessoal!');
+        try {
+          await saveAttempt(attempt);
+          if (userStats && score > userStats.bestScore) toast.success('🏆 Novo recorde pessoal!');
+        } catch {
+          toast.error('Resultado concluído, mas a pontuação não pôde ser salva no ranking. Tente novamente quando estiver online.');
+        }
       }
       setGameState('result');
       return;
@@ -240,8 +275,7 @@ export default function QuizPage() {
                   <Button className="flex-1" size="lg" onClick={startGame}>
                     <Zap className="w-5 h-5 mr-2" /> Jogar
                   </Button>
-                  {/* Challenge Button disabled for now */}
-                  <Button variant="outline" size="lg" disabled onClick={() => setShowChallenge(true)} className="opacity-50">
+                  <Button variant="outline" size="lg" onClick={() => void openChallengeDrawer()}>
                     <Swords className="w-5 h-5 mr-2" /> Desafiar
                   </Button>
                 </div>
@@ -311,7 +345,6 @@ export default function QuizPage() {
                     <span className="text-xs font-bold text-yellow-500">x{streak}</span>
                   </div>
                 )}
-                {challengeMode && <Badge variant="destructive" className="text-[10px]"><Swords className="w-3 h-3 mr-1" />Desafio</Badge>}
                 <div className="flex items-center gap-1.5">
                   <Star className="w-4 h-4 text-yellow-500" />
                   <span className="font-bold text-foreground">{score}</span>
@@ -367,7 +400,7 @@ export default function QuizPage() {
                 <div className="w-20 h-20 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
                   <Trophy className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold">{challengeMode ? 'Desafio Concluído!' : 'Quiz Concluído!'}</h2>
+                <h2 className="text-2xl font-bold">Quiz Concluído!</h2>
                 <div className="text-4xl font-extrabold text-primary">{score} <span className="text-lg text-muted-foreground">pontos</span></div>
                 <p className="text-muted-foreground">{correctCount} de {questions.length} corretas ({Math.round((correctCount / questions.length) * 100)}%)</p>
                 {userStats && (
@@ -380,7 +413,7 @@ export default function QuizPage() {
                   </div>
                 )}
                 <div className="flex gap-2 justify-center pt-2">
-                  <Button onClick={() => { setGameState('menu'); setChallengeMode(false); }} variant="outline"><RotateCcw className="w-4 h-4 mr-1" /> Menu</Button>
+                  <Button onClick={() => setGameState('menu')} variant="outline"><RotateCcw className="w-4 h-4 mr-1" /> Menu</Button>
                   <Button onClick={startGame}><Zap className="w-4 h-4 mr-1" /> Jogar Novamente</Button>
                 </div>
               </CardContent>
@@ -388,6 +421,41 @@ export default function QuizPage() {
           </div>
         )}
       </>
+      <Drawer open={challengeDrawerOpen} onOpenChange={setChallengeDrawerOpen}>
+        <DrawerContent className="mx-auto max-h-[82dvh] max-w-lg">
+          <DrawerHeader className="border-b border-border/60 text-left">
+            <DrawerTitle className="flex items-center gap-2"><Swords className="h-5 w-5 text-primary" />Desafiar membro</DrawerTitle>
+            <DrawerDescription>Escolha quem receberá um convite para jogar Quiz Bíblico.</DrawerDescription>
+          </DrawerHeader>
+          <div className="min-h-0 overflow-y-auto p-4">
+            {challengeLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Carregando membros...</p> : null}
+            {!challengeLoading && challengeInvitees.length === 0 ? <p className="py-8 text-center text-sm text-muted-foreground">Nenhum outro membro com acesso ao Quiz está disponível.</p> : null}
+            {!challengeLoading && challengeInvitees.length > 0 ? (
+              <div className="space-y-2">
+                {challengeInvitees.map((invitee) => {
+                  const selected = selectedChallengeInvitee?.email === invitee.email;
+                  return (
+                    <button
+                      key={invitee.email}
+                      type="button"
+                      onClick={() => setSelectedChallengeInvitee(invitee)}
+                      className={cn('flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors', selected ? 'border-primary bg-primary/10' : 'border-border/60 bg-card hover:border-primary/40')}
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-secondary-foreground">{invitee.name.charAt(0).toUpperCase()}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{invitee.name}</span><span className="block truncate text-xs text-muted-foreground">{invitee.email}</span></span>
+                      {selected ? <CheckCircle2 className="h-5 w-5 text-primary" /> : <Users className="h-4 w-4 text-muted-foreground" />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          <DrawerFooter className="border-t border-border/60">
+            <Button onClick={() => void sendChallengeInvite()} disabled={!selectedChallengeInvitee || challengeSending}>{challengeSending ? 'Enviando convite...' : 'Enviar convite'}</Button>
+            <Button variant="outline" onClick={() => setChallengeDrawerOpen(false)} disabled={challengeSending}>Cancelar</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </WebPageLayout>
   );
 }

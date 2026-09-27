@@ -30,7 +30,9 @@ O app deve usar um banco global e bancos por igreja, com separacao fisica e conc
 
 O login da igreja recebe `churchSlug`, valida a igreja ativa e provisionada no banco global, resolve o `databaseKey`, monta o datasource do tenant e autentica o usuario dentro do banco da propria igreja. O `tenantId` entra na sessao e as APIs usam uma referencia validada para escolher o banco correto. Esse fluxo fica em `/auth/login`.
 
-O administrador global usa um fluxo separado em `/admin/login`. Ele é autenticado pela tabela `PlatformAdmin` do banco global e acessa somente as rotas `/admin/*`; não deve ser tratado como um `User` de tenant.
+O administrador global é autenticado pela tabela `PlatformAdmin` do banco global na
+mesma tela `/auth/login`, deixando o slug vazio. Ele acessa somente as rotas
+`/admin/*` e não deve ser tratado como um `User` de tenant.
 
 Regra de separacao:
 
@@ -88,4 +90,7 @@ Dexie armazena dados locais e uma fila de sincronizacao. A estrategia atual e in
 
 SSE e usado para eventos com o app aberto. O broker fica em `src/lib/server/sse-broker.ts` e o endpoint principal e `/api/events`.
 
-Web Push ainda deve ser tratado como evolucao futura, nao como funcionalidade plenamente consolidada.
+Web Push já está integrado ao broker de notificações, com fallback de som/vibração
+quando o app está aberto. A configuração de PWA, atualização de service worker e
+ícones por tenant ainda exigem validação em dispositivos reais; acompanhe
+`technical-audit-2026-09.md`.

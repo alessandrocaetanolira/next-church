@@ -5,9 +5,28 @@ detalhamento técnico; este arquivo contém apenas o estado e a ordem de execuç
 
 ## Próximo foco
 
-As Prioridades 1, 2 e 3 estão concluídas. A próxima etapa é validar o fluxo
-offline-first em dispositivos reais, manter o branding dinâmico isolado por tenant
-e concluir o módulo independente de desafios online.
+As Prioridades 1, 2 e 3 estão concluídas. Antes de ampliar módulos, resolver os
+achados P1 da [auditoria técnica](./technical-audit-2026-09.md): alinhar PWA/Serwist
+ao bundler oficial, consolidar notificações e reduzir polling redundante. Em seguida,
+validar offline em dispositivos reais, branding por tenant e desafios online.
+
+## Auditoria técnica — ação imediata
+
+- [x] P0: remover a rota pública `/api/seed`; os dados de demonstração permanecem
+      exclusivamente nos scripts explícitos de inicialização. Remover também as
+      exceções públicas redundantes dos webhooks locais de teste no proxy.
+- [ ] P1: escolher uma única integração Serwist compatível com o bundler oficial
+      (Webpack hoje) e validar build, `next start`, update e instalação PWA.
+- [ ] P1: consolidar SSE/Web Push e remover ou migrar polling legado de
+      `lib/notifications`, `features/sync/services/notification-service` e `use-sse`.
+- [ ] P1: tornar o polling do Feed fallback do SSE, pausado quando a aba não estiver
+      visível.
+- [ ] Medir Lighthouse/Web Vitals e perfil de rede nas rotas Login, Dashboard, Feed,
+      Cantina e Configurações antes de refatorar componentes grandes.
+- [ ] Definir política de carregamento de mídia para `AppImage` (lazy, decoding,
+      dimensões reservadas e prioridade).
+- [ ] Revisar regras ESLint desabilitadas e elevar warnings de hooks relevantes após
+      limpar ocorrências existentes.
 
 ## Estado atual
 
@@ -26,6 +45,9 @@ e concluir o módulo independente de desafios online.
 - [x] Perfil do próprio usuário com avatar WebP e atualização de dados pessoais.
 - [x] Permissões padrão para novos membros aprovados, incluindo Feed e Bíblia.
 - [x] Ranking geral da igreja agregando devocional, quiz e pontuações persistidas de jogos.
+- [x] Quiz: persistir tentativa antes de exibir o resultado, mantendo a tela de
+      resultado disponível mesmo se o envio falhar; criar convite persistido e
+      notificação para desafio entre membros elegíveis.
 - [x] Link do devocional para abrir diretamente livro, capítulo e verso na Bíblia.
 - [ ] E-mail transacional ainda não implementado.
 
@@ -100,6 +122,8 @@ e concluir o módulo independente de desafios online.
 - [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
 - [ ] Validar branding e manifest sem mistura entre tenants.
 - [ ] Confirmar instalação PWA em Android real, incluindo ícone e manifest do tenant.
+- [ ] Validar ícone de notificação Push por tenant; o service worker ainda aponta
+      para o ícone padrão.
 
 ## Prioridade 5 — Cantina
 
@@ -124,6 +148,8 @@ e concluir o módulo independente de desafios online.
 - [x] Criar `InfiniteScroll` compartilhado para listas mobile.
 - [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
 - [ ] Consolidar `ErrorState`, `ActionMenu` e filtros compartilhados.
+- [ ] Extrair hooks e seções das telas client-side maiores (Dashboard, Minha Conta,
+      Grupo, Cantina, Feed e Configurações), começando pelas rotas mais acessadas.
 
 ## Prioridade 7 — Notificações e e-mail
 
@@ -139,7 +165,8 @@ e concluir o módulo independente de desafios online.
 - [x] Criar persistência inicial de pontuação de jogos e integrar o ranking ao perfil de engajamento.
 - [ ] Integrar todos os jogos solo ao endpoint de pontuação com `clientRunId`/idempotência.
 - [ ] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
-- [ ] Criar desafios entre membros nos jogos, incluindo convite, aceite/recusa, partida em dupla e resultado persistido.
+- [ ] Completar desafios entre membros: aceite/recusa, partida em dupla e resultado
+      persistido. O convite inicial de Quiz e sua notificação já estão disponíveis.
 - [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
 
@@ -153,3 +180,4 @@ e concluir o módulo independente de desafios online.
 - [E-mail transacional](./email-todo.md)
 - [Frontend](./frontend-todo.md)
 - [Jogos](./games-todo.md)
+- [Auditoria técnica](./technical-audit-2026-09.md)

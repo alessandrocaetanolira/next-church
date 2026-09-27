@@ -19,7 +19,9 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 ## Estado do projeto
 
 As Prioridades 1 (estabilização), 2 (template Web) e 3 (permissões e experiência
-de acesso) estão concluídas. O próximo foco é validar o fluxo offline-first em
+de acesso) estão concluídas. A rota HTTP de seed foi removida, o convite inicial
+do Quiz agora é persistido e notificado, e o tenant atual `amesachurch` usa o plano
+`PREMIUM` para liberar a Cantina. O próximo foco é validar o fluxo offline-first em
 dispositivos reais, manter o branding dinâmico por tenant e concluir a evolução
 dos jogos online. O acompanhamento detalhado está em
 [docs/TODO.md](docs/TODO.md).
@@ -148,13 +150,17 @@ Email: admin@church.local
 Senha: admin@church
 ```
 
-Administrador da igreja:
+Administrador da igreja no tenant de demonstração:
 
 ```text
-Igreja: igreja-teste
+Igreja: amesachurch
 Email: admin@igreja-teste.com
 Senha: 123456
 ```
+
+O slug público atual `amesachurch` é diferente da chave física do banco,
+`igreja-teste`; comandos de migration e reset usam a chave física quando indicado.
+O plano atual do tenant é `PREMIUM`, incluindo a Cantina.
 
 ### 5. Iniciar e validar
 
@@ -245,7 +251,7 @@ CC BY-NC; confirme os direitos das traduções antes de qualquer uso comercial.
 Login da igreja em `/auth/login`:
 
 ```text
-Igreja: igreja-teste
+Igreja: amesachurch
 Email: admin@igreja-teste.com
 Senha: 123456
 ```
@@ -343,7 +349,10 @@ As validações devem ser executadas na raiz do projeto:
   agora percorre login, JWT, sessão, store e cache offline; administradores e
   pastores mantêm acesso global, incluindo a Cantina.
 - As Prioridades 1, 2 e 3 do [TODO principal](docs/TODO.md) estão concluídas; a
-  validação offline em dispositivos reais e os desafios online são os próximos ciclos.
+  validação offline em dispositivos reais, a consolidação do PWA e os desafios
+  online são os próximos ciclos.
+- A auditoria técnica registrou a remoção da rota insegura `/api/seed` e os itens
+  P1 ainda pendentes em [docs/technical-audit-2026-09.md](docs/technical-audit-2026-09.md).
 - A sessão offline agora usa cache separado por `tenantId + userId`, migra o
   formato legado com segurança e remove o contexto local no logout explícito.
 - O sincronismo persiste o cursor em `offlineMetadata` e filtra a fila de saída
