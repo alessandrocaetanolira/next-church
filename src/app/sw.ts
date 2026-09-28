@@ -71,6 +71,8 @@ type PushPayload = {
   mensagem?: string;
   url?: string;
   tag?: string;
+  icon?: string;
+  badge?: string;
   data?: Record<string, unknown>;
   payload?: Record<string, unknown>;
 };
@@ -93,8 +95,8 @@ self.addEventListener('push', (event: Event) => {
   });
   const showNotification = self.registration.showNotification(title, {
     body,
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
+    icon: payload.icon ?? '/pwa-192x192.png',
+    badge: payload.badge ?? payload.icon ?? '/pwa-192x192.png',
     tag: payload.tag ?? String(data.tipo ?? data.type ?? ''),
     vibrate: [80, 40, 80],
     data: { ...data, url: targetUrl, notificationId },

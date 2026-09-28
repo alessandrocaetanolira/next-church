@@ -124,7 +124,7 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
 - [ ] Validar branding e manifest sem mistura entre tenants.
 - [ ] Confirmar instalação PWA em Android real, incluindo ícone e manifest do tenant.
-- [ ] Validar ícone de notificação Push por tenant; o service worker ainda aponta
+- [x] Usar o ícone PWA do tenant no payload de notificação Push, mantendo fallback
       para o ícone padrão.
 
 ## Prioridade 5 — Cantina

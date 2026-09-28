@@ -3,6 +3,8 @@ import { publishTenantEvent } from '@/infra/sse/sse-broker';
 import { webPushService } from '@/infra/web-push/web-push-service';
 import { PushSubscriptionsRepository } from '@/server/notifications/push-subscriptions.repository';
 import { generateId } from '@/lib/id';
+import { getGlobalClient } from '@/lib/prisma-factory';
+import { getTenantPwaIconUrl } from '@/lib/branding/pwa-assets';
 
 /**
  * Mensagem normalizada produzida por qualquer módulo de negócio.
@@ -238,6 +240,21 @@ async function getMemberEmails(prisma: PrismaClient, memberIds: string[]) {
   return Array.from(new Set(users.map((user) => normalizeEmail(user.email ?? '')).filter(Boolean)));
 }
 
+async function getTenantPushIcon(tenantId: string) {
+  try {
+    const church = await getGlobalClient().church.findFirst({
+      where: {
+        OR: [{ databaseKey: tenantId }, { slug: tenantId }],
+        deletedAt: null,
+      },
+      select: { slug: true, branding: { select: { brandingVersion: true } } },
+    });
+    return church ? getTenantPwaIconUrl(church.slug, 192, church.branding?.brandingVersion) : '/pwa-192x192.png';
+  } catch {
+    return '/pwa-192x192.png';
+  }
+}
+
 async function getFeedPostAuthorEmail(prisma: PrismaClient, postId: string) {
   const [post] = await prisma.$queryRawUnsafe<Array<{ userId: string | null }>>(
     `
@@ -331,6 +348,7 @@ export async function createNotifications(
     const subscriptions = await subscriptionsRepository.listByEmails(recipients);
     const firstNotification = notifications[0];
     const notificationUrl = firstNotification?.href ?? '/notifications';
+    const tenantIcon = await getTenantPushIcon(tenantId);
     const result = await webPushService.send(
       subscriptions,
       {
@@ -338,6 +356,8 @@ export async function createNotifications(
         body: firstNotification?.message ?? 'Você recebeu uma nova notificação.',
         url: notificationUrl,
         tag: firstNotification?.type,
+        icon: tenantIcon,
+        badge: tenantIcon,
         data: {
           type: firstNotification?.type,
           tipo: firstNotification?.type,
