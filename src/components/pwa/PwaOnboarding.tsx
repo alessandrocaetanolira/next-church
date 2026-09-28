@@ -58,8 +58,12 @@ export function PwaOnboarding() {
   useEffect(() => {
     setMounted(true);
     setInstalled(isStandalone());
-    setInstallDismissed(readFlag(INSTALL_DISMISSED_KEY));
+    const dismissed = readFlag(INSTALL_DISMISSED_KEY);
+    setInstallDismissed(dismissed);
     setNotificationsDismissed(readFlag(NOTIFICATIONS_DISMISSED_KEY));
+    // O app instalado ou já dispensado não deve bloquear o onboarding de
+    // notificações aguardando uma nova decisão de instalação.
+    setInstallResolved(isStandalone() || dismissed);
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -87,6 +91,9 @@ export function PwaOnboarding() {
   }, [isAuthenticated, mounted, production]);
 
   const canOfferInstall = production && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios || android);
+  // Notification.permission é a fonte de verdade do navegador. Só exibimos a
+  // modal quando ainda não houve decisão; permissões granted/denied não devem
+  // disparar um novo pedido de permissão.
   const canOfferNotifications = production && mounted && isAuthenticated && installResolved && serviceWorkerReady && push.supported && push.permission === 'default' && !push.subscribed && !notificationsDismissed;
 
   const dismissInstall = () => {

@@ -17,10 +17,8 @@ import {
 import { NotificationBell } from '@/components/NotificationBell';
 import { useState, useEffect } from 'react';
 import { isOffline, onConnectivityChange } from '@/lib/pushNotifications';
-import { usePushSubscription } from '@/hooks/use-push-subscription';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { toast } from 'sonner';
 import { AppImage } from '@/components/shared';
 import { getAccessibleModules } from '@/lib/access-control';
 
@@ -99,7 +97,6 @@ export function Header() {
   const [showAbout, setShowAbout] = useState(false);
   const [offline, setOffline] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
-  const push = usePushSubscription();
 
   useEffect(() => {
     setOffline(isOffline());
@@ -107,17 +104,8 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    if (push.error) toast.error(push.error);
-  }, [push.error]);
-
-  useEffect(() => {
     setLogoFailed(false);
   }, [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
-
-  const handleRequestNotifications = async () => {
-    const enabled = await push.subscribe();
-    if (enabled) toast.success('Notificações ativadas neste dispositivo.');
-  };
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -204,12 +192,6 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>Sem conexão — dados salvos localmente</TooltipContent>
                 </Tooltip>
-              )}
-
-              {push.supported && !push.subscribed && push.permission !== 'denied' && (
-                <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => void handleRequestNotifications()} disabled={push.loading}>
-                  {push.loading ? 'Ativando...' : 'Ativar alertas'}
-                </Button>
               )}
 
               {isMember && (

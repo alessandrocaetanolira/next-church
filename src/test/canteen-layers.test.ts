@@ -2,19 +2,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CanteenSalesService } from '@/server/canteen/sales.service';
 import { CanteenSalesDetailService } from '@/server/canteen/sales-detail.service';
 import { CanteenLedgerService } from '@/server/canteen/ledger.service';
+import { CanteenOperationService } from '@/server/canteen/operation.service';
 import type { CanteenSalesRepository, SaleRecord } from '@/server/canteen/sales.repository';
 import type { CanteenLedgerRepository } from '@/server/canteen/ledger.repository';
+import type { CanteenOperationRepository } from '@/server/canteen/operation.repository';
 
-const { getStatusMock, notifyOrderMock, notifyMemberMock } = vi.hoisted(() => ({
+const { getStatusMock, notifyOrderMock, notifyMemberMock, notifyOpenedMock } = vi.hoisted(() => ({
   getStatusMock: vi.fn(),
   notifyOrderMock: vi.fn(),
   notifyMemberMock: vi.fn(),
+  notifyOpenedMock: vi.fn(),
 }));
 
 vi.mock('@/lib/server/canteen-operation', () => ({ getCanteenStatus: getStatusMock }));
 vi.mock('@/lib/server/notification-service', () => ({
   notifyCanteenNewOrder: notifyOrderMock,
   notifyMemberOrderUpdate: notifyMemberMock,
+  notifyCanteenOpened: notifyOpenedMock,
 }));
 
 const member = { role: 'MEMBER', permissions: ['canteen:order'], planFeatures: ['canteen'], linkedMemberId: 'member-1' };
@@ -102,5 +106,21 @@ describe('regras transacionais da cantina', () => {
     expect(repository.registerPayment).toHaveBeenCalledWith('member-1', 10, 'Admin');
 
     await expect(service.payment('member-1', { amount: 40 }, 'Admin')).rejects.toThrow('maior que a dívida');
+  });
+
+  it('notifica todos ao abrir a cantina, mas não repete ao manter aberta', async () => {
+    const repository = {
+      getStatus: vi.fn()
+        .mockResolvedValueOnce({ isOpen: false })
+        .mockResolvedValueOnce({ isOpen: true }),
+      setStatus: vi.fn().mockResolvedValue({ isOpen: true, openedAt: new Date(), closedAt: null, updatedBy: 'admin@test.local' }),
+    } as unknown as CanteenOperationRepository;
+    const service = new CanteenOperationService(repository, {} as never, 'tenant-1');
+
+    await service.setStatus({ isOpen: true }, 'admin@test.local');
+    await service.setStatus({ isOpen: true }, 'admin@test.local');
+
+    expect(notifyOpenedMock).toHaveBeenCalledTimes(1);
+    expect(notifyOpenedMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { email: 'admin@test.local' });
   });
 });

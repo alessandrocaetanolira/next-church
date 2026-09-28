@@ -422,6 +422,29 @@ export async function notifyCanteenNewOrder(
   });
 }
 
+/** Notifica todos os usuários ativos quando a cantina começa a receber pedidos. */
+export async function notifyCanteenOpened(
+  prisma: PrismaClient,
+  tenantId: string,
+  sender?: { email?: string | null; name?: string | null },
+) {
+  const recipients = await getActiveUserEmails(prisma);
+  if (!recipients.length) return;
+
+  await sendNotification(prisma, tenantId, {
+    recipients,
+    sender,
+    content: {
+      type: 'canteen-opened',
+      title: 'Cantina aberta',
+      message: 'A cantina está aberta e já pode receber pedidos.',
+      href: '/cantina',
+      sourceType: 'canteen',
+      sourceId: 'default',
+    },
+  });
+}
+
 /** Notifica quem pode aprovar novos cadastros públicos de membros. */
 export async function notifyPendingMemberRegistration(
   prisma: PrismaClient,
