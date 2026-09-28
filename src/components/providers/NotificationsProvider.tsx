@@ -69,6 +69,10 @@ export function NotificationsProvider() {
       } catch (error) {
         console.error('Erro ao processar SSE de notificações:', error);
       }
+    }, (connected) => {
+      window.dispatchEvent(new CustomEvent('church:notification-stream-status', {
+        detail: { connected },
+      }));
     });
     window.addEventListener('online', refresh);
     document.addEventListener('visibilitychange', refresh);

@@ -24,7 +24,7 @@ type OfflineSession = Session & {
 };
 
 function SessionCacheBridge() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const setSession = useAuthStore((state) => state.setSession);
   const logout = useAuthStore((state) => state.logout);
 
@@ -80,6 +80,20 @@ function SessionCacheBridge() {
       // O cache da sessão é opcional; a sessão online continua funcionando.
     }
   }, [logout, session, setSession, status]);
+
+  useEffect(() => {
+    const revalidateOnResume = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+      void update();
+    };
+
+    document.addEventListener('visibilitychange', revalidateOnResume);
+    window.addEventListener('pageshow', revalidateOnResume);
+    return () => {
+      document.removeEventListener('visibilitychange', revalidateOnResume);
+      window.removeEventListener('pageshow', revalidateOnResume);
+    };
+  }, [update]);
 
   return null;
 }

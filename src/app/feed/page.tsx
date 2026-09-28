@@ -159,6 +159,9 @@ export default function FeedPage() {
   useEffect(() => {
     if (initialLoading || isOffline) return;
 
+    let streamConnected = true;
+    let fallbackInterval: number | undefined;
+
     const checkForNewPosts = async () => {
       try {
         const payload = await listFeedPosts(1, PAGE_SIZE, filterType);
@@ -171,8 +174,41 @@ export default function FeedPage() {
       }
     };
 
-    const interval = window.setInterval(() => void checkForNewPosts(), 30_000);
-    return () => window.clearInterval(interval);
+    const stopFallback = () => {
+      if (fallbackInterval !== undefined) window.clearInterval(fallbackInterval);
+      fallbackInterval = undefined;
+    };
+    const startFallback = () => {
+      if (fallbackInterval !== undefined) return;
+      void checkForNewPosts();
+      fallbackInterval = window.setInterval(() => void checkForNewPosts(), 30_000);
+    };
+    const handleStreamStatus = (event: Event) => {
+      streamConnected = Boolean((event as CustomEvent<{ connected?: boolean }>).detail?.connected);
+      if (streamConnected) stopFallback();
+      else startFallback();
+    };
+    const handleFeedEvent = () => {
+      setNewPostsAvailable(true);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        stopFallback();
+      } else if (!streamConnected) {
+        startFallback();
+      }
+    };
+
+    window.addEventListener('church:notification-stream-status', handleStreamStatus);
+    window.addEventListener('church:feed-post-created', handleFeedEvent);
+    document.addEventListener('visibilitychange', handleVisibility);
+    if (!streamConnected) startFallback();
+    return () => {
+      stopFallback();
+      window.removeEventListener('church:notification-stream-status', handleStreamStatus);
+      window.removeEventListener('church:feed-post-created', handleFeedEvent);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [filterType, initialLoading, isOffline]);
 
   const handleRefreshNewPosts = async () => {

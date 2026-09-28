@@ -20,7 +20,7 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 
 As Prioridades 1 (estabilização), 2 (template Web) e 3 (permissões e experiência
 de acesso) estão concluídas. A rota HTTP de seed foi removida, o convite inicial
-do Quiz agora é persistido e notificado, e o tenant atual `amesachurch` usa o plano
+do Quiz agora é persistido e notificado, e o tenant atual `igreja-teste` usa o plano
 `PREMIUM` para liberar a Cantina. O próximo foco é validar o fluxo offline-first em
 dispositivos reais, manter o branding dinâmico por tenant e concluir a evolução
 dos jogos online. O acompanhamento detalhado está em
@@ -153,13 +153,14 @@ Senha: admin@church
 Administrador da igreja no tenant de demonstração:
 
 ```text
-Igreja: amesachurch
+Igreja: igreja-teste
 Email: admin@igreja-teste.com
 Senha: 123456
 ```
 
-O slug público atual `amesachurch` é diferente da chave física do banco,
-`igreja-teste`; comandos de migration e reset usam a chave física quando indicado.
+O slug público e a chave física do banco inicial são `igreja-teste`.
+Em outros tenants, o slug público pode ser diferente da chave física; comandos de
+migration e reset usam a chave física quando indicado.
 O plano atual do tenant é `PREMIUM`, incluindo a Cantina.
 
 ### 5. Iniciar e validar
@@ -251,7 +252,7 @@ CC BY-NC; confirme os direitos das traduções antes de qualquer uso comercial.
 Login da igreja em `/auth/login`:
 
 ```text
-Igreja: amesachurch
+Igreja: igreja-teste
 Email: admin@igreja-teste.com
 Senha: 123456
 ```

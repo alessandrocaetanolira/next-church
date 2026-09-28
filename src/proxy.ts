@@ -22,6 +22,9 @@ export async function proxy(request: NextRequest) {
     nextUrl.pathname.startsWith("/api/auth") ||
     nextUrl.pathname.startsWith("/api/public") ||
     nextUrl.pathname.startsWith("/pwa-start") ||
+    nextUrl.pathname.startsWith("/offline") ||
+    nextUrl.pathname.startsWith("/branding/") ||
+    nextUrl.pathname.startsWith("/pwa-") ||
     nextUrl.pathname.startsWith("/cadastro");
 
   if (isPublicRoute) {

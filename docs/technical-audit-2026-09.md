@@ -42,28 +42,15 @@ atualização de service worker e rollback de cache.
 ### P1 — Consolidar notificações em um único fluxo
 
 O caminho ativo usa `NotificationsProvider` + `openNotificationStream()` para SSE e
-Web Push. Permanecem no repositório, sem importadores de produção identificados:
-
-- `src/lib/notifications.ts`, com polling, estado em `localStorage` e avisos
-  simulados;
-- `src/features/sync/services/notification-service.ts`, com outro polling Dexie;
-- `src/features/sync/hooks/use-sse.ts`, que abre outro `EventSource` e exibe toast
-  genérico.
-
-Esses caminhos duplicam contratos, timers, som e possibilidade de notificações
-repetidas. Próxima ação: inventariar dependências, remover o legado ou migrar seus
-consumidores para o provider atual; manter uma única política de reconexão,
-deduplicação e permissão de notificação.
+Web Push. Os dois serviços de polling sem consumidores foram removidos, e
+`src/features/sync/hooks/use-sse.ts` agora reutiliza o mesmo stream compartilhado.
+A política de reconexão permanece centralizada em `notification-stream.ts`.
 
 ### P1 — Evitar polling redundante no Feed
 
-`src/app/feed/page.tsx` mantém polling a cada 30 segundos para detectar posts novos,
-mesmo recebendo o evento `church:feed-post-created` distribuído pelo SSE global.
-Isso acrescenta chamadas em todas as sessões que deixam o Feed aberto e duplica a
-função de atualização.
-
-Próxima ação: usar SSE como fonte principal e ativar polling somente como fallback
-controlado quando a conexão estiver indisponível, pausando-o com a aba oculta.
+`src/app/feed/page.tsx` usa o evento `church:feed-post-created` distribuído pelo
+SSE global como fonte principal. O polling de 30 segundos é ativado somente quando
+o stream sinaliza desconexão, reduzindo chamadas em sessões saudáveis.
 
 ## Performance e arquitetura
 

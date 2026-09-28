@@ -8,11 +8,12 @@ export type NotificationStreamPayload = {
 };
 
 type StreamHandler = (payload: NotificationStreamPayload) => void;
+type StreamStatusHandler = (connected: boolean) => void;
 
 let activeClose: (() => void) | null = null;
 
 /** Abre o SSE autenticado com backoff controlado e uma única conexão por janela. */
-export function openNotificationStream(onMessage: StreamHandler) {
+export function openNotificationStream(onMessage: StreamHandler, onStatus?: StreamStatusHandler) {
   activeClose?.();
 
   let source: EventSource | null = null;
@@ -23,12 +24,16 @@ export function openNotificationStream(onMessage: StreamHandler) {
   const connect = () => {
     if (closed) return;
     source = new EventSource('/api/events');
-    source.onopen = () => { retryMs = 1_000; };
+    source.onopen = () => {
+      retryMs = 1_000;
+      onStatus?.(true);
+    };
     source.onmessage = (event) => {
       try { onMessage(JSON.parse(event.data) as NotificationStreamPayload); }
       catch (error) { console.error('[sse-client] payload inválido', error); }
     };
     source.onerror = () => {
+      onStatus?.(false);
       source?.close();
       if (closed || retryTimer !== undefined) return;
       retryTimer = window.setTimeout(() => {

@@ -17,10 +17,10 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
       exceções públicas redundantes dos webhooks locais de teste no proxy.
 - [ ] P1: escolher uma única integração Serwist compatível com o bundler oficial
       (Webpack hoje) e validar build, `next start`, update e instalação PWA.
-- [ ] P1: consolidar SSE/Web Push e remover ou migrar polling legado de
-      `lib/notifications`, `features/sync/services/notification-service` e `use-sse`.
-- [ ] P1: tornar o polling do Feed fallback do SSE, pausado quando a aba não estiver
-      visível.
+- [x] P1: consolidar SSE/Web Push; o provider mantém uma única conexão SSE,
+      `use-sse` reutiliza o mesmo stream e os serviços de polling legado foram removidos.
+- [x] P1: tornar o polling do Feed fallback do SSE, ativado somente quando o stream
+      estiver indisponível.
 - [ ] Medir Lighthouse/Web Vitals e perfil de rede nas rotas Login, Dashboard, Feed,
       Cantina e Configurações antes de refatorar componentes grandes.
 - [ ] Definir política de carregamento de mídia para `AppImage` (lazy, decoding,
@@ -113,6 +113,8 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [x] Versionar o schema Dexie para índices pessoais com tenant.
 - [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
 - [ ] Garantir sessão offline sem redirecionamento indevido para login.
+- [x] Revalidar a sessão online e liberar overlays/drawers ao retornar de uma aba
+      suspensa, evitando a tela aparentemente sem cliques.
 - [x] Isolar cache Dexie por tenant e usuário.
 - [ ] Completar sincronização, retry, conflitos e quota do IndexedDB, documentando a estratégia de resolução.
 - [x] Detectar conflito de versão no `push` sem sobrescrever alteração mais recente do servidor.
