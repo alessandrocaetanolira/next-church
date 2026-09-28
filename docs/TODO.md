@@ -15,8 +15,8 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [x] P0: remover a rota pública `/api/seed`; os dados de demonstração permanecem
       exclusivamente nos scripts explícitos de inicialização. Remover também as
       exceções públicas redundantes dos webhooks locais de teste no proxy.
-- [ ] P1: escolher uma única integração Serwist compatível com o bundler oficial
-      (Webpack hoje) e validar build, `next start`, update e instalação PWA.
+- [x] P1: alinhar a integração Serwist ao bundler oficial Turbopack do Next 16 e
+      validar o build com Service Worker gerado e precache automático.
 - [x] P1: consolidar SSE/Web Push; o provider mantém uma única conexão SSE,
       `use-sse` reutiliza o mesmo stream e os serviços de polling legado foram removidos.
 - [x] P1: tornar o polling do Feed fallback do SSE, ativado somente quando o stream

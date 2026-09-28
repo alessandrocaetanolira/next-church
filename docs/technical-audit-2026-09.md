@@ -34,10 +34,10 @@ layout e as dependências usam a integração `@serwist/turbopack`. O projeto j�
 problemas de chunks e instalação PWA; manter as duas estratégias aumenta o risco de
 artefatos incompatíveis e torna o diagnóstico de service worker mais difícil.
 
-Próxima ação: escolher e documentar uma integração Serwist compatível com Webpack
-enquanto Webpack for o bundler oficial, ou validar Turbopack ponta a ponta antes de
-migrar os scripts. A decisão deve incluir build, `next start`, instalação Android,
-atualização de service worker e rollback de cache.
+O projeto foi validado com `next build --turbopack`: o Serwist gerou o Service Worker
+e o precache automaticamente. Os scripts de desenvolvimento e produção agora usam
+explicitamente Turbopack. Ainda faltam os testes em dispositivo real, atualização
+do worker e rollback de cache.
 
 ### P1 — Consolidar notificações em um único fluxo
 

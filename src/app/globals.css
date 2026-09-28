@@ -241,6 +241,12 @@
     @apply border-border;
   } */
 
+  /* Mantém bordas sem cor explícita alinhadas aos cards também no tema escuro. */
+  .dark .border,
+  .dark .border-input {
+    border-color: hsl(var(--border));
+  }
+
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-text-size-adjust: 100%;

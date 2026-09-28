@@ -146,10 +146,10 @@ export function PwaOnboarding() {
           ) : (
             <p className="text-sm text-muted-foreground">Instale o app para abrir a igreja diretamente pela tela inicial, com uma experiência mais rápida e preparada para uso offline.</p>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={dismissInstall}>Agora não</Button>
-            <Button variant="outline" onClick={openInApp}>Abrir no app</Button>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => void install()}>{ios || (android && !installPrompt) ? 'Entendi' : 'Instalar app'}</Button>
+          <DialogFooter className="gap-2 pt-2 sm:space-x-0">
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={dismissInstall}>Agora não</Button>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={openInApp}>Abrir no app</Button>
+            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto" onClick={() => void install()}>{ios || (android && !installPrompt) ? 'Entendi' : 'Instalar app'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -162,9 +162,9 @@ export function PwaOnboarding() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.</p>
           {push.error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{push.error}</p>}
-          <DialogFooter>
-            <Button variant="outline" onClick={dismissNotifications}>Agora não</Button>
-            <Button onClick={() => void enableNotifications()} disabled={push.loading}>{push.loading ? 'Ativando...' : 'Ativar notificações'}</Button>
+          <DialogFooter className="gap-2 pt-2 sm:space-x-0">
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={dismissNotifications}>Agora não</Button>
+            <Button className="w-full sm:w-auto" onClick={() => void enableNotifications()} disabled={push.loading}>{push.loading ? 'Ativando...' : 'Ativar notificações'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

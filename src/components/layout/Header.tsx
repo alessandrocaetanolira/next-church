@@ -167,7 +167,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="flex h-16 items-center justify-between px-4">
+        <div className="flex h-16 items-center justify-between px-0 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             {mobileBackTarget ? (
               <Button variant="ghost" className="h-9 gap-1 px-1.5 text-sm" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
@@ -175,7 +175,7 @@ export function Header() {
                 <span className="max-w-28 truncate">{mobileBackTarget.label}</span>
               </Button>
             ) : (
-              <div className="flex h-9 w-40 items-center justify-start">
+              <div className="-ml-2 flex h-13 w-[12.5rem] max-w-[54vw] items-center justify-start sm:ml-0 sm:h-9 sm:w-40 sm:max-w-none">
                 <AppImage
                   src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
                   alt={settings.appName}

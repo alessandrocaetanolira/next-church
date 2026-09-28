@@ -172,10 +172,10 @@ npm test
 npm run build
 ```
 
-O comando `npm run dev` usa `next dev --webpack` para evitar a recompilação
-inconsistente de módulos observada no HMR do Turbopack durante o desenvolvimento.
-Em caso de chunks antigos no navegador, encerre o servidor, remova `.next` e faça
-um hard refresh. O service worker é desativado automaticamente em desenvolvimento.
+O projeto usa Turbopack no desenvolvimento e no build, compatível com a integração
+Serwist atual. Em caso de chunks antigos no navegador, encerre o servidor, remova
+`.next` e faça um hard refresh. O service worker é desativado automaticamente em
+desenvolvimento.
 
 Os testes automatizados usam Vitest:
 
