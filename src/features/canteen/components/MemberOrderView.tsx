@@ -9,11 +9,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useProducts } from '@/features/canteen/hooks/use-products';
 import { useCartStore } from '@/features/canteen/store/useCartStore';
-import { createCanteenSale } from '@/services/canteen/sales-api';
+import { salesApi } from '@/features/canteen/api/sales.api';
 import { isNetworkError } from '@/services/api/client';
 import { db } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { formatCurrency } from '@/lib/utils';
+import { queueSaleCreate } from '@/features/canteen/lib/offline-sales';
 
 export function MemberOrderView() {
   const { user } = useAuth();
@@ -31,12 +32,11 @@ export function MemberOrderView() {
     };
     try {
       try {
-        await createCanteenSale(payload);
+        await salesApi.create(payload);
         await db.sales.put({ ...payload, _status: 'synced' });
       } catch (error) {
         if (!isNetworkError(error)) throw error;
-        await db.sales.put({ ...payload, _status: 'pending' });
-        await db.syncOutbox.add({ module: 'sales', action: 'create', data: payload, timestamp: new Date().toISOString() });
+        await queueSaleCreate(payload);
       }
       clearCart();
       toast.success('Pedido enviado para a cantina.');

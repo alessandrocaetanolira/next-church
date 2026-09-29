@@ -1,5 +1,5 @@
-import { apiRequest } from '@/services/api/client';
+import { salesApi } from '@/features/canteen/api/sales.api';
 
 export function createMemberSale(input: unknown) {
-  return apiRequest<unknown>('/api/canteen/sales', { method: 'POST', body: JSON.stringify(input) });
+  return salesApi.create(input);
 }

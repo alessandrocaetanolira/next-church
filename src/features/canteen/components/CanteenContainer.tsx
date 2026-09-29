@@ -66,7 +66,7 @@ export function CanteenContainer() {
   const [canteenStatus, setCanteenStatus] = useState<{ isOpen: boolean; openedAt: string | null }>({ isOpen: false, openedAt: null });
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const tenantId = user?.tenantId ?? '';
-  const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId).toArray() : [], [tenantId]) ?? [];
+  const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId && !sale.deletedAt).toArray() : [], [tenantId]) ?? [];
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   const syncingRef = useRef(false);
   const pendingOrders = sales.filter((sale) => sale.paymentMethod === 'pending').length;

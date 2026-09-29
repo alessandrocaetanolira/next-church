@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { db, type LocalProduct } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { createCanteenProduct, updateCanteenProduct } from '@/services/canteen/products-api';
+import { productsApi } from '@/features/canteen/api/products.api';
+import { isNetworkError } from '@/lib/api';
 import { productFormSchema, type ProductFormValues } from './product-form.schema';
 import { ProductFormUI } from './ProductFormUI';
 
@@ -40,10 +41,14 @@ export function ProductForm({ onSuccess, product }: { onSuccess: () => void; pro
   const onSubmit = async (values: ProductFormValues) => {
     const payload = { id: product?.id ?? generateId(), tenantId, ...values, imageUrl: values.imageUrl || null };
     try {
-      const savedProduct = product ? await updateCanteenProduct<LocalProduct>(product.id, payload) : await createCanteenProduct<LocalProduct>(payload);
+      const savedProduct = product ? await productsApi.update(product.id, payload) : await productsApi.create(payload);
       await db.products.put({ ...savedProduct, tenantId, active: savedProduct.active ?? true, availableToday: savedProduct.availableToday ?? true, cost: savedProduct.cost ?? 0, imageUrl: savedProduct.imageUrl ?? null, minStock: savedProduct.minStock ?? 0, deletedAt: savedProduct.deletedAt ?? null, _status: 'synced' });
       toast.success(product ? 'Produto atualizado!' : 'Produto cadastrado!'); onSuccess();
-    } catch {
+    } catch (error) {
+      if (!isNetworkError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o produto.');
+        return;
+      }
       await db.products.put({ ...payload, tenantId, createdAt: product?.id ? (products.find((item) => item.id === product.id)?.createdAt ?? new Date().toISOString()) : new Date().toISOString(), updatedAt: new Date().toISOString(), deletedAt: null, _status: 'pending' });
       await db.syncOutbox.add({ module: 'products', action: product ? 'update' : 'create', data: payload, timestamp: new Date().toISOString() });
       toast.success(product ? 'Produto salvo localmente e pendente de sincronização.' : 'Produto criado localmente e pendente de sincronização.'); onSuccess();

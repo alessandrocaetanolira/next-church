@@ -49,6 +49,7 @@ export interface LocalSale {
   createdBy: string;
   createdAt: string;
   updatedAt?: string;
+  deletedAt?: string | null;
   _status?: 'synced' | 'pending' | 'error';
 }
 

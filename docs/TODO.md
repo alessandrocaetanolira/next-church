@@ -129,6 +129,10 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 
 ## Prioridade 5 — Cantina
 
+- [x] Enfileirar criação, atualização de status e arquivamento de pedidos no Dexie
+      quando a aplicação estiver offline, mantendo o registro local como `pending`.
+- [x] Processar a fila de vendas no endpoint de sincronização com autorização de
+      operação, detecção de conflito e idempotência para retries.
 - [ ] Adicionar consumidor intencional `VISITOR` sem criar membro falso.
 - [ ] Diferenciar no PDV: membro, visitante e não identificado.
 - [ ] Impedir fiado para visitante/não identificado.

@@ -5,3 +5,4 @@ export { Notice } from './Notice';
 export { PageHeader } from './PageHeader';
 export { PageShell } from './PageShell';
 export { SearchField } from './SearchField';
+export { HorizontalScroll } from './HorizontalScroll';

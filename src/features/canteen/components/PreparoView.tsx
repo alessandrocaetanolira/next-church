@@ -16,8 +16,11 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
-import { updateCanteenSale } from "@/services/canteen/operations-api";
+import { canteenOperationsApi } from '@/features/canteen/api/operations.api';
+import { queueSaleUpdate } from '@/features/canteen/lib/offline-sales';
+import { isNetworkError } from '@/lib/api';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { HorizontalScroll } from '@/components/common';
 
 export function PreparoView() {
   const { user } = useAuth();
@@ -30,7 +33,7 @@ export function PreparoView() {
 
   const handleStatusChange = async (orderId: string, orderStatus: 'preparing' | 'ready' | 'cancelled') => {
     try {
-      const updatedOrder = await updateCanteenSale<{ orderStatus: string | null }>(orderId, { action: 'status', orderStatus });
+      const updatedOrder = await canteenOperationsApi.updateSale<{ orderStatus: string | null }>(orderId, { action: 'status', orderStatus });
       await db.sales.update(orderId, {
         orderStatus: updatedOrder.orderStatus as never,
         _status: 'synced',
@@ -42,17 +45,27 @@ export function PreparoView() {
         cancelled: 'Pedido cancelado.',
       };
       toast.success(labels[orderStatus]);
-    } catch {
+    } catch (error) {
+      if (isNetworkError(error)) {
+        await queueSaleUpdate(orderId, { action: 'status', orderStatus }, { orderStatus });
+        toast.success('Status salvo localmente e será sincronizado.');
+        return;
+      }
       toast.error('Erro ao atualizar pedido.');
     }
   };
 
   const handleRemoveFromQueue = async (orderId: string) => {
     try {
-      await updateCanteenSale(orderId, { action: 'archive' });
+      await canteenOperationsApi.updateSale(orderId, { action: 'archive' });
       await db.sales.delete(orderId);
       toast.success('Pedido retirado da fila.');
-    } catch {
+    } catch (error) {
+      if (isNetworkError(error)) {
+        await queueSaleUpdate(orderId, { action: 'archive' }, { deletedAt: new Date().toISOString() });
+        toast.success('Pedido marcado localmente para remoção.');
+        return;
+      }
       toast.error('Erro ao retirar pedido da fila.');
     }
   };
@@ -61,6 +74,7 @@ export function PreparoView() {
     const allOrders = orders ?? [];
     const eligible = allOrders.filter(
       (order) =>
+        !order.deletedAt &&
         order.paymentMethod !== 'pending' &&
         order.paymentMethod !== 'cancelled' &&
         order.orderStatus !== 'pending' &&
@@ -90,7 +104,8 @@ export function PreparoView() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <HorizontalScroll className="pb-1" ariaLabel="Filtros do preparo">
+        <div className="flex w-max gap-2">
         {(['all', 'preparing', 'ready', 'cancelled'] as const).map((value) => (
           <FilterChip
             key={value}
@@ -103,7 +118,8 @@ export function PreparoView() {
             ) : null}
           </FilterChip>
         ))}
-      </div>
+        </div>
+      </HorizontalScroll>
 
       <div className="space-y-3">
         {prepOrders.map((order) => {

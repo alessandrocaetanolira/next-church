@@ -1,7 +1,7 @@
 'use client';
 
 import { Send } from 'lucide-react';
-import type { ParkingGroup, ParkingSpot } from '@/services/parking/parking-api';
+import type { ParkingGroup, ParkingSpot } from '@/features/parking/api/parking.api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

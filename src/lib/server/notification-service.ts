@@ -5,6 +5,7 @@ import { PushSubscriptionsRepository } from '@/server/notifications/push-subscri
 import { generateId } from '@/lib/id';
 import { getGlobalClient } from '@/lib/prisma-factory';
 import { getTenantPwaIconUrl } from '@/lib/branding/pwa-assets';
+import { serverLogger } from '@/lib/server/logger';
 
 /**
  * Mensagem normalizada produzida por qualquer módulo de negócio.
@@ -375,7 +376,7 @@ export async function createNotifications(
     );
     if (result.expiredIds.length) await subscriptionsRepository.removeMany(result.expiredIds);
   } catch (error) {
-    console.warn('[push] entrega ignorada:', error instanceof Error ? error.message : String(error));
+    serverLogger.warn('push', 'entrega ignorada', error instanceof Error ? error.message : String(error));
   }
 }
 

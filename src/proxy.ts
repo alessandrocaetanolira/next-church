@@ -17,6 +17,22 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Webhooks de teste não usam sessão; o próprio handler valida flag e origem
+  // local antes de aceitar o payload.
+  if (nextUrl.pathname === "/enviar-sse" || nextUrl.pathname === "/enviar-push") {
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const host = (forwardedHost ?? request.headers.get("host") ?? nextUrl.hostname)
+      .split(",")[0]
+      .trim()
+      .toLowerCase()
+      .replace(/:\d+$/, "");
+    const isLocalhost = host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1";
+    if (!isLocalhost) {
+      return NextResponse.json({ error: "Webhook de teste disponível apenas localmente." }, { status: 404 });
+    }
+    return NextResponse.next();
+  }
+
   const isPublicRoute =
     nextUrl.pathname.startsWith("/auth/login") ||
     nextUrl.pathname.startsWith("/api/auth") ||

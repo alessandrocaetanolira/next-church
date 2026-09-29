@@ -7,6 +7,8 @@ import { getTenantClient } from '@/lib/prisma-factory';
 import { NextRequest } from 'next/server';
 import { Mock } from 'vitest';
 
+const { operateSaleMock } = vi.hoisted(() => ({ operateSaleMock: vi.fn() }));
+
 // Mock das dependências
 vi.mock('@/auth', () => ({
   auth: vi.fn(),
@@ -14,6 +16,10 @@ vi.mock('@/auth', () => ({
 
 vi.mock('@/lib/prisma-factory', () => ({
   getTenantClient: vi.fn(),
+}));
+
+vi.mock('@/server/canteen/sales-detail.controller', () => ({
+  operateSale: operateSaleMock,
 }));
 
 describe('Sync API Routes', () => {
@@ -130,6 +136,82 @@ describe('Sync API Routes', () => {
       expect(mockPrisma.task.update).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({ deletedAt: expect.any(Date) })
       }));
+    });
+
+    it('deve encaminhar atualização offline de pedido para a operação da cantina', async () => {
+      (auth as Mock).mockResolvedValue({
+        user: {
+          ...mockSession.user,
+          role: 'ADMIN',
+          permissions: ['canteen:operate'],
+          name: 'Operador Teste',
+        },
+      });
+      const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+      };
+      (getTenantClient as Mock).mockReturnValue(mockPrisma);
+      operateSaleMock.mockResolvedValue({ id: 'sale-offline-1' });
+
+      const req = new NextRequest('http://localhost/api/sync/push', {
+        method: 'POST',
+        body: JSON.stringify({
+          changes: [{
+            id: 10,
+            module: 'sales',
+            action: 'update',
+            data: {
+              id: 'sale-offline-1',
+              action: 'status',
+              orderStatus: 'ready',
+              updatedAt: '2026-09-29T12:05:00.000Z',
+            },
+          }],
+        }),
+      });
+
+      const response = await pushPOST(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.results).toEqual([{ id: 10, status: 'success' }]);
+      expect(operateSaleMock).toHaveBeenCalledWith(
+        expect.objectContaining({ tenantId: mockTenantId }),
+        expect.anything(),
+        'sale-offline-1',
+        expect.objectContaining({ action: 'status', orderStatus: 'ready' }),
+        'Operador Teste',
+      );
+    });
+
+    it('não reprocessa uma operação de venda já confirmada pela idempotência', async () => {
+      (auth as Mock).mockResolvedValue({ user: { ...mockSession.user, role: 'ADMIN', permissions: ['canteen:operate'] } });
+      const mockPrisma = {
+        $queryRawUnsafe: vi.fn().mockResolvedValue([{ status: 'success', responseJson: '{"status":"success"}' }]),
+        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+      };
+      (getTenantClient as Mock).mockReturnValue(mockPrisma);
+
+      const req = new NextRequest('http://localhost/api/sync/push', {
+        method: 'POST',
+        body: JSON.stringify({
+          changes: [{
+            id: 11,
+            idempotencyKey: 'sale-offline-1:status:ready',
+            module: 'sales',
+            action: 'update',
+            data: { id: 'sale-offline-1', action: 'status', orderStatus: 'ready', updatedAt: '2026-09-29T12:05:00.000Z' },
+          }],
+        }),
+      });
+
+      const response = await pushPOST(req);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.results).toEqual([{ id: 11, status: 'success', replayed: true }]);
+      expect(operateSaleMock).not.toHaveBeenCalled();
     });
   });
 

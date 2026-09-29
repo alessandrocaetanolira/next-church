@@ -22,6 +22,8 @@ import { getTeamScopedAccess } from '@/lib/server/team-scope';
 import { syncMemberCredits } from '@/server/member-credits/member-credits.controller';
 import { MemberCreditsRepository } from '@/server/member-credits/member-credits.repository';
 import { MemberCreditsService } from '@/server/member-credits/member-credits.service';
+import { operateSale } from '@/server/canteen/sales-detail.controller';
+import { CanteenSalesDetailService } from '@/server/canteen/sales-detail.service';
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
   const productsService = new CanteenProductsService(productsRepository, session.user.tenantSlug ?? session.user.tenantId);
   const memberCreditsService = new MemberCreditsService(new MemberCreditsRepository(prisma));
   const salesService = new CanteenSalesService(new CanteenSalesRepository(prisma), prisma, tenantId);
+  const salesDetailService = new CanteenSalesDetailService(new CanteenSalesRepository(prisma), prisma, tenantId);
   const results = [];
 
   const tableByModule: Record<string, string> = {
@@ -80,6 +83,12 @@ export async function POST(request: Request) {
       }
       if (change.module === 'sales' && change.action === 'create') {
         await createSale({ user: session.user, service: salesService }, change.data);
+        results.push({ id: change.id, status: 'success' });
+      } else if (change.module === 'sales' && change.action === 'update') {
+        const data = (change.data && typeof change.data === 'object' ? change.data : {}) as Record<string, unknown>;
+        const action = data.action === 'approve' || data.action === 'reject' || data.action === 'status' || data.action === 'archive' ? data.action : null;
+        if (!action) { results.push({ id: change.id, status: 'error', error: 'Ação de venda inválida' }); continue; }
+        await operateSale(session.user, salesDetailService, String(data.id), data, session.user.name ?? session.user.email ?? 'Sistema');
         results.push({ id: change.id, status: 'success' });
       } else if (change.module === 'memberCredits' && change.action === 'update') {
         await syncMemberCredits(session.user, memberCreditsService, change.data, session.user?.name || 'Sistema');

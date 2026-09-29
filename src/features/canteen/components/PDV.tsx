@@ -19,6 +19,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from 
 import { AppImage } from '@/components/shared';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
+import { HorizontalScroll } from '@/components/common';
 
 // Mapeamento de Ícones por Categoria
 const CATEGORY_ICONS: Record<string, any> = {
@@ -163,7 +164,8 @@ export function PDV() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+      <HorizontalScroll className="-mx-1 px-1 pb-1" ariaLabel="Categorias de produtos">
+        <div className="flex w-max gap-2">
         {categories.map((cat) => (
           <Button
             key={cat}
@@ -175,7 +177,8 @@ export function PDV() {
             {cat}
           </Button>
         ))}
-      </div>
+        </div>
+      </HorizontalScroll>
 
       <div className="flex flex-col gap-4 lg:flex-row">
         <div className="flex-1">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { MemberFormCreate } from '@/components/forms/MemberFormCreate';
+import { MemberFormCreate } from '@/features/members/forms';
 import { PageShell } from '@/components/common';
 
 export default function NewMemberPage() {

@@ -18,6 +18,18 @@ AUTH_TRUST_HOST="true"
 `DATABASE_URL` é relativo ao arquivo `prisma/global/schema.prisma`; portanto,
 `file:../databases/global.db` aponta para `prisma/databases/global.db`.
 
+### Logs de autenticação e Push
+
+Os eventos de autenticação e Web Push são enviados ao terminal com timestamp e
+também gravados em arquivos diários no diretório `logs/`:
+
+```text
+logs/2026-09-29.log
+```
+
+O diretório pode ser alterado com `LOG_DIR`. Os arquivos são ignorados pelo Git e
+não devem conter segredos, tokens ou chaves privadas.
+
 ### Ordem obrigatória — ambiente novo
 
 Use preferencialmente o comando único:
@@ -80,6 +92,23 @@ npm run db:tenant:migrate:all -- --tenant ig2 --backup-dir /tmp/church-hub-migra
 ```
 
 Use `--output /caminho/relatorio.json` para persistir o relatorio. Uma falha em um tenant nao interrompe os demais, mas encerra o comando com codigo diferente de zero.
+
+## Sincronização offline da Cantina
+
+Pedidos criados ou operados sem conexão são persistidos no Dexie do dispositivo:
+
+- `sales` mantém a representação local do pedido e o estado `_status: pending`;
+- `syncOutbox` registra a operação `sales/create` ou `sales/update`;
+- mudanças de status usam as ações `approve`, `reject`, `status` e `archive`;
+- arquivamento é apenas uma marcação local (`deletedAt`) até a confirmação do servidor;
+- ao voltar a conexão, o sincronizador envia as mudanças para `/api/sync/push`;
+- o servidor aplica a política de operação da Cantina, valida `updatedAt` e rejeita
+  alterações obsoletas como conflito;
+- `idempotencyKey` impede que um retry reaplique uma operação já confirmada.
+
+Em caso de falha, o pedido permanece pendente para retry manual ou automático. Não
+remova registros pendentes diretamente do IndexedDB; primeiro confirme a operação no
+servidor ou resolva o conflito pelo indicador de sincronização.
 
 Seed local principal (slug público atual):
 

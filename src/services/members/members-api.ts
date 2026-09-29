@@ -1,4 +1,4 @@
-import { apiRequest } from '@/services/api/client';
+import { apiRequest } from '@/lib/api';
 
 export function listMembers<T = unknown[]>() {
   return apiRequest<T>('/api/members', { cache: 'no-store' });

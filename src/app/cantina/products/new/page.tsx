@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/common';
-import { ProductFormCreate } from '@/components/forms/ProductFormCreate';
+import { ProductFormCreate } from '@/features/canteen/forms';
 
 export default function NewProductPage() {
   const router = useRouter();

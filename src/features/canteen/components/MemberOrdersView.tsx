@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { CreditCard, Smartphone, Banknote, User, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/utils';
-import { updateCanteenSale } from '@/services/canteen/operations-api';
+import { canteenOperationsApi } from '@/features/canteen/api/operations.api';
+import { queueSaleUpdate } from '@/features/canteen/lib/offline-sales';
+import { isNetworkError } from '@/lib/api';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 
 type PaymentChoice = 'cash' | 'pix' | 'credit' | 'fiado';
@@ -34,7 +36,7 @@ export function MemberOrdersView() {
     setProcessing(true);
 
     try {
-      const updated = await updateCanteenSale<{ paymentMethod: string; orderStatus: string | null }>(selectedOrder.id, { action, paymentMethod });
+      const updated = await canteenOperationsApi.updateSale<{ paymentMethod: string; orderStatus: string | null }>(selectedOrder.id, { action, paymentMethod });
       await db.sales.update(selectedOrder.id, {
         paymentMethod: updated.paymentMethod,
         orderStatus: updated.orderStatus,
@@ -50,7 +52,14 @@ export function MemberOrdersView() {
 
       toast.success(action === 'approve' ? 'Pedido aprovado.' : 'Pedido rejeitado.');
       setSelectedOrderId(null);
-    } catch {
+    } catch (error) {
+      if (isNetworkError(error)) {
+        await queueSaleUpdate(selectedOrder.id, { action, paymentMethod }, { paymentMethod: action === 'reject' ? 'cancelled' : 'pending' });
+        toast.success('Decisão salva localmente e será sincronizada.');
+        setSelectedOrderId(null);
+        setProcessing(false);
+        return;
+      }
       toast.error('Erro ao atualizar pedido.');
     } finally {
       setProcessing(false);

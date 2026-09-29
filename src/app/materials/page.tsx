@@ -4,22 +4,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDeleteDialog, Notice, PageHeader, SearchField } from '@/components/common';
 import { WebPageLayout } from '@/components/shared/web';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
-import { createMaterial, deleteMaterial, listMaterials, updateMaterial, updateMaterialQuantity, type Material } from '@/services/materials/materials-api';
+import { materialsApi, type Material } from '@/features/materials/api/materials.api';
+import { MaterialFormCreate, MaterialFormEdit } from '@/features/materials/forms';
 import { MaterialsWebTable } from '@/features/materials/components/MaterialsWebTable';
 
 type MaterialItem = Material;
-
-const categories = ['Limpeza', 'Cantina', 'Louvor', 'Escritório', 'Outros'];
-const units = ['unidades', 'litros', 'kg', 'metros', 'caixas', 'pacotes', 'rolos', 'jogos'];
 
 export default function MaterialsPage() {
   const setPageTitle = useUIStore((state) => state.setPageTitle);
@@ -33,11 +28,10 @@ export default function MaterialsPage() {
   const [editingMaterial, setEditingMaterial] = useState<MaterialItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', category: 'Outros', quantity: '0', minQuantity: '0', unit: 'unidades' });
 
   const fetchMaterials = async () => {
     try {
-      const data = await listMaterials();
+      const data = await materialsApi.list();
       setMaterials(Array.isArray(data) ? data : []);
     } catch {
       toast.error('Erro ao carregar materiais.');
@@ -57,7 +51,7 @@ export default function MaterialsPage() {
   const updateQuantity = async (material: MaterialItem, delta: number) => {
     const quantity = Math.max(0, material.quantity + delta);
     try {
-      await updateMaterialQuantity(material.id, quantity);
+      await materialsApi.updateQuantity(material.id, quantity);
       await fetchMaterials();
       toast.success('Quantidade atualizada.');
     } catch {
@@ -67,45 +61,13 @@ export default function MaterialsPage() {
 
   const openDialog = (material?: MaterialItem) => {
     setEditingMaterial(material ?? null);
-    setForm({
-      name: material?.name ?? '',
-      category: material?.category ?? 'Outros',
-      quantity: String(material?.quantity ?? 0),
-      minQuantity: String(material?.minQuantity ?? 0),
-      unit: material?.unit ?? 'unidades',
-    });
     setDialogOpen(true);
-  };
-
-  const saveMaterial = async () => {
-    if (!form.name.trim()) {
-      toast.error('Nome é obrigatório.');
-      return;
-    }
-
-    try {
-      const input = {
-          name: form.name.trim(),
-          category: form.category,
-          quantity: Number(form.quantity) || 0,
-          minQuantity: Number(form.minQuantity) || 0,
-          unit: form.unit,
-        };
-      if (editingMaterial) await updateMaterial(editingMaterial.id, input);
-      else await createMaterial(input);
-      setDialogOpen(false);
-      setEditingMaterial(null);
-      await fetchMaterials();
-      toast.success(editingMaterial ? 'Material atualizado.' : 'Material criado.');
-    } catch {
-      toast.error('Erro ao salvar material.');
-    }
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await deleteMaterial(deleteId);
+      await materialsApi.remove(deleteId);
       setDeleteId(null);
       await fetchMaterials();
       toast.success('Material removido.');
@@ -159,38 +121,10 @@ export default function MaterialsPage() {
           <DrawerHeader>
             <DrawerTitle>{editingMaterial ? 'Editar Material' : 'Novo Material'}</DrawerTitle>
           </DrawerHeader>
-          <div className="space-y-4 overflow-y-auto px-4 pb-6">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nome do material" />
-            </div>
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={form.category} onValueChange={(value) => setForm((current) => ({ ...current, category: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{categories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input type="number" min="0" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Qtd Mínima</Label>
-                <Input type="number" min="0" value={form.minQuantity} onChange={(event) => setForm((current) => ({ ...current, minQuantity: event.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Unidade</Label>
-                <Select value={form.unit} onValueChange={(value) => setForm((current) => ({ ...current, unit: value }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{units.map((unit) => <SelectItem key={unit} value={unit}>{unit}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button className="w-full" onClick={saveMaterial}>
-              {editingMaterial ? 'Salvar Alterações' : 'Criar Material'}
-            </Button>
+          <div className="overflow-y-auto px-4 pb-6">
+            {editingMaterial
+              ? <MaterialFormEdit material={editingMaterial} onSuccess={() => { setDialogOpen(false); setEditingMaterial(null); void fetchMaterials(); }} />
+              : <MaterialFormCreate onSuccess={() => { setDialogOpen(false); void fetchMaterials(); }} />}
           </div>
         </DrawerContent>
       </Drawer>

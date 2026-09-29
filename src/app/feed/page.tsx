@@ -23,6 +23,7 @@ import { WebPageLayout } from '@/components/shared/web';
 import { MobileFeedComposer } from '@/features/feed/components/MobileFeedComposer';
 import { SharedFlatList } from '@/components/SharedFlatList';
 import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
+import { HorizontalScroll } from '@/components/common';
 import { useRouter } from 'next/navigation';
 import { ConfirmDeleteDialog } from '@/components/common';
 
@@ -512,7 +513,8 @@ export default function FeedPage() {
         </>
       ) : null}
 
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide md:hidden">
+      <HorizontalScroll className="pb-2 md:hidden" ariaLabel="Filtros do feed">
+        <div className="flex w-max gap-3">
         {['all', 'announcement', 'event', 'social_project', 'verse', 'devotional', 'testimony'].map((type) => {
           const config = type === 'all' ? { label: 'Todos', icon: LayoutGrid, color: '' } : POST_TYPE_CONFIG[type as keyof typeof POST_TYPE_CONFIG];
           const Icon = config.icon;
@@ -523,7 +525,8 @@ export default function FeedPage() {
             </button>
           );
         })}
-      </div>
+        </div>
+      </HorizontalScroll>
       <div className="hidden items-center gap-2 overflow-x-auto pb-1 scrollbar-hide md:flex">
         <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
         {['all', 'announcement', 'event', 'social_project', 'verse', 'devotional', 'testimony', 'prayer', 'quiz_score'].map((type) => (

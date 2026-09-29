@@ -13,10 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { MemberFormEdit } from '@/components/forms/MemberFormEdit';
+import { MemberFormEdit } from '@/features/members/forms';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
-import { deleteMember, getMember, updateMemberAccess } from '@/services/members/members-api';
+import { membersApi } from '@/features/members/api/members.api';
 import { permissionOptions } from '@/features/members/components/member-permissions';
 
 type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
@@ -111,7 +111,7 @@ export default function MemberDetailsPage() {
   const loadMember = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getMember<ManagedMember>(memberId);
+      const data = await membersApi.get(memberId);
       setMember(data);
       setAccessRole(data.role ?? 'MEMBER');
       setAccessPermissions(data.permissions ?? []);
@@ -143,7 +143,7 @@ export default function MemberDetailsPage() {
     setSavingAccess(true);
 
     try {
-      await updateMemberAccess(member.id, {
+      await membersApi.updateAccess(member.id, {
           role: accessRole,
           permissions: accessPermissions,
           ...(changingPassword ? { password: accessPassword } : {}),
@@ -168,7 +168,7 @@ export default function MemberDetailsPage() {
     if (!member) return;
 
     try {
-      await deleteMember(member.id);
+      await membersApi.remove(member.id);
       toast.success('Membro excluído.');
       router.push('/members');
     } catch {

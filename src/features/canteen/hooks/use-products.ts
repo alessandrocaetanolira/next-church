@@ -9,46 +9,26 @@
 
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type LocalProduct } from '@/lib/db';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { listCanteenProducts } from '@/services/canteen/products-api';
 import { filterByTenant } from '@/lib/offline-tenant';
+import { syncCanteenProductsFromServer } from '@/features/canteen/lib/sync-products';
 
 export function useProducts(enabled = true) {
   const { user } = useAuth();
   const tenantId = user?.tenantId ?? '';
-  useEffect(() => {
-    let active = true;
-
-    const loadProducts = async () => {
-      if (!enabled) return;
-      try {
-        const products = await listCanteenProducts<LocalProduct[]>();
-        if (!active || !Array.isArray(products)) return;
-
-        await db.products.bulkPut(
-          products.map((product) => ({
-            ...product,
-            tenantId,
-            active: product.active ?? true,
-            availableToday: product.availableToday ?? true,
-            deletedAt: product.deletedAt ?? null,
-            _status: 'synced' as const,
-          }))
-        );
-      } catch {
-        // Mantém a leitura local caso a rede falhe.
-      }
-    };
-
-    loadProducts();
-
-    return () => {
-      active = false;
-    };
+  const loadProducts = useCallback(async () => {
+    if (!enabled || !tenantId || !navigator.onLine) return;
+    try { await syncCanteenProductsFromServer(tenantId); } catch { /* mantém o cache local */ }
   }, [enabled, tenantId]);
+
+  useEffect(() => {
+    void loadProducts();
+    window.addEventListener('online', loadProducts);
+    return () => window.removeEventListener('online', loadProducts);
+  }, [loadProducts]);
 
   const products = useLiveQuery(
     async () => {

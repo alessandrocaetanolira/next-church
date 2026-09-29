@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { PageShell } from '@/components/common';
-import { ProductFormEdit } from '@/components/forms/ProductFormEdit';
+import { ProductFormEdit } from '@/features/canteen/forms';
 import { db } from '@/lib/db';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 

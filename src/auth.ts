@@ -14,6 +14,7 @@ import Credentials from "next-auth/providers/credentials";
 import { getGlobalClient, getTenantClient } from "@/lib/prisma-factory";
 import bcrypt from "bcryptjs";
 import { normalizePlanFeatures } from '@/lib/plan-features';
+import { serverLogger } from '@/lib/server/logger';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -31,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        */
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.warn('[Auth] Credenciais incompletas.');
+          serverLogger.warn('Auth', 'Credenciais incompletas.');
           return null;
         }
 
@@ -45,7 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.churchSlug || !String(credentials.churchSlug).trim()) {
           const platformAdmin = await globalClient.platformAdmin.findUnique({ where: { email } });
           if (!platformAdmin || !platformAdmin.active || !(await bcrypt.compare(password, platformAdmin.passwordHash))) {
-            console.warn('[Auth] Slug ausente e credenciais não pertencem ao administrador global:', email);
+            serverLogger.warn('Auth', 'Slug ausente e credenciais não pertencem ao administrador global', email);
             return null;
           }
           return {
@@ -71,7 +72,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!church || !church.active || (church.status && church.status !== 'ACTIVE')) {
-            console.warn('[Auth] Igreja não encontrada ou inativa:', churchSlug);
+            serverLogger.warn('Auth', 'Igreja não encontrada ou inativa', churchSlug);
             return null;
           }
 
@@ -93,13 +94,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (!user || !user.active || !user.passwordHash) {
-             console.warn('[Auth] Usuário não encontrado, inativo ou sem senha:', { email, churchSlug, databaseKey });
+             serverLogger.warn('Auth', 'Usuário não encontrado, inativo ou sem senha', { email, churchSlug, databaseKey });
              return null;
           }
 
           const passwordMatch = await bcrypt.compare(password, user.passwordHash);
           if (!passwordMatch) {
-            console.warn('[Auth] Senha inválida:', { email, churchSlug });
+            serverLogger.warn('Auth', 'Senha inválida', { email, churchSlug });
             return null;
           }
 
@@ -133,7 +134,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             planFeatures,
           };
         } catch (e) {
-          console.error("Auth Exception:", e);
+          serverLogger.error('Auth', 'Exceção durante autenticação', e);
           return null;
         }
       },
@@ -191,7 +192,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
           }
         } catch (error) {
-          console.error('[Auth] Não foi possível atualizar as permissões da sessão:', error);
+          serverLogger.error('Auth', 'Não foi possível atualizar as permissões da sessão', error);
         }
       }
 

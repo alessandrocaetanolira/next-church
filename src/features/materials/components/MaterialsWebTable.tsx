@@ -4,7 +4,7 @@ import { AlertTriangle, Edit, Minus, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WebDataTable, type Column } from '@/components/shared/web';
-import type { Material } from '@/services/materials/materials-api';
+import type { Material } from '@/features/materials/api/materials.api';
 
 type StockStatus = 'destructive' | 'warning' | 'success';
 

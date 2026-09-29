@@ -14,7 +14,7 @@ import { Eye, Plus, QrCode } from 'lucide-react';
 import { EmptyState, LoadingState, PageHeader, SearchField } from '@/components/common';
 import { WebPageLayout } from '@/components/shared/web';
 import { hasActionPermission } from '@/lib/access-control';
-import { listMembers } from '@/services/members/members-api';
+import { membersApi } from '@/features/members/api/members.api';
 import { MembersWebTable } from '@/features/members/components/MembersWebTable';
 import { maritalStatusLabels, roleLabels, type ManagedMember } from '@/features/members/components/member-display';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
@@ -38,7 +38,7 @@ export default function MembersPage() {
 
   const fetchMembers = async () => {
     try {
-      const data = await listMembers<ManagedMember[]>();
+      const data = await membersApi.list();
       setMembers(data);
     } catch {
       toast.error('Erro ao carregar membros');

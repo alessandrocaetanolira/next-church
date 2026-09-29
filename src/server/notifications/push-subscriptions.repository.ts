@@ -1,4 +1,5 @@
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+import { serverLogger } from '@/lib/server/logger';
 
 export class PushSubscriptionsRepository {
   constructor(private readonly prisma: TenantPrismaClient) {}
@@ -8,7 +9,7 @@ export class PushSubscriptionsRepository {
   }
 
   upsert(userId: string, endpoint: string, p256dh: string, auth: string) {
-    console.info('[push-server] repository executando upsert', { userId, endpoint: endpoint.slice(0, 80), p256dhLength: p256dh.length, authLength: auth.length });
+    serverLogger.info('push-server', 'repository executando upsert', { userId, endpoint: endpoint.slice(0, 80), p256dhLength: p256dh.length, authLength: auth.length });
     const now = new Date().toISOString();
     return this.prisma.$executeRawUnsafe(
       `INSERT INTO "PushSubscription" (id, userId, endpoint, p256dh, auth, createdAt, updatedAt)
@@ -32,6 +33,9 @@ export class PushSubscriptionsRepository {
     return this.prisma.$queryRawUnsafe<Array<{ id: string; endpoint: string; p256dh: string; auth: string }>>(
       `SELECT p.id, p.endpoint, p.p256dh, p.auth FROM "PushSubscription" p JOIN "User" u ON u.id = p.userId WHERE lower(u.email) IN (${emails.map(() => '?').join(',')})`,
       ...emails.map((email) => email.toLowerCase()),
-    );
+    ).then((subscriptions) => {
+      serverLogger.info('push-server', 'subscriptions listadas', { emails, count: subscriptions.length });
+      return subscriptions;
+    });
   }
 }

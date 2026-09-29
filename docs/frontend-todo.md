@@ -160,6 +160,14 @@ Regra: Zustand não será usado como banco de dados remoto. Ele fica reservado p
 estado global de UI, carrinho, preferências e fila offline. Dados de servidor devem
 ter cache, invalidação e ciclo de vida próprios.
 
+### Sincronização offline da Cantina
+
+O fluxo de vendas offline usa o Dexie como fila local, sem colocar dados remotos no
+Zustand. `queueSaleCreate` e `queueSaleUpdate` atualizam `sales` e registram a
+operação em `syncOutbox`; o endpoint de sincronização aplica as ações no servidor e
+retorna sucesso, conflito ou erro. Componentes de operação devem atualizar somente o
+estado local otimista e delegar transporte ao service/API do domínio.
+
 ## 5. Padrão de formulários por domínio
 
 ### 5.1 Estrutura obrigatória
@@ -299,7 +307,8 @@ Usar os tokens semânticos já definidos em `globals.css`:
 ### Fase 0 — fundação
 
 - [ ] Adicionar Zod e resolver do RHF.
-- [ ] Criar `src/lib/api` global com erros e tipos.
+- [x] Criar `src/lib/api` global com erros, tipos, query params e métodos HTTP;
+      `src/services/api/client.ts` permanece como fachada de compatibilidade.
 - [ ] Definir padrão de hooks de dados e política de cache.
 - [ ] Consolidar tokens e criar matriz visual light/dark.
 - [ ] Criar componentes de formulário e estados de tela comuns.
@@ -307,10 +316,16 @@ Usar os tokens semânticos já definidos em `globals.css`:
 
 ### Fase 1 — CRUDs simples
 
-- [ ] Migrar membros para `features/members` com list/detail, schema e FormCreate/FormEdit/FormUI.
-- [ ] Migrar materiais para `features/materials`.
-- [ ] Migrar produtos de cantina para `features/canteen/forms`.
-- [ ] Migrar vagas de estacionamento para `features/parking`.
+- [x] Migrar membros para `features/members` com API tipada, list/detail, schema e
+      FormCreate/FormEdit/FormUI; os imports antigos permanecem apenas como fachada
+      de compatibilidade para consumidores ainda não migrados.
+- [x] Migrar materiais para `features/materials`, com API tipada e formulários
+      RHF/Zod separados por criação, edição e UI.
+- [x] Migrar produtos de cantina para `features/canteen/forms`, com API tipada,
+      RHF/Zod e fallback offline; os componentes antigos permanecem como fachada
+      durante a migração dos consumidores da Cantina.
+- [x] Migrar vagas de estacionamento para `features/parking`, com API tipada e
+      formulário RHF/Zod separado da página.
 - [ ] Substituir `src/components/forms/MemberForm.tsx` e `ProductForm.tsx` pelos forms de domínio.
 
 ### Fase 2 — operação e administração
@@ -323,6 +338,8 @@ Usar os tokens semânticos já definidos em `globals.css`:
 ### Fase 3 — fluxos complexos
 
 - [ ] Refatorar cantina completa: catálogo, PDV, pedidos, preparo, vendas, ledger e fidelidade.
+      A API tipada de produtos, vendas e operações já foi criada; falta migrar os
+      consumidores e concluir os fluxos offline de pedidos e histórico.
 - [ ] Refatorar feed e comentários com cache/invalidação e publicação por escopo.
 - [ ] Refatorar `minha-conta`, carteira e notificações.
 - [ ] Refatorar tarefas, escalas e grupos/[id] reduzindo a responsabilidade das páginas.

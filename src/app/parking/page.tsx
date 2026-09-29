@@ -14,35 +14,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Car, CarFront, Plus, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { hasActionPermission } from '@/lib/access-control';
-import {
-  createParkingSpot,
-  deleteParkingSpot,
-  listParkingGroups,
-  listParkingMembers,
-  listParkingSpots,
-  notifyParkingResponsible,
-  publishParkingFeed,
-  updateParkingSpot,
-  updateParkingSpotStatus,
-  type ParkingGroup,
-  type ParkingMember,
-  type ParkingSpot,
-} from '@/services/parking/parking-api';
+import { parkingApi, type ParkingGroup, type ParkingMember, type ParkingSpot } from '@/features/parking/api/parking.api';
+import { ParkingForm } from '@/features/parking/forms';
 import { ParkingWebTable } from '@/features/parking/components/ParkingWebTable';
 import { WebPageLayout } from '@/components/shared/web';
 
 type GroupOption = ParkingGroup;
 type SpotItem = ParkingSpot;
 type MemberOption = ParkingMember;
-
-const initialForm = {
-  groupId: '',
-  label: '',
-  status: 'free',
-  occupiedByMemberId: '',
-  occupiedByName: '',
-  notes: '',
-};
 
 export default function ParkingPage() {
   const setPageTitle = useUIStore((state) => state.setPageTitle);
@@ -58,7 +37,6 @@ export default function ParkingPage() {
   const [messageForm, setMessageForm] = useState({ title: '', message: '' });
   const [sendingMessage, setSendingMessage] = useState(false);
   const [publishingPost, setPublishingPost] = useState(false);
-  const [form, setForm] = useState(initialForm);
   const [postForm, setPostForm] = useState({
     groupId: '',
     title: '',
@@ -82,7 +60,7 @@ export default function ParkingPage() {
 
   const loadBaseData = async () => {
     try {
-      const [groupsPayload, membersPayload] = await Promise.all([listParkingGroups(), listParkingMembers()]);
+      const [groupsPayload, membersPayload] = await Promise.all([parkingApi.groups(), parkingApi.members()]);
       const nextGroups = Array.isArray(groupsPayload) ? groupsPayload : [];
       setGroups(nextGroups);
       setMembers(Array.isArray(membersPayload) ? membersPayload : []);
@@ -100,7 +78,7 @@ export default function ParkingPage() {
 
   const loadSpots = async (groupId: string) => {
     try {
-      const payload = await listParkingSpots(groupId);
+      const payload = await parkingApi.spots(groupId);
       setSpots(Array.isArray(payload) ? payload : []);
     } catch {
       toast.error('Erro ao carregar vagas.');
@@ -115,47 +93,12 @@ export default function ParkingPage() {
 
   const openDrawer = (spot?: SpotItem) => {
     setEditingSpot(spot ?? null);
-    setForm(
-      spot
-        ? {
-            groupId: spot.groupId,
-            label: spot.label,
-            status: spot.status,
-            occupiedByMemberId: spot.occupiedByMemberId ?? '',
-            occupiedByName: spot.occupiedByName ?? '',
-            notes: spot.notes ?? '',
-          }
-        : {
-            ...initialForm,
-            groupId: activeGroupId,
-          },
-    );
     setDrawerOpen(true);
-  };
-
-  const saveSpot = async () => {
-    if (!form.groupId || !form.label.trim()) {
-      toast.error('Grupo e vaga são obrigatórios.');
-      return;
-    }
-
-    try {
-      const input = { ...form, occupiedAt: form.status === 'free' ? null : new Date().toISOString() };
-      if (editingSpot) await updateParkingSpot(editingSpot.id, input);
-      else await createParkingSpot(input);
-      toast.success(editingSpot ? 'Vaga atualizada.' : 'Vaga criada.');
-      setDrawerOpen(false);
-      setEditingSpot(null);
-      setForm(initialForm);
-      await loadSpots(form.groupId);
-    } catch {
-      toast.error('Erro ao salvar vaga.');
-    }
   };
 
   const updateStatus = async (spot: SpotItem, status: string) => {
     try {
-      await updateParkingSpotStatus(spot.id, {
+      await parkingApi.updateStatus(spot.id, {
         status,
         occupiedByMemberId: status === 'free' ? null : spot.occupiedByMemberId,
         occupiedByName: status === 'free' ? null : spot.occupiedByName,
@@ -171,7 +114,7 @@ export default function ParkingPage() {
   const deleteSpot = async (id: string, groupId: string) => {
     if (!confirm('Remover esta vaga?')) return;
     try {
-      await deleteParkingSpot(id);
+      await parkingApi.remove(id);
       toast.success('Vaga removida.');
       await loadSpots(groupId);
     } catch {
@@ -188,7 +131,7 @@ export default function ParkingPage() {
 
     setSendingMessage(true);
     try {
-      await notifyParkingResponsible(messageSpot.id, {
+      await parkingApi.notify(messageSpot.id, {
         title: messageForm.title.trim(),
         message: messageForm.message.trim(),
       });
@@ -211,7 +154,7 @@ export default function ParkingPage() {
 
     setPublishingPost(true);
     try {
-      await publishParkingFeed({
+      await parkingApi.publish({
           type: 'event',
           share: true,
           title: postForm.title.trim() || undefined,
@@ -336,64 +279,8 @@ export default function ParkingPage() {
           <DrawerHeader>
             <DrawerTitle>{editingSpot ? 'Editar vaga' : 'Nova vaga'}</DrawerTitle>
           </DrawerHeader>
-          <div className="space-y-4 overflow-y-auto px-4 pb-6">
-            <div className="space-y-2">
-              <Label>Grupo</Label>
-              <Select value={form.groupId} onValueChange={(value) => setForm((current) => ({ ...current, groupId: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Vaga</Label>
-              <Input value={form.label} onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))} placeholder="Ex: A1" />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={form.status} onValueChange={(value) => setForm((current) => ({ ...current, status: value }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Livre</SelectItem>
-                  <SelectItem value="occupied">Ocupada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {form.status !== 'free' ? (
-              <>
-                <div className="space-y-2">
-                  <Label>Membro</Label>
-                  <Select
-                    value={form.occupiedByMemberId}
-                    onValueChange={(value) => {
-                      const member = members.find((item) => item.id === value);
-                      setForm((current) => ({
-                        ...current,
-                        occupiedByMemberId: value,
-                        occupiedByName: member?.name ?? '',
-                      }));
-                    }}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione um membro" /></SelectTrigger>
-                    <SelectContent>
-                      {members.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Observações</Label>
-                  <Input value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} placeholder="Placa, referência ou observação" />
-                </div>
-              </>
-            ) : null}
-            <Button className="w-full" onClick={() => void saveSpot()}>
-              {editingSpot ? 'Salvar alterações' : 'Cadastrar vaga'}
-            </Button>
+          <div className="overflow-y-auto px-4 pb-6">
+            <ParkingForm spot={editingSpot ?? undefined} groups={groups} members={members} defaultGroupId={activeGroupId} onSuccess={() => { setDrawerOpen(false); setEditingSpot(null); if (activeGroupId) void loadSpots(activeGroupId); }} />
           </div>
         </DrawerContent>
       </Drawer>
