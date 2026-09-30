@@ -45,6 +45,9 @@ export class CanteenSalesDetailService {
     if (action === 'approve') {
       const paymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
       if (!paymentMethod || paymentMethod === 'pending') throw new ValidationError('Forma de pagamento inválida.');
+      if (paymentMethod === 'fiado' && (!sale.memberId || sale.consumerType !== 'MEMBER')) {
+        throw new ValidationError('Fiado está disponível somente para membros cadastrados.');
+      }
       const result = await this.repository.approve(id, paymentMethod, actor);
       if (!result) throw new NotFoundError('Pedido não encontrado.');
       await this.notify(result, 'approved', actor);

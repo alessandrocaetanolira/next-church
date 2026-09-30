@@ -105,6 +105,8 @@ Pedidos criados ou operados sem conexão são persistidos no Dexie do dispositiv
 - o servidor aplica a política de operação da Cantina, valida `updatedAt` e rejeita
   alterações obsoletas como conflito;
 - `idempotencyKey` impede que um retry reaplique uma operação já confirmada.
+- `consumerType` identifica a venda como `MEMBER`, `VISITOR` ou `UNIDENTIFIED`;
+  somente `MEMBER` pode usar fiado.
 
 Em caso de falha, o pedido permanece pendente para retry manual ou automático. Não
 remova registros pendentes diretamente do IndexedDB; primeiro confirme a operação no

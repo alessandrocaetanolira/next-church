@@ -13,6 +13,7 @@ type FinancialPayload = {
     id: string;
     total: number;
     paymentMethod: string;
+    consumerType?: 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED' | null;
     orderStatus?: 'preparing' | 'ready' | 'cancelled' | null;
     items: Array<{
       productId?: string;
@@ -32,6 +33,7 @@ function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number], tenan
     id: sale.id,
     total: sale.total,
     paymentMethod: sale.paymentMethod,
+    consumerType: sale.consumerType ?? 'MEMBER',
     orderStatus: sale.orderStatus ?? undefined,
     items: sale.items.map((item) => ({
       productId: item.productId ?? '',

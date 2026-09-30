@@ -20,22 +20,23 @@ async function getContext() {
   const prisma = getTenantClient(session.user.tenantId);
   const user = await prisma.user.findFirst({ where: { id: session.user.id, deletedAt: null, active: true } });
   if (!user) throw new UnauthenticatedError();
-  const [userProfile] = await prisma.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
-    `SELECT avatarUrl FROM "User" WHERE id = ? LIMIT 1`,
+  const [userProfile] = await prisma.$queryRawUnsafe<Array<{ avatarUrl: string | null; coverUrl: string | null }>>(
+    `SELECT avatarUrl, coverUrl FROM "User" WHERE id = ? LIMIT 1`,
     user.id,
   );
   const member = user.linkedMemberId
     ? await prisma.member.findFirst({ where: { id: user.linkedMemberId, deletedAt: null } })
     : null;
-  return { session, prisma, user, member, avatarUrl: userProfile?.avatarUrl ?? null };
+  return { session, prisma, user, member, avatarUrl: userProfile?.avatarUrl ?? null, coverUrl: userProfile?.coverUrl ?? null };
 }
 
-function serialize(user: Awaited<ReturnType<typeof getContext>>['user'], member: Awaited<ReturnType<typeof getContext>>['member'], avatarUrl: string | null) {
+function serialize(user: Awaited<ReturnType<typeof getContext>>['user'], member: Awaited<ReturnType<typeof getContext>>['member'], avatarUrl: string | null, coverUrl: string | null) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     avatarUrl,
+    coverUrl,
     role: user.role,
     linkedMemberId: user.linkedMemberId,
     phone: member?.phone ?? '',
@@ -48,7 +49,7 @@ function serialize(user: Awaited<ReturnType<typeof getContext>>['user'], member:
 export async function GET() {
   try {
     const context = await getContext();
-    return jsonOk(serialize(context.user, context.member, context.avatarUrl));
+    return jsonOk(serialize(context.user, context.member, context.avatarUrl, context.coverUrl));
   } catch (error) {
     return jsonError(error);
   }
@@ -65,6 +66,10 @@ export async function PATCH(request: Request) {
     if (avatarUrl && !avatarUrl.startsWith(`/api/files/${context.session.user.tenantSlug}/profile/`)) {
       throw new ValidationError('Avatar inválido.');
     }
+    const coverUrl = body.coverUrl === null ? null : text(body.coverUrl);
+    if (coverUrl && !coverUrl.startsWith(`/api/files/${context.session.user.tenantSlug}/profile/`)) {
+      throw new ValidationError('Capa inválida.');
+    }
 
     const memberData = context.member ? {
       name,
@@ -76,9 +81,10 @@ export async function PATCH(request: Request) {
 
     const updatedAt = new Date().toISOString();
     await context.prisma.$executeRawUnsafe(
-      `UPDATE "User" SET name = ?, avatarUrl = ?, version = version + 1, updatedAt = ? WHERE id = ?`,
+      `UPDATE "User" SET name = ?, avatarUrl = ?, coverUrl = ?, version = version + 1, updatedAt = ? WHERE id = ?`,
       name,
       avatarUrl || null,
+      coverUrl || null,
       updatedAt,
       context.user.id,
     );
@@ -87,7 +93,7 @@ export async function PATCH(request: Request) {
       ? await context.prisma.member.update({ where: { id: context.member.id }, data: memberData })
       : context.member;
 
-    return jsonOk(serialize(updatedUser ?? context.user, updatedMember, avatarUrl || null));
+    return jsonOk(serialize(updatedUser ?? context.user, updatedMember, avatarUrl || null, coverUrl || null));
   } catch (error) {
     return jsonError(error);
   }

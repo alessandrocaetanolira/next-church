@@ -13,6 +13,7 @@ model User {
   name           String
   email          String    @unique
   avatarUrl      String?
+  coverUrl       String?
   passwordHash   String?
   role           String    @default("MEMBER")
   permissions    String?
@@ -92,6 +93,7 @@ model Sale {
   total         Float
   paymentMethod String
   items         String
+  consumerType  String    @default("MEMBER")
   memberId      String?
   memberName    String?
   createdBy     String

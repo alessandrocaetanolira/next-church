@@ -26,7 +26,7 @@ export function MemberOrderView() {
     if (!items.length || submitting) return;
     setSubmitting(true);
     const payload = {
-      id: generateId(), total, items, paymentMethod: 'pending' as const, orderStatus: 'pending' as const,
+      id: generateId(), total, items, consumerType: 'MEMBER' as const, paymentMethod: 'pending' as const, orderStatus: 'pending' as const,
       memberId: user?.linkedMemberId ?? undefined, memberName: user?.name ?? undefined,
       createdBy: user?.name ?? user?.email ?? 'Membro', tenantId: user?.tenantId, createdAt: new Date().toISOString(),
     };

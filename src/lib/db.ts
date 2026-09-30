@@ -42,6 +42,7 @@ export interface LocalSale {
   tenantSlug?: string;
   total: number;
   paymentMethod: string;
+  consumerType?: 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED';
   items: CartItem[];
   orderStatus?: 'pending' | 'preparing' | 'ready' | 'cancelled';
   memberId?: string;

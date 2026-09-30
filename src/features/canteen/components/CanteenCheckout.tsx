@@ -21,6 +21,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useCartStore } from '../store/useCartStore';
 
 type PaymentMethod = 'cash' | 'pix' | 'credit' | 'fiado';
+type ConsumerType = 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED';
 
 const PAYMENT_OPTIONS: Array<{ value: PaymentMethod; label: string; icon: typeof Banknote; className: string }> = [
   { value: 'cash', label: 'Dinheiro', icon: Banknote, className: 'text-success' },
@@ -37,13 +38,14 @@ export function CanteenCheckout() {
   const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]) || [];
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [selectedMember, setSelectedMember] = useState('');
+  const [consumerType, setConsumerType] = useState<ConsumerType>('VISITOR');
   const [sendToPrep, setSendToPrep] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = async () => {
     if (!items.length || !user?.email || submitting) return;
-    if (paymentMethod === 'fiado' && !selectedMember) {
+    if (paymentMethod === 'fiado' && (consumerType !== 'MEMBER' || !selectedMember)) {
       toast.error('Selecione um membro para fiado.');
       return;
     }
@@ -52,11 +54,12 @@ export function CanteenCheckout() {
     const payload = {
       id: generateId(),
       total,
+      consumerType,
       paymentMethod,
       orderStatus: sendToPrep ? 'preparing' : null,
       items,
-      memberId: paymentMethod === 'fiado' ? selectedMember : undefined,
-      memberName: paymentMethod === 'fiado' ? member?.name : undefined,
+      memberId: consumerType === 'MEMBER' ? (selectedMember || undefined) : undefined,
+      memberName: consumerType === 'MEMBER' ? member?.name : undefined,
       createdAt: new Date().toISOString(),
       createdBy: user.email,
       tenantId,
@@ -100,8 +103,9 @@ export function CanteenCheckout() {
             <CardHeader><CardTitle className="text-base">Pagamento</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <p className="text-center text-3xl font-bold text-primary">{formatCurrency(total)}</p>
-              <div className="grid grid-cols-2 gap-2">{PAYMENT_OPTIONS.map(({ value, label, icon: Icon, className }) => <Button key={value} type="button" variant={paymentMethod === value ? 'default' : 'outline'} className="h-16 flex-col gap-1" onClick={() => setPaymentMethod(value)}><Icon className={`h-5 w-5 ${paymentMethod === value ? 'text-current' : className}`} /><span>{label}</span></Button>)}</div>
-              {paymentMethod === 'fiado' ? <div className="space-y-2"><Label>Membro</Label><Select value={selectedMember} onValueChange={setSelectedMember}><SelectTrigger><SelectValue placeholder="Selecione um membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}</SelectContent></Select></div> : null}
+              <div className="space-y-2"><Label>Consumidor</Label><Select value={consumerType} onValueChange={(value) => { const next = value as ConsumerType; setConsumerType(next); if (next !== 'MEMBER' && paymentMethod === 'fiado') setPaymentMethod('cash'); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MEMBER">Membro cadastrado</SelectItem><SelectItem value="VISITOR">Visitante</SelectItem><SelectItem value="UNIDENTIFIED">Não identificado</SelectItem></SelectContent></Select></div>
+              {consumerType === 'MEMBER' ? <div className="space-y-2"><Label>Membro</Label><Select value={selectedMember} onValueChange={setSelectedMember}><SelectTrigger><SelectValue placeholder="Selecione um membro" /></SelectTrigger><SelectContent>{members.map((member) => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}</SelectContent></Select></div> : null}
+              <div className="grid grid-cols-2 gap-2">{PAYMENT_OPTIONS.map(({ value, label, icon: Icon, className }) => <Button key={value} type="button" disabled={value === 'fiado' && consumerType !== 'MEMBER'} variant={paymentMethod === value ? 'default' : 'outline'} className="h-16 flex-col gap-1" onClick={() => setPaymentMethod(value)}><Icon className={`h-5 w-5 ${paymentMethod === value ? 'text-current' : className}`} /><span>{label}</span></Button>)}</div>
               <div className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-3"><div className="flex items-center gap-2"><ChefHat className="h-4 w-4 text-primary" /><span className="text-sm font-medium">Enviar para preparo</span></div><Button type="button" variant={sendToPrep ? 'default' : 'outline'} size="sm" onClick={() => setSendToPrep((value) => !value)}>{sendToPrep ? 'Sim' : 'Não'}</Button></div>
               <Button className="w-full" size="lg" disabled={submitting} onClick={() => void handleCheckout()}>{submitting ? 'Registrando...' : 'Confirmar venda'}</Button>
             </CardContent>

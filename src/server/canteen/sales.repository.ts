@@ -4,7 +4,7 @@ import { ConflictError } from '@/lib/http/errors';
 
 export type SaleItem = { productId?: string; name: string; quantity: number; price: number };
 export type SaleRecord = {
-  id: string; total: number; paymentMethod: string; orderStatus: string | null; items: string;
+  id: string; total: number; paymentMethod: string; consumerType: string; orderStatus: string | null; items: string;
   memberId: string | null; memberName: string | null; createdBy: string; createdAt: Date; updatedAt: Date; deletedAt: Date | null;
 };
 
@@ -23,14 +23,14 @@ export class CanteenSalesRepository {
 
   async list() {
     const sales = await this.prisma.$queryRawUnsafe<SaleRecord[]>(`
-      SELECT id, total, paymentMethod, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
+      SELECT id, total, paymentMethod, consumerType, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
       FROM "Sale" WHERE deletedAt IS NULL ORDER BY createdAt DESC LIMIT 50
     `);
     return sales.map(parseSale);
   }
 
   async create(data: {
-    id?: string; total: number; paymentMethod: string; orderStatus: string | null;
+    id?: string; total: number; paymentMethod: string; consumerType?: string; orderStatus: string | null;
     items: SaleItem[]; memberId: string | null; memberName: string | null; createdBy: string; createdAt?: Date;
   }) {
     const result = await this.prisma.$transaction(async (tx) => {
@@ -48,7 +48,8 @@ export class CanteenSalesRepository {
       });
 
       await tx.$executeRawUnsafe(
-        `UPDATE "Sale" SET "orderStatus" = ?, "updatedAt" = ? WHERE id = ?`,
+        `UPDATE "Sale" SET "consumerType" = ?, "orderStatus" = ?, "updatedAt" = ? WHERE id = ?`,
+        data.consumerType ?? 'MEMBER',
         data.orderStatus,
         new Date().toISOString(),
         sale.id,
@@ -75,7 +76,7 @@ export class CanteenSalesRepository {
       }
 
       const [createdSale] = await tx.$queryRawUnsafe<SaleRecord[]>(
-        `SELECT id, total, paymentMethod, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
+        `SELECT id, total, paymentMethod, consumerType, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
          FROM "Sale" WHERE id = ? LIMIT 1`, sale.id,
       );
       return createdSale;
@@ -86,7 +87,7 @@ export class CanteenSalesRepository {
 
   findById(id: string) {
     return this.prisma.$queryRawUnsafe<SaleRecord[]>(
-      `SELECT id, total, paymentMethod, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
+      `SELECT id, total, paymentMethod, consumerType, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
        FROM "Sale" WHERE id = ? LIMIT 1`, id,
     ).then(([sale]) => sale ?? null);
   }
@@ -145,7 +146,7 @@ export class CanteenSalesRepository {
         );
       }
       const [updated] = await tx.$queryRawUnsafe<SaleRecord[]>(
-        `SELECT id, total, paymentMethod, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
+        `SELECT id, total, paymentMethod, consumerType, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
          FROM "Sale" WHERE id = ? LIMIT 1`, id,
       );
       return updated ?? null;

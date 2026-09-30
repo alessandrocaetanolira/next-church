@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Banknote, CreditCard, DollarSign, FileSpreadsheet, FileText, MessageSquare, Receipt, Search, Smartphone, TrendingUp, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,6 +62,7 @@ export function SalesHistory() {
   const liveMembers = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]);
   const members = useMemo(() => liveMembers ?? [], [liveMembers]);
   const [search, setSearch] = useState("");
+  const [consumerFilter, setConsumerFilter] = useState<'ALL' | 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED'>('ALL');
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
@@ -85,9 +87,11 @@ export function SalesHistory() {
     return (sales ?? []).filter(
       (sale) =>
         sale.items.some((item) => item.name.toLowerCase().includes(term)) ||
-        (sale.memberName?.toLowerCase().includes(term) ?? false),
-    );
-  }, [sales, search]);
+        (sale.memberName?.toLowerCase().includes(term) ?? false) ||
+        (sale.consumerType === 'VISITOR' && 'visitante'.includes(term)) ||
+        (sale.consumerType === 'UNIDENTIFIED' && 'não identificado'.includes(term)),
+    ).filter((sale) => consumerFilter === 'ALL' || (sale.consumerType ?? (sale.memberId ? 'MEMBER' : 'UNIDENTIFIED')) === consumerFilter);
+  }, [sales, search, consumerFilter]);
 
   const membersWithDebt = useMemo(
     () =>
@@ -297,10 +301,10 @@ export function SalesHistory() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => exportSalesPDF(sales ?? [], settings.appName)}>
+              <Button variant="outline" size="sm" onClick={() => exportSalesPDF(filteredSales, settings.appName)}>
                 <FileText className="mr-1 h-4 w-4" /> PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => exportSalesExcel(sales ?? [])}>
+              <Button variant="outline" size="sm" onClick={() => exportSalesExcel(filteredSales)}>
                 <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
               </Button>
             </div>
@@ -315,6 +319,16 @@ export function SalesHistory() {
               className="pl-9"
             />
           </div>
+
+          <Select value={consumerFilter} onValueChange={(value) => setConsumerFilter(value as typeof consumerFilter)}>
+            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Tipo de consumidor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Todos os consumidores</SelectItem>
+              <SelectItem value="MEMBER">Membros</SelectItem>
+              <SelectItem value="VISITOR">Visitantes</SelectItem>
+              <SelectItem value="UNIDENTIFIED">Não identificados</SelectItem>
+            </SelectContent>
+          </Select>
 
           <div className="hidden md:block">
             <SalesWebTable sales={filteredSales} getPaymentLabel={getPaymentLabel} onOpenSale={setSelectedSaleId} />
@@ -332,7 +346,7 @@ export function SalesHistory() {
                     <div className="flex items-center gap-2 mb-1">
                       {getPaymentIcon(sale.paymentMethod)}
                       <span className="font-medium text-sm">{getPaymentLabel(sale.paymentMethod)}</span>
-                      {sale.memberName ? <Badge variant="outline" className="text-xs">{sale.memberName}</Badge> : null}
+                      <Badge variant="outline" className="text-xs">{sale.consumerType === 'VISITOR' ? 'Visitante' : sale.consumerType === 'UNIDENTIFIED' ? 'Não identificado' : sale.memberName || 'Membro não informado'}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {sale.items.length} item(s) • {format(new Date(sale.createdAt), "dd/MM 'às' HH:mm", { locale: ptBR })}

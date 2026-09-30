@@ -11,6 +11,7 @@ function parseSale(sale: {
   id: string;
   total: number;
   paymentMethod: string;
+  consumerType: string;
   orderStatus?: string | null;
   memberId: string | null;
   memberName: string | null;
@@ -49,6 +50,7 @@ export async function GET() {
     id: string;
     total: number;
     paymentMethod: string;
+    consumerType: string;
     orderStatus: string | null;
     items: string;
     memberId: string | null;
@@ -60,7 +62,7 @@ export async function GET() {
   }>>(
     `
       SELECT
-        id, total, paymentMethod, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
+        id, total, paymentMethod, consumerType, orderStatus, items, memberId, memberName, createdBy, createdAt, updatedAt, deletedAt
       FROM "Sale"
       WHERE memberId = ? AND deletedAt IS NULL
       ORDER BY createdAt DESC

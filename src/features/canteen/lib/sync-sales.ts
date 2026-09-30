@@ -5,6 +5,7 @@ type RemoteSale = {
   id: string;
   total: number;
   paymentMethod: string;
+  consumerType?: 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED' | null;
   orderStatus?: 'pending' | 'preparing' | 'ready' | 'cancelled' | null;
   items: Array<{
     productId?: string;
@@ -24,6 +25,7 @@ function toLocalSale(sale: RemoteSale, tenantId?: string): LocalSale {
     id: sale.id,
     total: sale.total,
     paymentMethod: sale.paymentMethod,
+    consumerType: sale.consumerType ?? (sale.memberId ? 'MEMBER' : 'UNIDENTIFIED'),
     orderStatus: sale.orderStatus ?? undefined,
     items: sale.items.map((item) => ({
       productId: item.productId ?? '',

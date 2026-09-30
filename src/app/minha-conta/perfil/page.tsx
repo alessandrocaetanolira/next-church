@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Camera, Save } from 'lucide-react';
+import { Camera, ImagePlus, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageShell, LoadingState } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getProfile, updateProfile, uploadProfileAvatar, type UserProfile } from '@/services/profile/profile-api';
+import { getProfile, updateProfile, uploadProfileAvatar, uploadProfileCover, type UserProfile } from '@/services/profile/profile-api';
 import { maskPhone } from '@/lib/utils';
 
 type ProfileForm = Pick<UserProfile, 'name' | 'phone' | 'birthDate' | 'aboutMe' | 'maritalStatus'>;
@@ -35,6 +35,8 @@ export default function UserProfilePage() {
   const [form, setForm] = useState<ProfileForm>({ name: '', phone: '', birthDate: '', aboutMe: '', maritalStatus: 'single' });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarDataUrl, setAvatarDataUrl] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -44,6 +46,7 @@ export default function UserProfilePage() {
         setProfile(value);
         setForm({ name: value.name, phone: maskPhone(value.phone), birthDate: value.birthDate ? value.birthDate.slice(0, 10) : '', aboutMe: value.aboutMe ?? '', maritalStatus: value.maritalStatus || 'single' });
         setAvatarPreview(value.avatarUrl ?? null);
+        setCoverPreview(value.coverUrl ?? null);
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : 'Não foi possível carregar seu perfil.'))
       .finally(() => setLoading(false));
@@ -67,6 +70,22 @@ export default function UserProfilePage() {
     }
   };
 
+  const handleCoverChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione uma imagem válida.');
+      return;
+    }
+    try {
+      const dataUrl = await readDataUrl(file);
+      setCoverDataUrl(dataUrl);
+      setCoverPreview(dataUrl);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar a capa.');
+    }
+  };
+
   const save = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!profile || !form.name.trim()) {
@@ -77,10 +96,14 @@ export default function UserProfilePage() {
     try {
       let avatarUrl = profile.avatarUrl ?? null;
       if (avatarDataUrl) avatarUrl = (await uploadProfileAvatar(avatarDataUrl)).url;
-      const updated = await updateProfile({ ...form, name: form.name.trim(), avatarUrl });
+      let coverUrl = profile.coverUrl ?? null;
+      if (coverDataUrl) coverUrl = (await uploadProfileCover(coverDataUrl)).url;
+      const updated = await updateProfile({ ...form, name: form.name.trim(), avatarUrl, coverUrl });
       setProfile(updated);
       setAvatarDataUrl(null);
       setAvatarPreview(updated.avatarUrl ?? null);
+      setCoverDataUrl(null);
+      setCoverPreview(updated.coverUrl ?? null);
       await updateSession();
       toast.success('Perfil atualizado.');
     } catch (error) {
@@ -96,6 +119,16 @@ export default function UserProfilePage() {
   return (
     <PageShell size="narrow">
       <form onSubmit={save} className="space-y-5">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="relative aspect-[3/1] min-h-32 bg-muted">
+            {coverPreview ? <img src={coverPreview} alt="Capa do perfil" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Adicione uma capa ao seu perfil</div>}
+            <label className="absolute bottom-3 right-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-sm font-medium shadow-sm backdrop-blur hover:bg-background">
+              <ImagePlus className="h-4 w-4" />Alterar capa
+              <input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
+            </label>
+          </div>
+          <div className="px-4 py-3"><p className="font-medium">Capa do perfil</p><p className="text-xs text-muted-foreground">Use uma imagem horizontal para destacar seu perfil.</p></div>
+        </div>
         <div className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 sm:flex-row">
           <Avatar className="h-24 w-24 border border-border">
             {avatarPreview ? <AvatarImage src={avatarPreview} alt={form.name} /> : null}

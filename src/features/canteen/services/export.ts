@@ -13,6 +13,20 @@ function formatMoney(value: number) {
   return `R$ ${value.toFixed(2)}`;
 }
 
+function getConsumerLabel(sale: { consumerType?: string; memberName?: string | null }) {
+  if (sale.consumerType === 'VISITOR') return 'Visitante';
+  if (sale.consumerType === 'UNIDENTIFIED') return 'Não identificado';
+  return sale.memberName || 'Membro não informado';
+}
+
+function getStatusLabel(status?: string | null) {
+  if (status === 'pending') return 'Pendente';
+  if (status === 'preparing') return 'Em preparo';
+  if (status === 'ready') return 'Pronto';
+  if (status === 'cancelled') return 'Cancelado';
+  return 'Concluído';
+}
+
 /**
  * Exporta histórico de vendas para PDF usando autotable.
  * 
@@ -24,9 +38,12 @@ export function exportSalesPDF(sales: any[], appName: string = "Mesa App") {
   doc.text(`${appName} - Relatório de Vendas`, 14, 15);
   
   autoTable(doc, {
-    head: [['Data', 'Itens', 'Total']],
+    head: [['Data', 'Consumidor', 'Pagamento', 'Status', 'Itens', 'Total']],
     body: sales.map(s => [
         format(new Date(s.createdAt), "dd/MM"),
+        getConsumerLabel(s),
+        s.paymentMethod,
+        getStatusLabel(s.orderStatus),
         s.items.map((i: any) => i.name).join(', '),
         formatMoney(s.total)
     ]),
@@ -45,7 +62,8 @@ export function exportSalesExcel(sales: any[]) {
   const rows = sales.map((sale) => ({
     data: format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm'),
     pagamento: sale.paymentMethod,
-    membro: sale.memberName ?? '',
+    consumidor: getConsumerLabel(sale),
+    status: getStatusLabel(sale.orderStatus),
     itens: sale.items.map((item: any) => `${item.quantity}x ${item.name}`).join(', '),
     total: sale.total,
   }));

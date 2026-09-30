@@ -23,6 +23,9 @@ export class CanteenSalesService {
     const items = Array.isArray(body.items) ? body.items : [];
     const total = Number(body.total);
     const paymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
+    const requestedConsumerType = body.consumerType === 'VISITOR' || body.consumerType === 'UNIDENTIFIED' || body.consumerType === 'MEMBER'
+      ? body.consumerType
+      : null;
     const orderStatus = typeof body.orderStatus === 'string' ? body.orderStatus : null;
     if (!items.length || !Number.isFinite(total) || total < 0 || !paymentMethod) {
       throw new ValidationError('Itens, total e forma de pagamento são obrigatórios.');
@@ -49,14 +52,26 @@ export class CanteenSalesService {
       throw new ForbiddenError('Seu usuário ainda não está vinculado a um membro da igreja.');
     }
 
+    const memberId = canSell
+      ? (typeof body.memberId === 'string' && body.memberId ? body.memberId : null)
+      : (user.linkedMemberId ?? null);
+    const consumerType = canSell
+      ? (requestedConsumerType ?? (memberId ? 'MEMBER' : 'UNIDENTIFIED'))
+      : 'MEMBER';
+    if (consumerType === 'VISITOR' || consumerType === 'UNIDENTIFIED') {
+      if (memberId) throw new ValidationError('Venda de visitante não pode possuir membro vinculado.');
+      if (paymentMethod === 'fiado') throw new ValidationError('Fiado está disponível somente para membros cadastrados.');
+    }
+
     const result = await this.repository.create({
       id: typeof body.id === 'string' && body.id ? body.id : undefined,
       total,
       paymentMethod,
+      consumerType,
       orderStatus,
       items: normalizedItems,
-      memberId: canSell ? (typeof body.memberId === 'string' ? body.memberId : null) : (user.linkedMemberId ?? null),
-      memberName: canSell ? (typeof body.memberName === 'string' ? body.memberName : null) : user.name ?? user.email ?? null,
+      memberId,
+      memberName: consumerType === 'MEMBER' ? (canSell ? (typeof body.memberName === 'string' ? body.memberName : null) : user.name ?? user.email ?? null) : null,
       createdBy: typeof body.createdBy === 'string' && body.createdBy ? body.createdBy : user.name ?? user.email ?? 'Sistema',
       createdAt: typeof body.createdAt === 'string' ? new Date(body.createdAt) : undefined,
     });

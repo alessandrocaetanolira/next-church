@@ -43,6 +43,8 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [x] Branding por tenant, cores, logos e configuração do PWA.
 - [x] Manifest, ícones e tela de entrada PWA dinâmicos por tenant.
 - [x] Perfil do próprio usuário com avatar WebP e atualização de dados pessoais.
+- [x] Perfil do próprio usuário com capa horizontal em WebP, enviada em Base64 e
+      servida somente para usuários autenticados do tenant.
 - [x] Permissões padrão para novos membros aprovados, incluindo Feed e Bíblia.
 - [x] Ranking geral da igreja agregando devocional, quiz e pontuações persistidas de jogos.
 - [x] Quiz: persistir tentativa antes de exibir o resultado, mantendo a tela de
@@ -133,11 +135,11 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
       quando a aplicação estiver offline, mantendo o registro local como `pending`.
 - [x] Processar a fila de vendas no endpoint de sincronização com autorização de
       operação, detecção de conflito e idempotência para retries.
-- [ ] Adicionar consumidor intencional `VISITOR` sem criar membro falso.
-- [ ] Diferenciar no PDV: membro, visitante e não identificado.
-- [ ] Impedir fiado para visitante/não identificado.
-- [ ] Adicionar filtros e relatórios por tipo de consumidor.
-- [ ] Revisar PDF de vendas e operação de remoção de pedidos prontos.
+- [x] Adicionar consumidor intencional `VISITOR` sem criar membro falso.
+- [x] Diferenciar no PDV: membro, visitante e não identificado.
+- [x] Impedir fiado para visitante/não identificado.
+- [x] Adicionar filtros e relatórios por tipo de consumidor.
+- [x] Revisar PDF de vendas e operação de remoção de pedidos prontos.
 
 ## Prioridade 6 — Branding e UI
 

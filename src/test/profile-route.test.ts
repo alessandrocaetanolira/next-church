@@ -28,7 +28,7 @@ describe('perfil do usuário', () => {
     prisma.user.findFirst.mockResolvedValue(user);
     prisma.member.findFirst.mockResolvedValue(member);
     prisma.member.update.mockResolvedValue({ ...member, name: 'Novo nome' });
-    prisma.$queryRawUnsafe.mockResolvedValue([{ avatarUrl: null }]);
+    prisma.$queryRawUnsafe.mockResolvedValue([{ avatarUrl: null, coverUrl: null }]);
     prisma.$executeRawUnsafe.mockResolvedValue(1);
   });
 
@@ -49,6 +49,7 @@ describe('perfil do usuário', () => {
     expect(prisma.$executeRawUnsafe).toHaveBeenCalledWith(
       expect.stringContaining('WHERE id = ?'),
       'Novo nome',
+      null,
       null,
       expect.any(String),
       user.id,

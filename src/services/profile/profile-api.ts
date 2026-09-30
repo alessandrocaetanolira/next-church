@@ -5,6 +5,7 @@ export type UserProfile = {
   name: string;
   email: string;
   avatarUrl?: string | null;
+  coverUrl?: string | null;
   role: string;
   linkedMemberId?: string | null;
   phone: string;
@@ -22,6 +23,13 @@ export function updateProfile(input: Partial<UserProfile>) {
 }
 
 export function uploadProfileAvatar(dataUrl: string) {
+  return apiRequest<{ url: string }>('/api/files/upload', {
+    method: 'POST',
+    body: JSON.stringify({ module: 'profile', dataUrl }),
+  });
+}
+
+export function uploadProfileCover(dataUrl: string) {
   return apiRequest<{ url: string }>('/api/files/upload', {
     method: 'POST',
     body: JSON.stringify({ module: 'profile', dataUrl }),
