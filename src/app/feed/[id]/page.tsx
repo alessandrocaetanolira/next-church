@@ -15,6 +15,7 @@ import { WebPageLayout } from '@/components/shared/web';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { getFeedPost, toggleFeedLike } from '@/services/feed/feed-api';
 import type { FeedPost } from '@/lib/db';
+import { MentionText } from '@/features/feed/components/MentionText';
 import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
 import { toast } from 'sonner';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
@@ -61,7 +62,7 @@ export default function FeedPostPage() {
             </div>
             {post.title ? <h1 className="text-2xl font-bold text-primary">{post.title}</h1> : null}
             {post.reference ? <p className="font-medium text-primary">{post.reference}</p> : null}
-            <p className="whitespace-pre-wrap text-base leading-7">{post.content}</p>
+            <MentionText content={post.content} mentions={post.mentions} className="whitespace-pre-wrap text-base leading-7" />
             {post.mediaUrl ? <div>
               <div className="overflow-hidden rounded-2xl border border-border bg-muted/20">
                 {post.mediaType === 'video' ? (getYouTubeEmbedUrl(post.mediaUrl) ? <div className="aspect-video"><iframe src={getYouTubeEmbedUrl(post.mediaUrl) ?? undefined} title="Vídeo do YouTube" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /></div> : <video src={post.mediaUrl} controls className="max-h-[70vh] w-full bg-black object-contain" />) : <AppImage src={post.mediaUrl} alt={post.title || 'Mídia da publicação'} width={1200} height={800} className="h-auto max-h-[70vh] w-full object-contain" />}

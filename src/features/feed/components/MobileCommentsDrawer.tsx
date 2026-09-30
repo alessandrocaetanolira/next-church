@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { useEffect, useState } from 'react';
 import { Heart, MessageCirclePlus, MoreHorizontal, X } from 'lucide-react';
 import type { FeedPost } from '@/lib/db';
+import { MentionText } from './MentionText';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
@@ -68,7 +69,7 @@ export function MobileCommentsDrawer({ post, open, onNewComment, onReply, onClos
                   <Avatar className="h-10 w-10 shrink-0">{comment.userAvatar ? <AvatarImage src={comment.userAvatar} alt={comment.userName} /> : null}<AvatarFallback className="bg-primary/10 text-primary">{comment.userName[0]}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2"><strong className="text-base">{comment.userName}</strong><span className="text-sm text-muted-foreground">{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: ptBR })}</span><MoreHorizontal className="ml-auto h-5 w-5 text-muted-foreground" /></div>
-                    <p className="mt-1 text-base leading-6">{comment.content}</p>
+                    <MentionText content={comment.content} mentions={comment.mentions} className="mt-1 text-base leading-6" />
                     <div className="mt-2 flex items-center gap-5 text-sm text-muted-foreground"><button type="button" className="flex items-center gap-1 text-pink-500"><Heart className="h-5 w-5" />Curtir</button><button type="button" onClick={() => onReply(post, comment.id)}>Responder</button></div>
                   </div>
                 </article>

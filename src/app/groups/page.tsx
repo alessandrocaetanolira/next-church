@@ -15,7 +15,7 @@ import { listGroups, listJoinRequests, requestGroupJoin } from '@/services/group
 import { GroupsWebGrid } from '@/features/groups/components/GroupsWebGrid';
 import { GroupsWebTable } from '@/features/groups/components/GroupsWebTable';
 import { WebPageLayout } from '@/components/shared/web';
-import { HorizontalScroll, LoadingState } from '@/components/common';
+import { FilterBar, LoadingState } from '@/components/common';
 
 type GroupType = 'ministry' | 'team' | 'social_project' | 'kids' | 'parking';
 type GroupCapability = 'fundraising' | 'enrollment' | 'communication' | 'scheduling' | 'checkin';
@@ -161,7 +161,7 @@ function GroupsPageContent() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar grupo..." className="pl-9" />
         </div>
-        <HorizontalScroll className="pb-1" ariaLabel="Filtros de grupos">
+        <FilterBar label="Filtros de grupos">
           <div className="flex w-max gap-2">
           <FilterChip active={filter === 'all'} onClick={() => setFilterAndUrl('all')}>Todos</FilterChip>
           {groupTypes.map((type) => (
@@ -170,7 +170,7 @@ function GroupsPageContent() {
             </FilterChip>
           ))}
           </div>
-        </HorizontalScroll>
+        </FilterBar>
         {canManage ? (
           <Button onClick={() => router.push('/groups/new')}>
             <Plus className="mr-2 h-4 w-4" />

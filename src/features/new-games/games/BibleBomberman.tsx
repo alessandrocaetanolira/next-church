@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 type Pos = { x: number; y: number };
 type Cell = "empty" | "wall" | "brick" | "bomb" | "fire" | "powerup";
@@ -53,6 +54,7 @@ const BibleBomberman = () => {
   const [shield, setShield] = useState(false);
   const [level, setLevel] = useState(1);
   const [won, setWon] = useState(false);
+  useWinnerSound(won);
   const [powerupCells, setPowerupCells] = useState<(Pos & { emoji: string; type: string })[]>([]);
   const touchStart = useRef<Pos | null>(null);
 

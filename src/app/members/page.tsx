@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { toast } from 'sonner';
 import { Eye, Plus, QrCode } from 'lucide-react';
-import { EmptyState, LoadingState, PageHeader, SearchField } from '@/components/common';
+import { EmptyState, ErrorState, LoadingState, PageHeader, SearchField } from '@/components/common';
 import { WebPageLayout } from '@/components/shared/web';
 import { hasActionPermission } from '@/lib/access-control';
 import { membersApi } from '@/features/members/api/members.api';
@@ -27,25 +27,30 @@ export default function MembersPage() {
   const canUpdate = hasActionPermission(user, 'members', 'update');
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [inviteDrawerOpen, setInviteDrawerOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<ManagedMember | null>(null);
 
-  useEffect(() => {
-    setPageTitle('Membros');
-    void fetchMembers();
-  }, [setPageTitle]);
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await membersApi.list();
       setMembers(data);
-    } catch {
-      toast.error('Erro ao carregar membros');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Não foi possível carregar os membros.';
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setPageTitle('Membros');
+    void fetchMembers();
+  }, [fetchMembers, setPageTitle]);
 
   const filteredMembers = members.filter((member) => {
     const term = search.toLowerCase();
@@ -83,6 +88,8 @@ export default function MembersPage() {
 
       {loading ? (
         <LoadingState />
+      ) : loadError ? (
+        <ErrorState description={loadError} onRetry={() => void fetchMembers()} />
       ) : (
         <>
           <div className="lg:hidden">
@@ -163,6 +170,7 @@ export default function MembersPage() {
                   <div className="sm:col-span-2"><span className="text-muted-foreground">Sobre</span><p>{selectedMember.aboutMe || '-'}</p></div>
                 </div>
                 {canUpdate ? <Button className="w-full" onClick={() => router.push(`/members/${selectedMember.id}/edit`)}>Editar membro</Button> : null}
+                <Button variant="outline" className="w-full" onClick={() => router.push(`/perfil/${selectedMember.id}`)}>Ver perfil social</Button>
                 <Button variant="outline" className="w-full" onClick={() => router.push(`/members/${selectedMember.id}/access`)}>Acesso e permissões</Button>
               </div>
             </>

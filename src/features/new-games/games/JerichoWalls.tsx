@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const PATTERN_LENGTH_START = 3;
 const MAX_ROUNDS = 7;
@@ -16,6 +17,8 @@ const JerichoWalls = () => {
   const [gameState, setGameState] = useState<"intro" | "playing" | "won" | "lost">("intro");
   const [message, setMessage] = useState("");
   const timeouts = useRef<number[]>([]);
+
+  useWinnerSound(gameState === "won");
 
   const clearTimeouts = () => {
     timeouts.current.forEach(clearTimeout);

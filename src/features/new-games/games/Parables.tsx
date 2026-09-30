@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const PARABLES = [
   { description: "Um homem plantou sementes em diferentes tipos de solo: caminho, pedras, espinhos e boa terra.", answer: "Parábola do Semeador", options: ["Parábola do Semeador", "Parábola do Trigo e do Joio", "Parábola do Grão de Mostarda", "Parábola dos Talentos"] },
@@ -29,6 +30,8 @@ const ParablesGame = () => {
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const parable = parables[current];
 

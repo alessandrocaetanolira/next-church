@@ -9,8 +9,9 @@ Este documento cobre os dois fluxos atuais:
 
 - [x] Separar a persistência de tentativas do Quiz em `src/services/quiz/quiz-api.ts`.
 - [x] Reutilizar o service de tentativas no fluxo `/games`.
-- [ ] Criar um service único de resultados para jogos legados e novos.
-- [ ] Definir um contrato comum de resultado (`gameId`, pontuação, duração, acertos e data).
+- [x] Criar um service único de resultados para jogos novos via `recordGameScore`.
+- [x] Definir contrato mínimo comum (`gameId`, `runId`, pontuação e data).
+- [x] Quiz Bomba mantém pontos acumulados, permite desistência e encerra ao concluir o conjunto de perguntas.
 - [ ] Manter a lógica de cada jogo independente da API e do Dexie.
 - [ ] Criar um hook comum para persistência e sincronização de resultados.
 
@@ -18,7 +19,7 @@ Este documento cobre os dois fluxos atuais:
 
 - [x] Persistir tentativas online no endpoint de Quiz.
 - [x] Usar fallback local quando a API estiver indisponível.
-- [ ] Garantir idempotência ao reenviar uma tentativa após reconexão.
+- [x] Garantir idempotência dos resultados novos através de `runId` único.
 - [ ] Sincronizar `db.quizAttempts` com o servidor.
 - [ ] Exibir estado de envio, pendência e erro ao usuário.
 - [ ] Adicionar testes para persistência online, offline e retry.

@@ -46,12 +46,17 @@ export class EngagementRepository {
     );
   }
 
-  async createGameScore(data: { userId: string; userName: string; gameId: string; score: number; completedAt: Date }) {
+  async findGameScoreByRunId(runId: string) {
+    const [score] = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(`SELECT id FROM "GameScore" WHERE runId = ? LIMIT 1`, runId);
+    return score ?? null;
+  }
+
+  async createGameScore(data: { userId: string; userName: string; gameId: string; runId: string; score: number; completedAt: Date }) {
     const id = generateId();
     const now = new Date().toISOString();
     await this.prisma.$executeRawUnsafe(
-      `INSERT INTO "GameScore" (id, userId, userName, gameId, score, completedAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, data.userId, data.userName, data.gameId, data.score, data.completedAt.toISOString(), now, now,
+      `INSERT INTO "GameScore" (id, userId, userName, gameId, runId, score, completedAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, data.userId, data.userName, data.gameId, data.runId, data.score, data.completedAt.toISOString(), now, now,
     );
     return { id, ...data };
   }

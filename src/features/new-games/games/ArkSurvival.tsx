@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 interface Animal {
   id: number;
@@ -38,6 +39,8 @@ const ArkSurvival = () => {
   const [finished, setFinished] = useState(false);
   const [started, setStarted] = useState(false);
   const [flash, setFlash] = useState<number | null>(null);
+
+  useWinnerSound(finished && animals.length > 0 && score >= animals.filter((animal) => !animal.wrong).length);
 
   const startGame = useCallback(() => {
     const reals = shuffle(REAL_ANIMALS).slice(0, 8);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const ROUNDS = [
   {
@@ -86,6 +87,7 @@ const ConnectPairsGame = () => {
   };
 
   const allMatched = matched.size === round.pairs.length;
+  useWinnerSound(allMatched);
 
   const nextRound = () => {
     const next = roundIdx + 1;

@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { AppImage } from '@/components/shared';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MentionText } from './MentionText';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -100,7 +101,7 @@ export function FeedWebPostList({
                   {post.senderType === 'group' ? <p className="mb-1 text-xs font-medium text-muted-foreground">Publicado em nome do grupo</p> : null}
                   {post.title ? <h3 className="mb-2 text-lg font-semibold text-primary">{post.title}</h3> : null}
                   {post.type === 'verse' && post.reference ? <p className="mb-1 text-base font-medium text-primary">{post.reference}</p> : null}
-                  <p className="whitespace-pre-wrap text-base leading-7 text-foreground/90">{post.content}</p>
+                  <MentionText content={post.content} mentions={post.mentions} className="whitespace-pre-wrap text-base leading-7 text-foreground/90" />
                   {post.mediaUrl ? <>
                     <div className="relative mt-4 aspect-[16/9] overflow-hidden rounded-2xl border border-border bg-muted/20" onClick={(event) => event.stopPropagation()}>{post.mediaType === 'video' ? (getYouTubeEmbedUrl(post.mediaUrl) ? <iframe src={getYouTubeEmbedUrl(post.mediaUrl) ?? undefined} title="Vídeo do YouTube" className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video src={post.mediaUrl} controls className="h-full w-full bg-black object-cover" />) : <AppImage src={post.mediaUrl} alt={post.title || 'Mídia da publicação'} width={1200} height={800} className="h-full w-full object-cover" />}</div>
                     {post.mediaType === 'video' ? <a href={post.mediaUrl} target="_blank" rel="noreferrer" onClick={(event) => event.stopPropagation()} className="mt-1 inline-block text-xs text-primary underline-offset-4 hover:underline">Abrir vídeo externamente</a> : null}

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { GameRenderer } from "@/features/new-games/GameRenderer";
+import { MemoryGameEntry } from "@/features/game-challenges/MemoryGameEntry";
 import { gamesCatalog, type NewGameId } from "@/features/new-games/catalog";
 
 export default async function JogoNovoDetalhePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -9,5 +10,5 @@ export default async function JogoNovoDetalhePage({ params }: { params: Promise<
     notFound();
   }
 
-  return <GameRenderer gameId={gameId} />;
+  return gameId === 'memoria' ? <MemoryGameEntry /> : <GameRenderer gameId={gameId} />;
 }

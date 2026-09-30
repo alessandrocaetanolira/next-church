@@ -3,6 +3,7 @@ import { hasPermissionKey, parsePermissions, type PermissionAction, type Permiss
 
 type AppUser = {
   email?: string | null;
+  tenantId?: string | null;
   role?: string | null;
   permissions?: string[] | string | null;
   linkedMemberId?: string | null;
@@ -122,6 +123,7 @@ export function canAccessRoute(user: AppUser | null | undefined, pathname: strin
     (pathname === '/' && hasPlanFeature(user, 'dashboard')) ||
     (pathname.startsWith('/carteira') && hasPlanFeature(user, 'members')) ||
     pathname.startsWith('/minha-conta') ||
+    (pathname.startsWith('/perfil') && Boolean(user.tenantId)) ||
     (pathname.startsWith('/notifications') && hasActionPermission(user, 'notifications', 'view')) ||
     (pathname.startsWith('/feed') && hasActionPermission(user, 'feed', 'view')) ||
     (pathname.startsWith('/groups') && hasAnyActionPermission(user, 'groups', ['view', 'request'])) ||

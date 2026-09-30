@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 interface Target {
   id: number;
@@ -29,6 +30,8 @@ const DavidSling = () => {
   const [shots, setShots] = useState(0);
   const [hitEffect, setHitEffect] = useState<{ x: number; y: number; points: number } | null>(null);
   const nextId = useRef(0);
+
+  useWinnerSound(finished && score > 100);
 
   useEffect(() => {
     if (!started || finished) return;

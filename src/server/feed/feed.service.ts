@@ -1,5 +1,5 @@
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
-import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, publishFeedPostCreated } from '@/lib/server/notification-service';
+import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, publishFeedPostCreated, sendNotification } from '@/lib/server/notification-service';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { FeedRepository } from './feed.repository';
 import { FeedPolicy } from './feed.policy';
@@ -62,6 +62,9 @@ export class FeedService {
     if (postAsGroup && !group) throw new ValidationError('Grupo não encontrado.');
     const effectiveVisibility = postAsGroup ? 'group' : (canTargetFeed ? visibility : 'public');
     const id = FeedRepository.generateId();
+    const handles = Array.from(content.matchAll(/@([\p{L}\p{N}._-]+)/gu)).map((match) => match[1]).filter(Boolean);
+    const mentionTargets = await this.repository.findMentionTargets(handles);
+    const mentions = mentionTargets.map((target) => ({ id: target.id, name: target.name, handle: target.handle }));
     const pinDays = Math.max(0, Math.min(30, Number(body.pinDays ?? 0)));
     const post = await this.repository.create({
       id, userId: user.email as string, userName: postAsGroup ? group?.name ?? 'Grupo' : user.name || 'Usuário', userAvatar: postAsGroup ? null : user.image || null,
@@ -73,6 +76,13 @@ export class FeedService {
       visibility: effectiveVisibility, groupId: effectiveVisibility === 'group' ? groupId : null,
       pinnedUntil: pinDays > 0 ? new Date(Date.now() + pinDays * 86400000).toISOString() : null,
       targetUserIds: canTargetFeed && visibility === 'individual' && Array.isArray(body.targetUserIds) ? body.targetUserIds.filter((item): item is string => typeof item === 'string') : [],
+      mentions,
+    });
+    const mentionedEmails = Array.from(new Set(mentionTargets.map((target) => target.email.trim().toLowerCase()).filter((email) => email !== user.email?.trim().toLowerCase())));
+    if (mentionedEmails.length) await sendNotification(this.prisma, this.tenantId, {
+      recipients: mentionedEmails,
+      sender: { email: user.email, name: user.name },
+      content: { type: 'feed.mention', title: `${user.name || 'Alguém'} mencionou você`, message: `${user.name || 'Alguém'} mencionou você em uma publicação.`, href: `/feed/${id}`, sourceType: 'feedMention', sourceId: id },
     });
     await publishFeedPostCreated(this.prisma, this.tenantId, {
       postId: id,
@@ -110,9 +120,14 @@ export class FeedService {
     const existingComments = serialized.comments as FeedComment[];
     const parentExists = parentId ? existingComments.some((item) => item.id === parentId) : true;
     if (!parentExists) throw new ValidationError('Comentário de referência não encontrado.');
-    const comment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, userAvatar: actorAvatar || null, content, createdAt: new Date().toISOString() };
+    const comment: FeedComment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, userAvatar: actorAvatar || null, content, createdAt: new Date().toISOString() };
+    const handles = Array.from(content.matchAll(/@([\p{L}\p{N}._-]+)/gu)).map((match) => match[1]).filter(Boolean);
+    const mentionTargets = await this.repository.findMentionTargets(handles);
+    comment.mentions = mentionTargets.map((target) => ({ id: target.id, name: target.name, handle: target.handle }));
     const updated = await this.repository.updateEngagement(id, serialized.likes as string[], [...existingComments, comment]);
     await notifyFeedComment(this.prisma, this.tenantId, { postId: id, parentId, actorEmail, actorName, content });
+    const mentionedEmails = Array.from(new Set(mentionTargets.map((target) => target.email.trim().toLowerCase()).filter((email) => email !== actorEmail.trim().toLowerCase())));
+    if (mentionedEmails.length) await sendNotification(this.prisma, this.tenantId, { recipients: mentionedEmails, sender: { email: actorEmail, name: actorName }, content: { type: 'feed.mention', title: `${actorName} mencionou você`, message: `${actorName} mencionou você em um comentário.`, href: `/feed/${id}`, sourceType: 'feedCommentMention', sourceId: id } });
     return updated ? FeedRepository.serialize(updated) : null;
   }
 

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const WORDS = [
   { word: "JONAS", hint: "Profeta engolido pelo grande peixe" },
@@ -67,6 +68,7 @@ const HangmanGame = () => {
   const errors = [...guessed].filter(l => !word.includes(l)).length;
   const maxErrors = 6;
   const won = [...word].every(l => guessed.has(l));
+  useWinnerSound(won);
   const lost = errors >= maxErrors;
 
   const handleGuess = useCallback((letter: string) => {

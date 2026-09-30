@@ -14,6 +14,10 @@ export class MembersService {
     return member;
   }
 
+  async getPublicProfile(id: string) {
+    return this.repository.findPublicProfile(id);
+  }
+
   async create(input: unknown) {
     const data = normalizeMemberInput(input as Record<string, unknown>);
     const validationError = validateMemberInput(data);

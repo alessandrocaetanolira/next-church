@@ -3,6 +3,7 @@ import GameLayout from "@/features/new-games/components/GameLayout";
 import ChallengeMode from "@/features/new-games/components/ChallengeMode";
 import { useUser } from "@/features/new-games/contexts/UserContext";
 import { AppImage } from "@/components/shared";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const IMAGES = [
   { id: 1, img: "/jogos-novos/memory/adam-eve.png" },
@@ -97,6 +98,7 @@ const MemoryGame = () => {
   }, [flippedIds, cards, mode, currentPlayerIdx]);
 
   const allMatched = cards.every(c => c.matched);
+  useWinnerSound(gameState === "playing" && allMatched);
 
   const restart = () => {
     setCards(createCards());

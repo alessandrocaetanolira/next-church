@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const STATEMENTS = [
   { text: "Moisés abriu o Mar Vermelho", answer: true },
@@ -41,6 +42,8 @@ const TrueOrFalseGame = () => {
   const [score, setScore] = useState(0);
   const [result, setResult] = useState<{ correct: boolean; note?: string } | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const statement = statements[current];
 

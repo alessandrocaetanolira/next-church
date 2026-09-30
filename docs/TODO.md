@@ -155,7 +155,7 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [x] Validar fallback de logo após login e em light/dark.
 - [x] Criar `InfiniteScroll` compartilhado para listas mobile.
 - [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
-- [ ] Consolidar `ErrorState`, `ActionMenu` e filtros compartilhados.
+- [x] Consolidar `ErrorState`, `OfflineState`, `ActionMenu` e `FilterBar` compartilhados.
 - [ ] Extrair hooks e seções das telas client-side maiores (Dashboard, Minha Conta,
       Grupo, Cantina, Feed e Configurações), começando pelas rotas mais acessadas.
 
@@ -164,7 +164,7 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [x] Broker SSE, persistência interna e Web Push.
 - [x] Eventos compartilhados para Cantina e demais módulos principais.
 - [x] Reproduzir beep e vibração em notificações SSE e Push recebidas com o app aberto.
-- [ ] Adicionar testes para remetente, entrega e eventos de crédito.
+- [x] Adicionar testes para remetente, entrega e eventos de crédito.
 - [ ] Implementar e-mail transacional com provider, templates, fila, retry e idempotência.
 
 ## Prioridade 8 — Módulos de baixa prioridade

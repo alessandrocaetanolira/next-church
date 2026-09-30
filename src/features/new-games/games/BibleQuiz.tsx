@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const QUESTIONS = [
   { q: "Quantos dias Deus levou para criar o mundo?", options: ["5", "6", "7", "10"], answer: 1 },
@@ -41,6 +42,8 @@ const BibleQuizGame = () => {
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const question = questions[current];
 

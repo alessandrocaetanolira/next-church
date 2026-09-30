@@ -15,8 +15,9 @@ import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Awar
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createQuizAttempt, listQuizAttempts, type QuizAttempt } from '@/services/quiz/quiz-api';
-import { createQuizChallengeInvite, listQuizChallengeInvitees, type QuizChallengeInvitee } from '@/services/game-challenges/game-challenges-api';
+import { acceptGameChallenge, createQuizChallengeInvite, declineGameChallenge, getGameChallenge, listQuizChallengeInvitees, openGameChallengeStream, playGameChallenge, shareGameChallengeResult, type GameChallenge, type QuizChallengeInvitee } from '@/services/game-challenges/game-challenges-api';
 import { WebPageLayout } from '@/components/shared/web';
+import { useWinnerSound } from '@/features/new-games/hooks/use-winner-sound';
 
 export default function QuizPage() {
   const { data: session } = useSession();
@@ -39,12 +40,49 @@ export default function QuizPage() {
   const [selectedChallengeInvitee, setSelectedChallengeInvitee] = useState<QuizChallengeInvitee | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [challengeSending, setChallengeSending] = useState(false);
+  const [challengeAvailabilityKnown, setChallengeAvailabilityKnown] = useState(false);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
+  const [onlineChallenge, setOnlineChallenge] = useState<GameChallenge | null>(null);
+  const [onlineAnswer, setOnlineAnswer] = useState<number | null>(null);
+
+  useWinnerSound(onlineChallenge?.status === 'completed' && onlineChallenge.winnerEmail?.toLowerCase() === userEmail?.toLowerCase());
 
   useEffect(() => {
     setPageTitle('Quiz Bíblico');
     seedQuizQuestions();
   }, [setPageTitle]);
+
+  useEffect(() => {
+    const challengeId = new URLSearchParams(window.location.search).get('challenge');
+    if (!challengeId) return;
+    let closeStream: (() => void) | undefined;
+    void getGameChallenge(challengeId).then((challenge) => {
+      setOnlineChallenge(challenge);
+      closeStream = openGameChallengeStream(challengeId, (event) => {
+        try { const data = JSON.parse(event.data) as { payload?: { snapshot?: GameChallenge } }; if (data.payload?.snapshot) setOnlineChallenge(data.payload.snapshot); } catch { /* evento inválido é ignorado */ }
+      });
+    }).catch(() => toast.error('Não foi possível carregar este desafio.'));
+    return () => closeStream?.();
+  }, []);
+
+  const acceptOnlineChallenge = async () => {
+    if (!onlineChallenge) return;
+    try { setOnlineChallenge(await acceptGameChallenge(onlineChallenge.id)); toast.success('Desafio aceito!'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível aceitar o desafio.'); }
+  };
+
+  const answerOnlineChallenge = async (answerIndex: number) => {
+    if (!onlineChallenge || onlineChallenge.currentTurnEmail?.toLowerCase() !== userEmail?.toLowerCase() || onlineAnswer !== null) return;
+    setOnlineAnswer(answerIndex);
+    try { await playGameChallenge(onlineChallenge.id, { answerIndex, version: onlineChallenge.stateVersion ?? 0 }); }
+    catch (error) { setOnlineAnswer(null); toast.error(error instanceof Error ? error.message : 'Jogada recusada.'); }
+  };
+
+  const shareOnlineResult = async () => {
+    if (!onlineChallenge) return;
+    try { await shareGameChallengeResult(onlineChallenge.id); toast.success('Resultado compartilhado no feed.'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível compartilhar o resultado.'); }
+  };
 
   const loadAttempts = useCallback(async () => {
     try {
@@ -58,6 +96,14 @@ export default function QuizPage() {
   useEffect(() => {
     void loadAttempts();
   }, [loadAttempts]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    void listQuizChallengeInvitees()
+      .then((invitees) => setChallengeInvitees(Array.isArray(invitees) ? invitees : []))
+      .catch(() => setChallengeInvitees([]))
+      .finally(() => setChallengeAvailabilityKnown(true));
+  }, [userEmail]);
 
   const userAttempts = useMemo(
     () => (userEmail ? attempts.filter((attempt) => attempt.userId === userEmail) : []),
@@ -118,6 +164,7 @@ export default function QuizPage() {
       setChallengeInvitees([]);
       toast.error('Não foi possível carregar os membros disponíveis para o desafio.');
     } finally {
+      setChallengeAvailabilityKnown(true);
       setChallengeLoading(false);
     }
   };
@@ -211,6 +258,15 @@ export default function QuizPage() {
   return (
     <WebPageLayout>
       <>
+        {onlineChallenge?.status === 'pending' ? (
+          <Card className="mb-4 border-primary/30 bg-primary/5"><CardContent className="flex items-center justify-between gap-3 p-4"><div><p className="font-semibold">{onlineChallenge.challengerName} desafiou você</p><p className="text-sm text-muted-foreground">Partida de {onlineChallenge.gameType === 'quiz-bomba' ? 'Quiz Bomba' : 'Quiz Bíblico'}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void acceptOnlineChallenge()}>Aceitar</Button><Button size="sm" variant="outline" onClick={() => void declineGameChallenge(onlineChallenge.id).then(() => setOnlineChallenge(null))}>Recusar</Button></div></CardContent></Card>
+        ) : null}
+        {onlineChallenge?.status === 'active' && onlineChallenge.currentQuestionData ? (
+          <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio online</CardTitle><p className="text-sm text-muted-foreground">{onlineChallenge.currentTurnEmail?.toLowerCase() === userEmail?.toLowerCase() ? 'Sua vez' : 'Aguardando o outro jogador'}</p></CardHeader><CardContent className="space-y-3"><p className="font-medium">{onlineChallenge.currentQuestionData.question}</p>{onlineChallenge.currentQuestionData.options.map((option, index) => <Button key={option} variant={onlineAnswer === index ? 'default' : 'outline'} className="w-full justify-start" disabled={onlineChallenge.currentTurnEmail?.toLowerCase() !== userEmail?.toLowerCase() || onlineAnswer !== null} onClick={() => void answerOnlineChallenge(index)}>{option}</Button>)}</CardContent></Card>
+        ) : null}
+        {onlineChallenge?.status === 'completed' ? (
+          <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio concluído</CardTitle></CardHeader><CardContent className="flex items-center justify-between gap-3"><p className="text-sm text-muted-foreground">A partida terminou. Compartilhe o resultado no feed.</p><Button size="sm" onClick={() => void shareOnlineResult()}>Compartilhar</Button></CardContent></Card>
+        ) : null}
         {gameState === 'menu' && (
           <div key="menu" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
@@ -275,9 +331,9 @@ export default function QuizPage() {
                   <Button className="flex-1" size="lg" onClick={startGame}>
                     <Zap className="w-5 h-5 mr-2" /> Jogar
                   </Button>
-                  <Button variant="outline" size="lg" onClick={() => void openChallengeDrawer()}>
+                  {challengeAvailabilityKnown && challengeInvitees.length > 0 ? <Button variant="outline" size="lg" onClick={() => void openChallengeDrawer()}>
                     <Swords className="w-5 h-5 mr-2" /> Desafiar
-                  </Button>
+                  </Button> : null}
                 </div>
               </CardContent>
             </Card>

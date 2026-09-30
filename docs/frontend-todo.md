@@ -311,7 +311,7 @@ Usar os tokens semânticos já definidos em `globals.css`:
       `src/services/api/client.ts` permanece como fachada de compatibilidade.
 - [ ] Definir padrão de hooks de dados e política de cache.
 - [ ] Consolidar tokens e criar matriz visual light/dark.
-- [ ] Criar componentes de formulário e estados de tela comuns.
+- [x] Criar componentes de formulário e estados de tela comuns (`LoadingState`, `ErrorState`, `EmptyState`, `OfflineState`, `ActionMenu` e `FilterBar`).
 - [ ] Definir convenção de pastas, nomes e exports.
 
 ### Fase 1 — CRUDs simples

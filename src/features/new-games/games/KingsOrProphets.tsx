@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 interface Person {
   name: string;
@@ -52,6 +53,8 @@ const KingsOrProphetsGame = () => {
   const [score, setScore] = useState(0);
   const [result, setResult] = useState<{ correct: boolean; actual: string } | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const person = people[current];
 

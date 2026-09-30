@@ -29,6 +29,7 @@ export const DEFAULT_MEMBER_PERMISSIONS = [
   'games:view',
   'groups:view',
   'groups:request',
+  'feed:share',
   'notifications:view',
 ] as const;
 

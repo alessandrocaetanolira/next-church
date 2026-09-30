@@ -17,6 +17,6 @@ export function updateEngagementProfile(input: { action: 'markDevotionalRead' } 
   return apiRequest<EngagementProfile>('/api/engagement/profile', { method: 'PATCH', body: JSON.stringify(input) });
 }
 
-export function recordGameScore(input: { gameId: string; score: number; completedAt?: string }) {
+export function recordGameScore(input: { gameId: string; runId: string; score: number; completedAt?: string }) {
   return apiRequest<EngagementProfile>('/api/engagement/scores', { method: 'POST', body: JSON.stringify(input) });
 }

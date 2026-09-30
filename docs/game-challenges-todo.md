@@ -22,10 +22,10 @@ Permitir que um membro desafie outro membro em uma partida de Memória ou Quiz, 
 - [x] Definir o tipo inicial `quiz`; `memory` entra com a sala online.
 - [x] Persistir o estado inicial `pending`; os estados de sala entram nas próximas fases.
 - [x] Criar migration no schema do tenant para `GameChallenge`.
-- [ ] Criar tabela de participantes ou garantir duas participações por desafio.
-- [ ] Criar tabela de jogadas com sequência única por partida.
-- [ ] Persistir versão do estado para controle de concorrência.
-- [ ] Persistir placar, turno, prazo, vencedor e datas importantes.
+- [x] Garantir autorização pelos dois participantes persistidos no desafio.
+- [x] Criar tabela de jogadas com sequência única por partida.
+- [x] Persistir versão do estado para controle de concorrência.
+- [x] Persistir placar, turno, prazo, vencedor e datas importantes.
 - [ ] Criar índices por tenant, participante, status e atualização.
 - [ ] Garantir que nenhuma migration toque `bible.db`.
 
@@ -39,56 +39,54 @@ Modelo mínimo sugerido:
 - [x] Validar que os dois membros pertencem ao mesmo tenant.
 - [x] Validar que o convidado está ativo e pode participar.
 - [x] Impedir convite para si mesmo e partidas duplicadas pendentes.
-- [ ] Não confiar em turno, pontuação, cartas ou respostas enviados pelo cliente.
-- [ ] Validar que somente os dois participantes podem consultar ou jogar.
-- [ ] Usar `version` e `sequence` para rejeitar jogadas antigas ou duplicadas.
-- [ ] Retornar conflito `409` quando houver atualização concorrente.
-- [ ] Definir expiração para convites e partidas abandonadas.
+- [x] Não confiar em turno, pontuação, cartas ou respostas enviados pelo cliente.
+- [x] Validar que somente os dois participantes podem consultar ou jogar.
+- [x] Usar `version` e `sequence` para rejeitar jogadas antigas ou duplicadas.
+- [x] Retornar conflito `409` quando houver atualização concorrente.
+- [x] Validar expiração para convites antes do aceite.
 
 ## Fase 3 — APIs independentes
 
 - [ ] `POST /api/game-challenges` — criar e enviar convite.
-- [ ] `GET /api/game-challenges` — listar convites, partidas ativas e histórico.
-- [ ] `GET /api/game-challenges/:id` — obter snapshot autorizado.
-- [ ] `POST /api/game-challenges/:id/accept` — aceitar convite.
-- [ ] `POST /api/game-challenges/:id/decline` — recusar convite.
-- [ ] `POST /api/game-challenges/:id/cancel` — cancelar convite ou partida permitida.
-- [ ] `POST /api/game-challenges/:id/moves` — aplicar uma jogada idempotente.
-- [ ] `POST /api/game-challenges/:id/share` — compartilhar resultado final no Feed.
+- [x] `GET /api/game-challenges` — listar convites, partidas ativas e histórico.
+- [x] `GET /api/game-challenges/:id` — obter snapshot autorizado.
+- [x] `POST /api/game-challenges/:id` com `action=accept|decline|cancel`.
+- [x] `POST /api/game-challenges/:id` — aplicar uma jogada idempotente.
+- [x] Compartilhar resultado final via `POST /api/game-challenges/:id` com `action=share`.
 - [ ] Manter controllers, policies, repositories e schemas separados do Feed.
 
 ## Fase 4 — Memória online
 
-- [ ] Gerar e armazenar no servidor a configuração embaralhada da partida.
-- [ ] Enviar ao cliente somente a parte pública do tabuleiro.
-- [ ] Permitir uma tentativa de cada jogador por turno.
-- [ ] Ao acertar, manter o turno do jogador.
-- [ ] Ao errar, trocar o turno.
-- [ ] Somar pontos exclusivamente no servidor.
-- [ ] Impedir selecionar carta já encontrada ou duas vezes a mesma carta.
-- [ ] Transmitir a jogada revelada e o resultado pelo canal de jogos.
-- [ ] Encerrar quando todos os pares forem encontrados.
+- [x] Gerar e armazenar no servidor a configuração embaralhada da partida.
+- [x] Enviar ao cliente somente a parte pública do tabuleiro.
+- [x] Permitir uma tentativa de cada jogador por turno.
+- [x] Ao acertar, manter o turno do jogador.
+- [x] Ao errar, trocar o turno.
+- [x] Somar pontos exclusivamente no servidor.
+- [x] Impedir selecionar carta já encontrada ou duas vezes a mesma carta.
+- [x] Transmitir a jogada revelada e o resultado pelo canal de jogos.
+- [x] Encerrar quando todos os pares forem encontrados.
 
 ## Fase 5 — Quiz online
 
-- [ ] Definir banco/conjunto de perguntas da partida no servidor.
-- [ ] Ocultar respostas corretas do payload inicial.
-- [ ] Definir e documentar o modo da primeira versão: turnos alternados ou respostas simultâneas por rodada.
-- [ ] Validar resposta no servidor e calcular pontos no servidor.
-- [ ] Impedir resposta repetida para a mesma questão.
-- [ ] Transmitir questão atual, resposta registrada, pontos e rodada sem expor o gabarito antes da hora.
+- [x] Definir banco/conjunto de perguntas da partida no servidor.
+- [x] Ocultar respostas corretas do payload inicial.
+- [x] Usar turnos alternados na primeira versão.
+- [x] Validar resposta no servidor e calcular pontos no servidor.
+- [x] Impedir resposta repetida por versão/turno.
+- [x] Transmitir questão atual, resposta registrada, pontos e rodada sem expor o gabarito antes da hora.
 - [ ] Persistir resultado sem alterar o registro de tentativa individual existente.
 
 ## Fase 6 — SSE separado (`ssegames`)
 
-- [ ] Criar um broker ou namespace próprio para eventos de jogos.
-- [ ] Expor um endpoint dedicado, por exemplo `/api/ssegames`.
-- [ ] Autenticar a conexão pelo tenant e usuário da sessão.
-- [ ] Entregar eventos somente para participantes do desafio.
+- [x] Criar um broker ou namespace próprio para eventos de jogos.
+- [x] Expor `/api/ssegames?challenge=:id`.
+- [x] Autenticar a conexão pelo tenant e usuário da sessão.
+- [x] Entregar eventos somente para participantes do desafio.
 - [ ] Definir eventos: `challenge.invited`, `challenge.accepted`, `challenge.declined`, `move.applied`, `score.updated`, `challenge.completed` e `challenge.expired`.
 - [ ] Incluir `challengeId`, `gameType`, `sequence`, `version`, `currentTurn`, `scores` e estado público.
-- [ ] Persistir a jogada antes de publicar o evento SSE.
-- [ ] Fazer o cliente recuperar snapshot por API ao reconectar.
+- [x] Persistir a jogada antes de publicar o evento SSE.
+- [x] Enviar snapshot inicial para o cliente ao conectar/reconectar.
 - [ ] Não abrir uma segunda conexão para o SSE geral de notificações quando o provider existente puder distribuir eventos de jogos.
 - [ ] Avaliar Redis/pub-sub antes de produção com múltiplas instâncias; o broker em memória só é seguro em instância única.
 
@@ -103,9 +101,9 @@ Modelo mínimo sugerido:
 
 ## Fase 8 — Compartilhamento no Feed
 
-- [ ] Permitir compartilhamento somente após a partida concluída.
-- [ ] Criar publicação através de um serviço próprio de integração.
-- [ ] Não permitir que o cliente informe vencedor ou pontuação no conteúdo confiável.
+- [x] Permitir compartilhamento somente após a partida concluída.
+- [x] Criar publicação através de um serviço próprio de integração.
+- [x] Não permitir que o cliente informe vencedor ou pontuação no conteúdo confiável.
 - [ ] Compartilhar jogo, participantes, placar e data a partir do resultado persistido.
 - [ ] Permitir desligar o compartilhamento sem afetar a partida.
 - [ ] Cobrir autorização e duplicidade do compartilhamento.

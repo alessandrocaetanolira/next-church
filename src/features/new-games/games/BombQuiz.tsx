@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { recordGameScore } from "@/services/engagement/engagement-api";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const QUESTIONS = [
   { q: "Quem matou Golias?", options: ["Saul", "Davi", "Josué", "Sansão"], answer: 1 },
@@ -40,17 +42,28 @@ const BombQuiz = () => {
   const [current, setCurrent] = useState(0);
   const [timer, setTimer] = useState(BOMB_TIME);
   const [streak, setStreak] = useState(0);
+  const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [exploded, setExploded] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [abandoned, setAbandoned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [started, setStarted] = useState(false);
+  const [runId, setRunId] = useState(() => `bomb-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+  useWinnerSound(finished && !abandoned);
 
   useEffect(() => {
-    if (!started || exploded || selected !== null) return;
+    if (!started || exploded || finished || selected !== null) return;
     if (timer <= 0) { setExploded(true); return; }
     const t = setTimeout(() => setTimer(ti => ti - 1), 1000);
     return () => clearTimeout(t);
   }, [timer, started, exploded, selected]);
+
+  useEffect(() => {
+    if (!started || (!exploded && !finished)) return;
+    void recordGameScore({ gameId: 'quiz-bomba', runId, score });
+  }, [exploded, finished, score, runId, started]);
 
   const handleAnswer = (i: number) => {
     if (selected !== null || exploded) return;
@@ -58,10 +71,13 @@ const BombQuiz = () => {
 
     if (i === questions[current].answer) {
       const newStreak = streak + 1;
+      const points = 10 + newStreak;
       setStreak(newStreak);
+      setScore((value) => value + points);
       if (newStreak > best) setBest(newStreak);
       setTimeout(() => {
-        setCurrent(c => (c + 1) % questions.length);
+        if (current + 1 >= questions.length) { setFinished(true); return; }
+        setCurrent(c => c + 1);
         setSelected(null);
         setTimer(Math.max(BOMB_TIME - Math.floor(newStreak / 3), 4)); // gets harder
       }, 600);
@@ -74,9 +90,13 @@ const BombQuiz = () => {
     setCurrent(0);
     setTimer(BOMB_TIME);
     setStreak(0);
+    setScore(0);
     setExploded(false);
+    setFinished(false);
+    setAbandoned(false);
     setSelected(null);
     setStarted(true);
+    setRunId(`bomb-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   };
 
   if (!started) {
@@ -95,14 +115,14 @@ const BombQuiz = () => {
     );
   }
 
-  if (exploded) {
+  if (exploded || finished) {
     return (
       <GameLayout title="Quiz Bomba" emoji="💣">
         <div className="text-center mt-10 animate-fade-in">
-          <div className="text-7xl mb-4">💥</div>
-          <p className="font-display text-2xl font-bold">BOOM!</p>
-          <p className="text-muted-foreground mt-2">Sequência: {streak} acerto{streak !== 1 ? "s" : ""}</p>
-          <p className="text-sm text-muted-foreground">Melhor: {best}</p>
+          <div className="text-7xl mb-4">{finished && !abandoned ? "🏆" : abandoned ? "⏹️" : "💥"}</div>
+          <p className="font-display text-2xl font-bold">{finished && !abandoned ? "Partida concluída!" : abandoned ? "Partida encerrada" : "BOOM!"}</p>
+          <p className="text-muted-foreground mt-2">Pontos: {score}</p>
+          <p className="text-sm text-muted-foreground">Sequência: {streak} acerto{streak !== 1 ? "s" : ""} · Melhor: {best}</p>
           <button onClick={restart} className="btn-game mt-6 bg-gradient-to-r from-red-500 to-orange-500">💣 Tentar Novamente</button>
         </div>
       </GameLayout>
@@ -114,7 +134,7 @@ const BombQuiz = () => {
   return (
     <GameLayout title="Quiz Bomba" emoji="💣">
       <div className="flex justify-between items-center mb-3">
-        <span className="text-sm font-semibold">🔥 Streak: {streak}</span>
+        <span className="text-sm font-semibold">🔥 Streak: {streak} · ⭐ {score} pts</span>
         <span className={`text-2xl font-bold ${timer <= 3 ? "text-destructive animate-pulse" : ""}`}>
           💣 {timer}s
         </span>
@@ -145,6 +165,7 @@ const BombQuiz = () => {
           );
         })}
       </div>
+      <button type="button" onClick={() => { setAbandoned(true); setFinished(true); }} className="mt-5 w-full rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary">Desistir da partida</button>
     </GameLayout>
   );
 };

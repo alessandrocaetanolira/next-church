@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const QUESTIONS = [
   { q: "Quantas tribos de Israel existiam?", answer: 12, options: [10, 12, 14, 7] },
@@ -36,6 +37,8 @@ const BibleMathGame = () => {
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const question = questions[current];
 

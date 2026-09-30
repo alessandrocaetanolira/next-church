@@ -206,6 +206,7 @@ export default function MemberDetailsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => router.push(`/perfil/${member.id}`)}>Perfil social</Button>
           {canUpdate ? <Button variant="outline" onClick={() => setEditOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Editar

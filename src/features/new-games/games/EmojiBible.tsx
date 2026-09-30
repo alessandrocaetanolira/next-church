@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const STORIES = [
   { emojis: "🍎🐍👫🌳", answer: "Adão e Eva", options: ["Adão e Eva", "Jardim do Éden", "Caim e Abel", "Torre de Babel"] },
@@ -31,6 +32,8 @@ const EmojiBibleGame = () => {
   const [score, setScore] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
+
+  useWinnerSound(finished);
 
   const story = stories[current % stories.length];
 

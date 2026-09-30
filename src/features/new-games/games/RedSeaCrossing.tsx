@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const GRID_W = 7;
 const GRID_H = 10;
@@ -69,6 +70,7 @@ const RedSeaCrossing = () => {
   const [level, setLevel] = useState(1);
   const [won, setWon] = useState(false);
   const [dead, setDead] = useState(false);
+  useWinnerSound(won);
   const [lives, setLives] = useState(3);
   const [started, setStarted] = useState(false);
 

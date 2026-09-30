@@ -1,5 +1,6 @@
 import { useState } from "react";
 import GameLayout from "@/features/new-games/components/GameLayout";
+import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
 
 const PLAGUES = [
   { name: "Sangue", emoji: "🩸", desc: "As águas do Nilo se transformaram em sangue" },
@@ -29,6 +30,8 @@ const PlaguesOfEgypt = () => {
   const [wrong, setWrong] = useState(false);
   const [finished, setFinished] = useState(false);
   const [errors, setErrors] = useState(0);
+
+  useWinnerSound(finished);
 
   const handlePick = (plague: typeof PLAGUES[0]) => {
     const nextIndex = placed.length;

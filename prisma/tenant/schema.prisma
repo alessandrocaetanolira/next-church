@@ -276,6 +276,7 @@ model FeedPost {
   readBy        String?
   likes         String    @default("[]")
   comments      String    @default("[]")
+  mentions      String    @default("[]")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -320,6 +321,7 @@ model EngagementProfile {
 
 model GameScore {
   id          String   @id @default(cuid())
+  runId       String?  @unique
   userId      String
   userName    String
   gameId      String
@@ -347,6 +349,19 @@ model GameChallenge {
   expiresAt           DateTime
   acceptedAt          DateTime?
   completedAt         DateTime?
+  startedAt           DateTime?
+  lastMoveAt          DateTime?
+  currentTurnEmail    String?
+  stateVersion        Int      @default(0)
+  moveSequence        Int      @default(0)
+  currentQuestion     Int      @default(0)
+  questionOrder       String   @default("[]")
+  scores              String   @default("{}")
+  winnerEmail         String?
+  memoryBoard         String   @default("[]")
+  memoryMatched      String   @default("[]")
+  memoryFirstIndex   Int?
+  memorySecondIndex  Int?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   deletedAt           DateTime?
@@ -354,6 +369,21 @@ model GameChallenge {
   @@index([challengerUserEmail, status])
   @@index([opponentUserEmail, status])
   @@index([expiresAt])
+}
+
+model GameChallengeMove {
+  id            String   @id @default(cuid())
+  challengeId   String
+  sequence      Int
+  playerEmail   String
+  questionIndex Int
+  answerIndex   Int
+  correct       Boolean
+  points        Int
+  createdAt     DateTime @default(now())
+
+  @@unique([challengeId, sequence])
+  @@index([challengeId, playerEmail])
 }
 
 model CanteenSettings {

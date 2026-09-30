@@ -157,6 +157,7 @@ export interface FeedPost {
   readBy?: string[];
   likes: string[];
   comments: FeedComment[];
+  mentions?: Array<{ id: string; name: string; handle: string }>;
   createdAt: string;
 }
 
@@ -168,6 +169,7 @@ export interface FeedComment {
   userName: string;
   userAvatar?: string | null;
   content: string;
+  mentions?: Array<{ id: string; name: string; handle: string }>;
   createdAt: string;
 }
 
