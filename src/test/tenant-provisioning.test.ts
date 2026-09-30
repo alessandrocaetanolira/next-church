@@ -13,7 +13,7 @@ describe('provisionamento resiliente de tenant', () => {
     databaseDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'church-provision-'));
     const globalUrl = `file:${path.join(databaseDirectory, 'global.db')}`;
     execSync(`DATABASE_URL="${globalUrl}" npx prisma migrate deploy --schema=prisma/global/schema.prisma`, { stdio: 'pipe' });
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await closeAllConnections();

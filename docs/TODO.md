@@ -177,6 +177,7 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
       persistido. O convite inicial de Quiz e sua notificação já estão disponíveis.
 - [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
+- [ ] Executar a separação progressiva Web/Mobile conforme [web-mobile-separation-todo.md](./web-mobile-separation-todo.md).
 
 ## Documentos detalhados
 
@@ -187,5 +188,6 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [Bíblia offline](./bible-offline-todo.md)
 - [E-mail transacional](./email-todo.md)
 - [Frontend](./frontend-todo.md)
+- [Separação Web/Mobile](./web-mobile-separation-todo.md)
 - [Jogos](./games-todo.md)
 - [Auditoria técnica](./technical-audit-2026-09.md)

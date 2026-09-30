@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
@@ -9,97 +9,25 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Check, Download, Bell } from 'lucide-react';
+import { Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Download, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { clearUnscopedOfflineData, db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 import { PendingMembersCard } from '@/features/pastoral/components/PendingMembersCard';
-import type { ThemeMode, ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { AppImage, MobileThemePreview } from '@/components/shared';
-import { WebPageLayout } from '@/components/shared/web';
-import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
 import { AparenciaTab } from './tabs/aparenciaTab';
 import { BibliaOfflineTab } from './tabs/bibliaOfflineTab';
 import { IgrejaTab } from './tabs/igrejaTab';
 import { NotificacoesTab } from './tabs/notificacoesTab';
-import { SettingsTabs, type SettingsTab } from './tabs/settingsTabs';
-
-function CollapsibleSection({ icon: Icon, title, children }: any) {
-  const isMobile = useIsMobile();
-  const [open, setOpen] = useState(false);
-
-  if (!isMobile) {
-    return (
-      <section className="space-y-6">
-        <div className="flex items-center gap-3 border-b border-border pb-3">
-          <Icon className="h-5 w-5 shrink-0 text-primary" />
-          <h3 className="flex-1 text-xl font-semibold tracking-tight">{title}</h3>
-        </div>
-        <div className="space-y-6">{children}</div>
-      </section>
-    );
-  }
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen} className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
-      <CollapsibleTrigger className="w-full flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
-        <Icon className="w-5 h-5 text-primary shrink-0" />
-        <h3 className="font-semibold text-lg flex-1 text-left">{title}</h3>
-        <ChevronDown className={cn('w-5 h-5 text-muted-foreground transition-transform duration-200', open && 'rotate-180')} />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="px-4 pb-4 pt-0 space-y-4">{children}</div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-interface ThemeOptionProps {
-  variant: ThemeVariant;
-  label: string;
-  color: string;
-  selected: boolean;
-  onClick: () => void;
-}
-
-function ThemeOption({ label, color, selected, onClick }: ThemeOptionProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex flex-col items-center gap-2 rounded-xl border-2 p-3 transition-all',
-        selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30',
-      )}
-    >
-      <div className="h-8 w-8 rounded-full" style={{ backgroundColor: color }} />
-      <span className="text-xs font-medium">{label}</span>
-      {selected ? <Check className="h-3 w-3 text-primary" /> : null}
-    </button>
-  );
-}
-
-const themes: { variant: ThemeVariant; label: string; color: string }[] = [
-  { variant: 'default', label: 'Azul', color: '#3b82f6' },
-  { variant: 'emerald', label: 'Verde', color: '#10b981' },
-  { variant: 'violet', label: 'Violeta', color: '#8b5cf6' },
-  { variant: 'rose', label: 'Rosa', color: '#f43f5e' },
-  { variant: 'amber', label: 'Ambar', color: '#f59e0b' },
-  { variant: 'slate', label: 'Cinza', color: '#64748b' },
-];
-
-const themeModes: { value: ThemeMode; label: string }[] = [
-  { value: 'system', label: 'Sistema' },
-  { value: 'light', label: 'Claro' },
-  { value: 'dark', label: 'Escuro' },
-];
+import { SettingsSection } from '@/features/settings/components/SettingsSection';
+import { ThemeOption, themeModes, themeOptions } from '@/features/settings/components/ThemeOptions';
+import { useSettingsBranding } from '@/features/settings/hooks/use-settings-branding';
+import { useSettingsController } from '@/features/settings/hooks/use-settings-controller';
+import { SettingsScreen } from '@/features/settings/screens';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -107,170 +35,25 @@ export default function SettingsPage() {
   const canUpdateSettings = hasActionPermission(session?.user, 'settings', 'update');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   const { settings, updateSettings } = useAppSettings();
+  const brandingController = useSettingsBranding();
   const push = usePushSubscription();
-  const [branding, setBranding] = useState({
-    name: settings.appName,
-    logoLightUrl: settings.logoLightUrl ?? settings.logoUrl ?? '',
-    logoDarkUrl: settings.logoDarkUrl ?? settings.logoUrl ?? '',
-    mobileIconUrl: settings.mobileIconUrl ?? '',
-    sidebarLogoUrl: settings.sidebarLogoUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-    sidebarOpenLightUrl: settings.sidebarOpenLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-    sidebarOpenDarkUrl: settings.sidebarOpenDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
-    sidebarCollapsedLightUrl: settings.sidebarCollapsedLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-    sidebarCollapsedDarkUrl: settings.sidebarCollapsedDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
-    sidebarUseImage: settings.sidebarUseImage,
-    sidebarTitle: settings.sidebarTitle ?? settings.appName,
-    sidebarSubtitle: settings.sidebarSubtitle ?? 'Gestão de Tarefas',
-    themeVariant: settings.themeVariant,
-  });
-  const [savingBranding, setSavingBranding] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('appearance');
+  const { branding, setBranding, savingBranding, saveBranding, handleLogoUpload } = brandingController;
+  const { settingsTab, setSettingsTab, clearCache, clearLegacyOfflineData } = useSettingsController();
 
   useEffect(() => { setPageTitle('Configurações'); }, [setPageTitle]);
 
-  useEffect(() => {
-    const loadBranding = async () => {
-      if (!session?.user) return;
-      try {
-        const payload = await getUserBranding();
-        setBranding({
-          name: payload.name ?? settings.appName,
-          logoLightUrl: payload.logoLightUrl ?? payload.logoUrl ?? '',
-          logoDarkUrl: payload.logoDarkUrl ?? payload.logoUrl ?? '',
-          mobileIconUrl: payload.mobileIconUrl ?? '',
-          sidebarLogoUrl: payload.sidebarLogoUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
-          sidebarOpenLightUrl: payload.sidebarOpenLightUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
-          sidebarOpenDarkUrl: payload.sidebarOpenDarkUrl ?? payload.logoDarkUrl ?? payload.logoUrl ?? '',
-          sidebarCollapsedLightUrl: payload.sidebarCollapsedLightUrl ?? payload.logoLightUrl ?? payload.logoUrl ?? '',
-          sidebarCollapsedDarkUrl: payload.sidebarCollapsedDarkUrl ?? payload.logoDarkUrl ?? payload.logoUrl ?? '',
-          sidebarUseImage: payload.sidebarUseImage ?? true,
-          sidebarTitle: payload.sidebarTitle ?? '',
-          sidebarSubtitle: payload.sidebarSubtitle ?? '',
-          themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? settings.themeVariant,
-        });
-      } catch {
-        setBranding({
-          name: settings.appName,
-          logoLightUrl: settings.logoLightUrl ?? settings.logoUrl ?? '',
-          logoDarkUrl: settings.logoDarkUrl ?? settings.logoUrl ?? '',
-          mobileIconUrl: settings.mobileIconUrl ?? '',
-          sidebarLogoUrl: settings.sidebarLogoUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-          sidebarOpenLightUrl: settings.sidebarOpenLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-          sidebarOpenDarkUrl: settings.sidebarOpenDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
-          sidebarCollapsedLightUrl: settings.sidebarCollapsedLightUrl ?? settings.logoLightUrl ?? settings.logoUrl ?? '',
-          sidebarCollapsedDarkUrl: settings.sidebarCollapsedDarkUrl ?? settings.logoDarkUrl ?? settings.logoUrl ?? '',
-          sidebarUseImage: settings.sidebarUseImage,
-          sidebarTitle: settings.sidebarTitle ?? '',
-          sidebarSubtitle: settings.sidebarSubtitle ?? '',
-          themeVariant: settings.themeVariant,
-        });
-      }
-    };
-
-    void loadBranding();
-  }, [
-    session?.user,
-    settings.appName,
-    settings.logoUrl,
-    settings.logoLightUrl,
-    settings.logoDarkUrl,
-    settings.mobileIconUrl,
-    settings.sidebarLogoUrl,
-    settings.sidebarOpenLightUrl,
-    settings.sidebarOpenDarkUrl,
-    settings.sidebarCollapsedLightUrl,
-    settings.sidebarCollapsedDarkUrl,
-    settings.sidebarUseImage,
-    settings.sidebarTitle,
-    settings.sidebarSubtitle,
-    settings.themeVariant,
-  ]);
-
-  const handleClearCache = async () => {
-    if (confirm('Tem certeza? Todos os dados offline serão apagados.')) {
-      await db.delete();
-      await db.open();
-      localStorage.clear();
-      toast.success('Cache e dados offline limpos com sucesso!');
-      window.location.reload();
-    }
-  };
-
-  const handleClearLegacyOfflineData = async () => {
-    if (!confirm('Remover dados offline antigos sem tenant identificado? O conteúdo da Bíblia será preservado.')) return;
-    const removed = await clearUnscopedOfflineData();
-    toast.success(`${removed} registro(s) legado(s) removido(s).`);
-  };
 
   const handleSaveBranding = async () => {
-    setSavingBranding(true);
-    try {
-      const payload = await updateUserBranding({
-        name: branding.name,
-        themeVariant: branding.themeVariant,
-    logoLightBase64: branding.logoLightUrl === '' ? null : branding.logoLightUrl.startsWith('data:') ? branding.logoLightUrl : undefined,
-    logoDarkBase64: branding.logoDarkUrl === '' ? null : branding.logoDarkUrl.startsWith('data:') ? branding.logoDarkUrl : undefined,
-    mobileIconBase64: branding.mobileIconUrl === '' ? null : branding.mobileIconUrl.startsWith('data:') ? branding.mobileIconUrl : undefined,
-    sidebarLogoBase64: branding.sidebarLogoUrl === '' ? null : branding.sidebarLogoUrl.startsWith('data:') ? branding.sidebarLogoUrl : undefined,
-        sidebarOpenLightBase64: branding.sidebarOpenLightUrl === '' ? null : branding.sidebarOpenLightUrl.startsWith('data:') ? branding.sidebarOpenLightUrl : undefined,
-        sidebarOpenDarkBase64: branding.sidebarOpenDarkUrl === '' ? null : branding.sidebarOpenDarkUrl.startsWith('data:') ? branding.sidebarOpenDarkUrl : undefined,
-        sidebarCollapsedLightBase64: branding.sidebarCollapsedLightUrl === '' ? null : branding.sidebarCollapsedLightUrl.startsWith('data:') ? branding.sidebarCollapsedLightUrl : undefined,
-        sidebarCollapsedDarkBase64: branding.sidebarCollapsedDarkUrl === '' ? null : branding.sidebarCollapsedDarkUrl.startsWith('data:') ? branding.sidebarCollapsedDarkUrl : undefined,
-        sidebarUseImage: branding.sidebarUseImage,
-        sidebarTitle: branding.sidebarTitle.trim() || null,
-        sidebarSubtitle: branding.sidebarSubtitle.trim() || null,
-      });
-      updateSettings({
-        appName: payload.name ?? branding.name,
-        logoUrl: payload.logoUrl ?? null,
-        logoLightUrl: payload.logoLightUrl ?? payload.logoUrl ?? null,
-        logoDarkUrl: payload.logoDarkUrl ?? payload.logoUrl ?? null,
-        mobileIconUrl: payload.mobileIconUrl ?? null,
-        sidebarLogoUrl: payload.sidebarLogoUrl ?? null,
-        sidebarOpenLightUrl: payload.sidebarOpenLightUrl ?? null,
-        sidebarOpenDarkUrl: payload.sidebarOpenDarkUrl ?? null,
-        sidebarCollapsedLightUrl: payload.sidebarCollapsedLightUrl ?? null,
-        sidebarCollapsedDarkUrl: payload.sidebarCollapsedDarkUrl ?? null,
-        sidebarUseImage: payload.sidebarUseImage ?? true,
-        sidebarTitle: payload.sidebarTitle,
-        sidebarSubtitle: payload.sidebarSubtitle,
-        themeVariant: (payload.themeVariant as ThemeVariant | undefined) ?? settings.themeVariant,
-      });
-      toast.success('Branding atualizado.');
-    } catch {
-      toast.error('Erro ao salvar branding.');
-    } finally {
-      setSavingBranding(false);
-    }
-  };
-
-  type BrandingImageField = 'mobileIconUrl' | 'sidebarOpenLightUrl' | 'sidebarOpenDarkUrl' | 'sidebarCollapsedLightUrl' | 'sidebarCollapsedDarkUrl';
-
-  const handleLogoUpload = async (field: BrandingImageField, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result === 'string') {
-        setBranding((current) => ({ ...current, [field]: result }));
-      }
-    };
-    reader.readAsDataURL(file);
+    try { await saveBranding(); toast.success('Branding atualizado.'); }
+    catch { toast.error('Erro ao salvar branding.'); }
   };
 
   return (
-    <WebPageLayout
-      title="Configurações"
-      description="Gerencie a aparência, identidade e recursos do seu aplicativo."
-    >
-
-      <SettingsTabs value={settingsTab} onChange={setSettingsTab} />
+    <SettingsScreen activeTab={settingsTab} onTabChange={setSettingsTab}>
 
       {/* Tema, aparência e identidade visual */}
       <AparenciaTab active={settingsTab === 'appearance'} value="appearance">
-        <CollapsibleSection icon={Palette} title="Tema, aparência e identidade visual">
+        <SettingsSection icon={Palette} title="Tema, aparência e identidade visual">
           <div className="grid gap-6 lg:grid-cols-[430px_minmax(0,1fr)] lg:items-start">
             <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3 sm:p-4">
               <div>
@@ -283,7 +66,7 @@ export default function SettingsPage() {
                   appName={branding.name || settings.appName}
                   userName={session?.user?.name ?? 'Alessandro'}
                   logoUrl={branding.mobileIconUrl || branding.logoLightUrl || branding.logoDarkUrl}
-                  accentColor={themes.find((theme) => theme.variant === branding.themeVariant)?.color}
+                  accentColor={themeOptions.find((theme) => theme.variant === branding.themeVariant)?.color}
                   dark={settings.themeMode === 'dark'}
                 />
               </div>
@@ -293,7 +76,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
           <Label>Cor Principal</Label>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {themes.map((theme) => (
+            {themeOptions.map((theme) => (
               <ThemeOption
                 key={theme.variant}
                 variant={theme.variant}
@@ -397,22 +180,22 @@ export default function SettingsPage() {
         )}
             </div>
           </div>
-        </CollapsibleSection>
+        </SettingsSection>
       </AparenciaTab>
 
       <BibliaOfflineTab active={settingsTab === 'offline'} value="offline">
-        <CollapsibleSection icon={Download} title="Bíblia offline">
+        <SettingsSection icon={Download} title="Bíblia offline">
         <p className="text-sm text-muted-foreground">O download é opcional e fica salvo somente neste dispositivo. Escolha quais versões deseja acessar sem internet.</p>
         <div className="grid gap-3 sm:grid-cols-3">
           <BibleDownloadControl translation="AA" />
           <BibleDownloadControl translation="ACF" />
           <BibleDownloadControl translation="NVI" />
         </div>
-        </CollapsibleSection>
+        </SettingsSection>
       </BibliaOfflineTab>
 
       <NotificacoesTab active={settingsTab === 'notifications'} value="notifications">
-        <CollapsibleSection icon={Bell} title="Notificações no dispositivo">
+        <SettingsSection icon={Bell} title="Notificações no dispositivo">
         <p className="text-sm text-muted-foreground">
           Receba alertas mesmo quando o app estiver fechado. A permissão é controlada pelo navegador.
         </p>
@@ -432,13 +215,13 @@ export default function SettingsPage() {
         )}
         {push.error && <p className="text-xs text-destructive">{push.error}</p>}
         {push.permission === 'denied' && !push.error && <p className="text-xs text-destructive">A permissão foi bloqueada. Reative-a nas configurações do navegador.</p>}
-        </CollapsibleSection>
+        </SettingsSection>
       </NotificacoesTab>
 
       <IgrejaTab active={settingsTab === 'church'} value="church">
         {(session?.user?.role === 'ADMIN' || session?.user?.role === 'PASTOR') && session?.user?.tenantId ? (
           <>
-          <CollapsibleSection icon={ImageIcon} title="Igreja e membros">
+          <SettingsSection icon={ImageIcon} title="Igreja e membros">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Compartilhe o link ou o QR Code corretos do cadastro público da sua igreja.
@@ -446,24 +229,24 @@ export default function SettingsPage() {
               <RegistrationShareCard tenantSlug={session.user.tenantSlug ?? ''} />
               <PendingMembersCard />
             </div>
-          </CollapsibleSection>
+          </SettingsSection>
           {session?.user?.role === 'ADMIN' ? (
             <>
-              <CollapsibleSection icon={Gift} title="Programa de Fidelidade">
+              <SettingsSection icon={Gift} title="Programa de Fidelidade">
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">Configurações avançadas de fidelidade para membros.</p>
                   <Button variant="outline" className="w-full">Gerenciar Regras</Button>
                 </div>
-              </CollapsibleSection>
+              </SettingsSection>
 
-              <CollapsibleSection icon={Lock} title="Gerenciar usuários">
+              <SettingsSection icon={Lock} title="Gerenciar usuários">
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">Gestão de permissões de acesso ao sistema.</p>
                   <Button variant="outline" className="w-full" onClick={() => router.push('/members')}>
                     Listar usuários
                   </Button>
                 </div>
-              </CollapsibleSection>
+              </SettingsSection>
             </>
           ) : null}
           </>
@@ -473,7 +256,7 @@ export default function SettingsPage() {
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 p-4 h-auto text-warning hover:bg-warning/10"
-          onClick={handleClearLegacyOfflineData}
+          onClick={() => void clearLegacyOfflineData()}
         >
           <Trash2 className="w-5 h-5" />
           <span>Remover dados offline antigos sem tenant</span>
@@ -481,7 +264,7 @@ export default function SettingsPage() {
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-3 p-4 h-auto text-destructive hover:bg-destructive/10" 
-          onClick={handleClearCache}
+          onClick={() => void clearCache()}
         >
           <Trash2 className="w-5 h-5" />
           <span>Limpar Dados Offline</span>
@@ -496,6 +279,6 @@ export default function SettingsPage() {
           <LogOut className="w-4 h-4" /> Sair da conta
         </Button>
       </IgrejaTab>
-    </WebPageLayout>
+    </SettingsScreen>
   );
 }

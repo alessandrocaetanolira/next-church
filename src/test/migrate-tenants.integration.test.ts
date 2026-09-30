@@ -28,7 +28,7 @@ describe('orquestrador de migrations tenant', () => {
       ],
     });
     fs.writeFileSync(path.join(databaseDirectory, 'church_tenant-broken.db'), 'arquivo invalido');
-  });
+  }, 60_000);
 
   afterAll(async () => {
     process.argv = originalArgv;

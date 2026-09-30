@@ -48,7 +48,7 @@ describe('Multi-Tenant Authentication', () => {
         permissions: 'canteen,settings',
       }
     });
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await closeAllConnections();

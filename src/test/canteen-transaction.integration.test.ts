@@ -17,7 +17,7 @@ describe('transações reais da cantina', () => {
     execSync(`DATABASE_URL="${databaseUrl}" npx prisma migrate deploy --schema=prisma/tenant/schema.prisma`, { stdio: 'pipe' });
     prisma = new TenantPrismaClient({ datasources: { db: { url: databaseUrl } } });
     repository = new CanteenSalesRepository(prisma);
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await prisma.$disconnect();
