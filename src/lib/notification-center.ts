@@ -19,6 +19,16 @@ const listeners = new Set<Listener>();
 let cache: NotificationRecord[] = [];
 let initialized = false;
 
+function syncPwaBadge(count: number) {
+  if (typeof navigator === 'undefined') return;
+  const appBadge = navigator as Navigator & {
+    setAppBadge?: (value?: number) => Promise<void>;
+    clearAppBadge?: () => Promise<void>;
+  };
+  const operation = count > 0 ? appBadge.setAppBadge?.(count) : appBadge.clearAppBadge?.();
+  if (operation) void operation.catch(() => undefined);
+}
+
 function emit() {
   listeners.forEach((listener) => listener());
 }
@@ -48,6 +58,7 @@ export async function initializeNotificationCenter(force = false) {
 
   try {
     cache = sortNotifications(await listNotifications());
+    syncPwaBadge(getUnreadNotificationCount());
     emit();
   } catch {
     initialized = false;
@@ -60,6 +71,7 @@ export function upsertNotification(notification: NotificationRecord, options?: {
   if (exists) return false;
 
   cache = sortNotifications([notification, ...cache]).slice(0, 100);
+  syncPwaBadge(getUnreadNotificationCount());
   emit();
   playNotificationBeep(notification.id);
 
@@ -81,6 +93,7 @@ export async function markNotificationRead(id: string) {
   cache = cache.map((notification) =>
     notification.id === id ? { ...notification, readAt } : notification
   );
+  syncPwaBadge(getUnreadNotificationCount());
   emit();
 
   try {
@@ -95,6 +108,7 @@ export async function markAllNotificationsRead() {
 
   const readAt = new Date().toISOString();
   cache = cache.map((notification) => ({ ...notification, readAt: notification.readAt ?? readAt }));
+  syncPwaBadge(0);
   emit();
 
   try {

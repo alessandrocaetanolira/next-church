@@ -50,9 +50,12 @@ export class SseBroker {
   /** Publica um evento somente para os listeners do destinatário informado. */
   publish(payload: ServerNotificationEvent) {
     const key = `${payload.tenantId}:${payload.userEmail.trim().toLowerCase()}`;
-    for (const listener of this.listeners.get(key) ?? []) {
+    const listeners = this.listeners.get(key);
+    if (!listeners) return 0;
+    for (const listener of listeners) {
       listener(payload);
     }
+    return listeners.size;
   }
 }
 
@@ -78,7 +81,7 @@ export function publishPermissionsUpdated(
   role: string,
   permissions: string[],
 ) {
-  sseBroker.publish({
+  return sseBroker.publish({
     id: `permissions:${userEmail}:${Date.now()}`,
     tenantId,
     userEmail,

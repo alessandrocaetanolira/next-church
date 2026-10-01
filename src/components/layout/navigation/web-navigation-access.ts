@@ -1,4 +1,4 @@
-import { getAccessibleModules } from "@/lib/access-control";
+import { canSeeModuleEntry, getAccessibleModules, isModulePlanAvailable } from "@/lib/access-control";
 import { WEB_NAVIGATION, type WebNavigationGroup, type WebNavigationItem } from "./web-navigation";
 
 type NavigationUser = Parameters<typeof getAccessibleModules>[0];
@@ -16,8 +16,11 @@ export function getVisibleWebNavigation(user: NavigationUser): VisibleWebNavigat
     group,
     items: group.items.filter((item) => {
       if (item.platformAdminOnly) return isPlatformAdmin;
-      return item.module ? accessibleModules.has(item.module) : true;
-    }),
+      if (!item.module) return true;
+      return accessibleModules.has(item.module) || canSeeModuleEntry(user, item.module);
+    }).map((item) => item.module && !isModulePlanAvailable(user, item.module)
+      ? { ...item, disabled: true, disabledReason: 'Este recurso não está incluso no plano atual.' }
+      : item),
   })).filter(({ group, items }) => {
     if (group.hiddenForPlatformAdmin && isPlatformAdmin) return false;
     if (group.platformAdminOnly && !isPlatformAdmin) return false;

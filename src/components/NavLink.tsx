@@ -13,6 +13,8 @@ interface NavLinkProps {
   end?: boolean;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   style?: CSSProperties;
+  title?: string;
+  'aria-disabled'?: boolean;
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(

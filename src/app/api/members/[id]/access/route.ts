@@ -5,6 +5,8 @@ import { UnauthenticatedError } from '@/lib/http/errors';
 import { updateMemberAccess } from '@/server/members/member-access.controller';
 import { MemberAccessRepository } from '@/server/members/member-access.repository';
 import { MemberAccessService } from '@/server/members/member-access.service';
+import { MemberAccessNotifier } from '@/server/members/member-access-notifier';
+import { PushSubscriptionsRepository } from '@/server/notifications/push-subscriptions.repository';
 
 async function getContext() {
   const session = await auth();
@@ -13,13 +15,14 @@ async function getContext() {
   return {
     user: session.user,
     service: new MemberAccessService(new MemberAccessRepository(prisma)),
+    notifier: new MemberAccessNotifier(new PushSubscriptionsRepository(prisma)),
   };
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const context = await getContext();
-    return jsonOk(await updateMemberAccess(context.user, context.service, (await params).id, await request.json(), context.user.tenantId));
+    return jsonOk(await updateMemberAccess(context.user, context.service, (await params).id, await request.json(), context.user.tenantId, context.notifier));
   } catch (error) {
     return jsonError(error);
   }

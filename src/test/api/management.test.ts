@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
 
 // Mock de sessões com diferentes permissões
 const mockSession = (role: string) => ({
-  user: { role, tenantId: 'test-tenant' },
+  user: { role, permissions: [], tenantId: 'test-tenant' },
 });
 
 vi.mock('@/auth', () => ({

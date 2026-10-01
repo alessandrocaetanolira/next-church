@@ -137,6 +137,41 @@ executado ainda.
   forçando logout; o tenant foi reativado depois e o login normalizado.
 - Fase 5 — revogação de sessão: **aceite concluído**.
 
+### Presets de perfil e permissões efetivas — 01/10/2026
+
+- `MEMBER` recebe Bíblia, Feed, jogos, grupos, notificações e compra na cantina.
+- `LEADER` herda `MEMBER` e recebe gestão de grupos, tarefas e materiais no escopo
+  das equipes atribuídas; não opera a cantina sem permissão explícita.
+- `CANTEEN` herda `MEMBER` e recebe todas as ações da cantina.
+- `PASTOR` herda `MEMBER` e recebe membros, aprovação, grupos, tarefas, materiais e
+  área pastoral; permissões adicionais podem ser atribuídas individualmente.
+- `ADMIN` mantém acesso total ao tenant.
+- A composição efetiva é `preset do perfil + permissões persistidas no usuário`,
+  respeitando o plano e o escopo de equipes.
+- O perfil `CANTEEN` foi incluído na tela de gestão de acesso.
+- Testes da matriz após a implementação: **17 aprovados**.
+
+### SSE, Push fallback e sessão de acesso — 01/10/2026
+
+- `permissions.updated` agora retorna a quantidade de listeners SSE alcançados.
+- Quando não há listener, o fluxo envia Push genérico “Atualizamos o app”, sem
+  incluir permissões no payload; ao abrir o app, a sessão é revalidada no servidor.
+- O fallback remove subscriptions Push expiradas e registra logs de entrega.
+- O `User.version` é incrementado em alterações de acesso e o JWT revalida perfil,
+  permissões, `active` e `deletedAt` quando a versão muda.
+- O teste local `prisma/scripts/test-permissions-sse.ts` permite alternar o perfil
+  com `TEST_ROLE=MEMBER|ADMIN` e publicar pelo processo Next em `localhost:3000`.
+- Teste operacional concluído: app aberto recebeu SSE; app fechado recebeu Push.
+
+### PWA e navegação mobile — 01/10/2026
+
+- Badge numérico do ícone PWA incrementa no Service Worker ao receber Push e é
+  sincronizado com notificações não lidas ao abrir o app.
+- A modal inicial permite registrar novamente a subscription quando a permissão já
+  foi concedida, mas o backend ainda não possui a inscrição.
+- Menu de usuário mobile usa Drawer bottom padrão e exige confirmação para logout.
+- Avatar do TopBar mobile recebeu margem de segurança à direita.
+
 ### Opção B — reparo incremental
 
 - [ ] Fazer inventário dos tenants e `_prisma_migrations`.

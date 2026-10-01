@@ -8,6 +8,8 @@ export type TestNotificationInput = {
   title: string;
   message: string;
   href?: string | null;
+  role?: string;
+  permissions?: string[];
 };
 
 export class TestNotificationRepository {

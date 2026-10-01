@@ -6,6 +6,7 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 type DrawerOptions = {
   content: ReactNode;
   contentClassName?: string;
+  contentWrapperClassName?: string;
 };
 
 type DrawerContextValue = {
@@ -58,7 +59,7 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
             maxHeight: keyboardInset ? `calc(82dvh - ${keyboardInset}px)` : undefined,
           }}
         >
-          <div className="min-h-0 overflow-y-auto overscroll-contain pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className={drawer?.contentWrapperClassName ?? "min-h-0 overflow-y-auto overscroll-contain pb-[max(0.5rem,env(safe-area-inset-bottom))]"}>
             {drawer?.content}
           </div>
         </DrawerContent>

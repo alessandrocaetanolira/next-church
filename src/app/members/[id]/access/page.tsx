@@ -18,7 +18,7 @@ type MemberAccess = {
   id: string;
   name: string;
   email: string;
-  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER' | null;
+  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER' | null;
   permissions: string[];
   hasAccess: boolean;
 };
@@ -27,6 +27,7 @@ const roles = [
   ['MEMBER', 'Membro'],
   ['LEADER', 'Líder'],
   ['PASTOR', 'Pastor'],
+  ['CANTEEN', 'Cantina'],
   ['ADMIN', 'Admin'],
 ] as const;
 

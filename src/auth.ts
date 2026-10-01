@@ -176,6 +176,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!church || !church.active || (church.status && church.status !== 'ACTIVE') || church.authVersion !== token.churchAuthVersion) {
             token.authValid = false;
           }
+
+          if (church && token.tenantId && token.email && token.authValid !== false) {
+            const currentUser = await getTenantClient(String(token.tenantId)).user.findUnique({
+              where: { email: String(token.email) },
+              select: { role: true, permissions: true, linkedMemberId: true, version: true, active: true, deletedAt: true },
+            });
+            if (!currentUser || !currentUser.active || currentUser.deletedAt) {
+              token.authValid = false;
+            } else if (currentUser.version !== token.version || currentUser.role !== token.role || (currentUser.permissions ?? '') !== (Array.isArray(token.permissions) ? token.permissions.join(',') : token.permissions ?? '')) {
+              token.role = currentUser.role;
+              token.permissions = currentUser.permissions?.split(',').map((permission) => permission.trim()).filter(Boolean) ?? [];
+              token.linkedMemberId = currentUser.linkedMemberId;
+              token.version = currentUser.version;
+            }
+          }
         } catch (error) {
           serverLogger.error('Auth', 'Não foi possível revalidar o tenant da sessão', error);
           token.authValid = false;

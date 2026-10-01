@@ -37,7 +37,7 @@ export class MemberAccessRepository {
     };
 
     return data.id
-      ? this.prisma.user.update({ where: { id: data.id }, data: userData })
+      ? this.prisma.user.update({ where: { id: data.id }, data: { ...userData, version: { increment: 1 } } })
       : this.prisma.user.create({ data: userData });
   }
 }

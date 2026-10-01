@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SseBroker, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
+import { publishPermissionsUpdated, SseBroker, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
 import { createSseStream } from '@/infra/sse/sse-stream';
 
 const tenantClient = {
@@ -107,5 +107,32 @@ describe('SseBroker', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('entrega atualização de perfil e permissões somente ao usuário conectado', async () => {
+    tenantClient.$queryRawUnsafe.mockResolvedValueOnce([]);
+    const abort = new AbortController();
+    const response = await openNotificationsStream(
+      new Request('http://localhost/api/events', { signal: abort.signal }),
+      'tenant-a',
+      'member@test.local',
+    );
+    const reader = response.body!.getReader();
+
+    const connected = await reader.read();
+    expect(new TextDecoder().decode(connected.value)).toContain('connected');
+
+    publishPermissionsUpdated('tenant-a', 'other@test.local', 'ADMIN', ['members:view']);
+    publishPermissionsUpdated('tenant-a', 'member@test.local', 'CANTEEN', ['canteen:view', 'canteen:order']);
+
+    const update = await reader.read();
+    const payload = new TextDecoder().decode(update.value);
+    expect(payload).toContain('permissions.updated');
+    expect(payload).toContain('"role":"CANTEEN"');
+    expect(payload).toContain('canteen:order');
+    expect(payload).not.toContain('other@test.local');
+
+    abort.abort();
+    await reader.cancel();
   });
 });

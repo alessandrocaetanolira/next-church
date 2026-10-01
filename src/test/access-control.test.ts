@@ -63,4 +63,18 @@ describe('permissões combinadas com recursos do plano', () => {
     expect(canAccessRoute(leaderWithoutTeams, '/schedules')).toBe(false);
     expect(canAccessRoute(leaderWithoutTeams, '/materials')).toBe(false);
   });
+
+  it('não exibe módulos sem permissão de visualização para membro', () => {
+    const member = {
+      role: 'MEMBER',
+      permissions: ['feed:view', 'bible:view'],
+      planFeatures: ['feed', 'bible', 'kids', 'social_projects', 'parking', 'materials'],
+    };
+
+    expect(canAccessRoute(member, '/kids')).toBe(false);
+    expect(canAccessRoute(member, '/social-projects')).toBe(false);
+    expect(canAccessRoute(member, '/parking')).toBe(false);
+    expect(canAccessRoute(member, '/materials')).toBe(false);
+    expect(getAccessibleModules(member).has('kids')).toBe(false);
+  });
 });

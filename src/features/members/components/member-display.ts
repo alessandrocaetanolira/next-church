@@ -1,4 +1,4 @@
-export type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+export type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
 
 export interface ManagedMember {
   id: string;
@@ -24,6 +24,7 @@ export const roleLabels: Record<MemberRole, string> = {
   PASTOR: 'Pastor',
   LEADER: 'Líder',
   MEMBER: 'Membro',
+  CANTEEN: 'Cantina',
 };
 
 export const maritalStatusLabels: Record<string, string> = {

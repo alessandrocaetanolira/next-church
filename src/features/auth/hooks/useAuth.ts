@@ -25,7 +25,7 @@ export interface User {
   email: string;
   image?: string | null;
   /** Nível de acesso/Papel do usuário no sistema */
-  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
   /** Identificador da igreja (Tenant) ao qual o usuário pertence */
   tenantId: string;
   tenantSlug?: string;

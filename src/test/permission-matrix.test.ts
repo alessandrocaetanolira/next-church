@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hasActionPermission, hasPlanFeature } from '@/lib/access-control';
+import { getRoleDefaultPermissions } from '@/lib/permission-catalog';
 
 describe('matriz de acesso por perfil', () => {
   const allFeatures = ['members', 'groups', 'tasks', 'materials', 'canteen', 'pastoral', 'feed', 'bible', 'games', 'notifications', 'settings'];
@@ -25,12 +26,22 @@ describe('matriz de acesso por perfil', () => {
     expect(hasActionPermission(user, 'members', 'delete')).toBe(false);
   });
 
-  it('líder recebe apenas as ações explicitamente atribuídas', () => {
-    const user = { role: 'LEADER', permissions: ['groups:update', 'tasks:view'], planFeatures: allFeatures };
+  it('líder herda o membro e recebe ações padrão de liderança', () => {
+    const user = { role: 'LEADER', permissions: getRoleDefaultPermissions('LEADER'), planFeatures: allFeatures };
     expect(hasActionPermission(user, 'groups', 'update')).toBe(true);
     expect(hasActionPermission(user, 'groups', 'delete')).toBe(false);
     expect(hasActionPermission(user, 'tasks', 'view')).toBe(true);
-    expect(hasActionPermission(user, 'tasks', 'create')).toBe(false);
+    expect(hasActionPermission(user, 'tasks', 'create')).toBe(true);
+    expect(hasActionPermission(user, 'canteen', 'order')).toBe(true);
+    expect(hasActionPermission(user, 'canteen', 'operate')).toBe(false);
+  });
+
+  it('CANTEEN herda o membro e recebe toda a operação da cantina', () => {
+    const user = { role: 'CANTEEN', permissions: getRoleDefaultPermissions('CANTEEN'), planFeatures: allFeatures };
+    expect(hasActionPermission(user, 'bible', 'view')).toBe(true);
+    expect(hasActionPermission(user, 'canteen', 'sell')).toBe(true);
+    expect(hasActionPermission(user, 'canteen', 'manage_products')).toBe(true);
+    expect(hasActionPermission(user, 'groups', 'update')).toBe(false);
   });
 
   it('membro pode solicitar ingresso quando recebe essa permissão', () => {

@@ -6,8 +6,9 @@ import { NavLink } from '@/components/NavLink';
 import { LayoutDashboard, Calendar, ShoppingCart, Settings, Menu, BookOpen, Users as UsersIcon, MessageCircle, Gamepad2, Megaphone, Bell, Package, Layers, Heart, Baby, Car } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { getAccessibleModules } from '@/lib/access-control';
+import { canSeeModuleEntry, getAccessibleModules, isModulePlanAvailable } from '@/lib/access-control';
 import { useDrawer } from '@/components/providers/DrawerProvider';
+import { toast } from 'sonner';
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -22,7 +23,7 @@ export function BottomNav() {
     { to: '/', icon: LayoutDashboard, label: 'Início', show: accessibleModules.has('dashboard') },
     { to: '/bible', icon: BookOpen, label: 'Bíblia', show: accessibleModules.has('bible') },
     { to: '/feed', icon: MessageCircle, label: 'Feed', show: accessibleModules.has('feed') },
-    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: accessibleModules.has('canteen') },
+    { to: '/cantina', icon: ShoppingCart, label: 'Cantina', show: accessibleModules.has('canteen') || canSeeModuleEntry(user, 'canteen'), disabled: !isModulePlanAvailable(user, 'canteen') },
   ].filter(item => item.show);
 
   const drawerItems = [
@@ -46,9 +47,18 @@ export function BottomNav() {
           const isActive = pathname === item.to;
           return (
             <NavLink key={item.to} to={item.to}
-              onClick={closeDrawer}
+              onClick={(event) => {
+                if (item.disabled) {
+                  event.preventDefault();
+                  toast.info('Este recurso não está incluso no plano atual.');
+                  return;
+                }
+                closeDrawer();
+              }}
+              aria-disabled={item.disabled}
+              title={item.disabled ? 'Este recurso não está incluso no plano atual.' : undefined}
               className={cn('flex h-14 w-16 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-150',
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
+                item.disabled ? 'cursor-not-allowed text-muted-foreground/50' : isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}>
               <item.icon className={cn('w-5 h-5', isActive && 'stroke-[2.5]')} />
               <span className="text-[10px] font-medium">{item.label}</span>
             </NavLink>
@@ -58,8 +68,9 @@ export function BottomNav() {
           type="button"
           onClick={() => openDrawer({
             contentClassName: 'max-h-[70dvh]',
+            contentWrapperClassName: 'min-h-0 overflow-y-auto overscroll-contain pb-0',
             content: <>
-              <div className="grid grid-cols-3 gap-3 overflow-y-auto p-4 pb-6 pt-8">
+              <div className="grid grid-cols-3 gap-3 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8">
                 {drawerItems.map((item, index) => {
                   const isActive = pathname === item.to;
                   return (

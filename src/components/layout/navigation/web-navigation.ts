@@ -28,6 +28,8 @@ export type WebNavigationItem = {
   icon: LucideIcon;
   module?: AppModule;
   platformAdminOnly?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
 };
 
 export type WebNavigationGroup = {

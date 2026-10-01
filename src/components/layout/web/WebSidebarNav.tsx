@@ -5,6 +5,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getVisibleWebNavigation, type VisibleWebNavigationGroup } from "@/components/layout/navigation/web-navigation-access";
 import type { WebNavigationItem } from "@/components/layout/navigation/web-navigation";
+import { toast } from "sonner";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -51,7 +52,14 @@ function SidebarSection({
                 <SidebarMenuButton asChild isActive={pathname === item.to || pathname.startsWith(`${item.to}/`)}>
                   <NavLink
                     to={item.to}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent"
+                    aria-disabled={item.disabled}
+                    title={item.disabled ? item.disabledReason : undefined}
+                    onClick={(event) => {
+                      if (!item.disabled) return;
+                      event.preventDefault();
+                      toast.info(item.disabledReason ?? 'Este recurso não está disponível no plano atual.');
+                    }}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent ${item.disabled ? 'cursor-not-allowed opacity-50' : ''}`}
                     activeClassName="bg-sidebar-accent font-medium text-sidebar-primary"
                   >
                     <Icon className="h-5 w-5 shrink-0" />

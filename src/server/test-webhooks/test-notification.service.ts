@@ -1,4 +1,4 @@
-import { publishTenantEvent } from '@/infra/sse/sse-broker';
+import { publishPermissionsUpdated, publishTenantEvent } from '@/infra/sse/sse-broker';
 import { webPushService } from '@/infra/web-push/web-push-service';
 import { PushSubscriptionsRepository } from '@/server/notifications/push-subscriptions.repository';
 import { TestNotificationRepository, type TestNotificationInput } from './test-notification.repository';
@@ -11,6 +11,21 @@ export class TestNotificationService {
   ) {}
 
   async sendSse(tenantId: string, input: TestNotificationInput) {
+    if (input.type === 'permissions.updated' && input.role && input.permissions) {
+      const listeners = publishPermissionsUpdated(tenantId, input.userEmail, input.role, input.permissions);
+      if (listeners > 0) return { ok: true as const, channel: 'sse' as const, type: input.type, listeners, push: null };
+
+      const subscriptions = await this.pushSubscriptions.listByEmails([input.userEmail]);
+      const push = await webPushService.send(subscriptions, {
+        title: 'Atualizamos o app',
+        body: 'Abra o aplicativo para sincronizar suas permissões.',
+        url: '/',
+        tag: 'church-access-updated',
+        data: { type: 'access-updated', url: '/' },
+      });
+      if (push.expiredIds.length) await this.pushSubscriptions.removeMany(push.expiredIds);
+      return { ok: true as const, channel: 'push-fallback' as const, type: input.type, listeners, push };
+    }
     serverLogger.info('webhook-sse', 'criando notificação', { tenantId, userEmail: input.userEmail, type: input.type });
     const notification = await this.repository.create(input);
     serverLogger.info('webhook-sse', 'publicando evento no broker', { tenantId, notificationId: notification.id });

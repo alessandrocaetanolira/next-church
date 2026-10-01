@@ -57,6 +57,8 @@ aceite registrado.
 - [x] PWA com Serwist, manifest, fallback `/offline` e precache gerado no build.
 - [x] Bíblia com Dexie, favoritos, anotações e download opcional.
 - [x] Notificações internas, SSE e Web Push.
+- [x] Atualização de perfil via SSE com fallback Push quando não há conexão ativa.
+- [x] Badge numérico do ícone PWA sincronizado com notificações não lidas.
 - [x] Beep moderno e vibração para eventos recebidos em primeiro plano, com vibração
       nativa no Web Push quando suportada pelo dispositivo.
 - [x] Branding por tenant, cores, logos e configuração do PWA.
@@ -121,6 +123,7 @@ aceite registrado.
 - [x] Garantir que o administrador veja todos os módulos autorizados, incluindo Cantina.
 - [x] Persistir permissões e equipes no store após login e atualizar permissões via SSE.
 - [x] Cobrir permissões com testes de policy, service e resposta HTTP.
+- [x] Cobrir transições ADMIN/MEMBER e entrega `permissions.updated` via SSE.
 
 ## Prioridade 4 — Offline-first real
 
@@ -147,6 +150,8 @@ aceite registrado.
 - [ ] Confirmar instalação PWA em Android real, incluindo ícone e manifest do tenant.
 - [x] Usar o ícone PWA do tenant no payload de notificação Push, mantendo fallback
       para o ícone padrão.
+- [x] Revisar modal inicial de notificações para recuperar subscriptions concedidas
+      mas ainda não registradas.
 
 ## Prioridade 5 — Cantina
 
@@ -174,6 +179,7 @@ aceite registrado.
 - [x] Validar fallback de logo após login e em light/dark.
 - [x] Criar `InfiniteScroll` compartilhado para listas mobile.
 - [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
+- [x] Substituir menu de usuário mobile por drawer bottom padrão, com confirmação de logout.
 - [x] Consolidar `ErrorState`, `OfflineState`, `ActionMenu` e `FilterBar` compartilhados.
 - [ ] Extrair hooks e seções das telas client-side maiores (Dashboard, Minha Conta,
       Grupo, Cantina, Feed e Configurações), começando pelas rotas mais acessadas.

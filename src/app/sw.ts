@@ -77,6 +77,33 @@ type PushPayload = {
   payload?: Record<string, unknown>;
 };
 
+const BADGE_DB_NAME = 'church-pwa-meta';
+const BADGE_STORE_NAME = 'state';
+const BADGE_KEY = 'unread-count';
+
+function updatePwaBadge(delta: number) {
+  return new Promise<void>((resolve) => {
+    const open = indexedDB.open(BADGE_DB_NAME, 1);
+    open.onupgradeneeded = () => open.result.createObjectStore(BADGE_STORE_NAME);
+    open.onerror = () => resolve();
+    open.onsuccess = () => {
+      const db = open.result;
+      const read = db.transaction(BADGE_STORE_NAME, 'readonly').objectStore(BADGE_STORE_NAME).get(BADGE_KEY);
+      read.onerror = () => resolve();
+      read.onsuccess = () => {
+        const count = Math.max(0, Number(read.result ?? 0) + delta);
+        const write = db.transaction(BADGE_STORE_NAME, 'readwrite').objectStore(BADGE_STORE_NAME).put(count, BADGE_KEY);
+        write.onsuccess = () => {
+          const registration = self.registration as ServiceWorkerRegistration & { setAppBadge?: (value?: number) => Promise<void> };
+          void registration.setAppBadge?.(count).catch(() => undefined);
+          resolve();
+        };
+        write.onerror = () => resolve();
+      };
+    };
+  });
+}
+
 self.addEventListener('push', (event: Event) => {
   const pushEvent = event as PushEvent;
   let payload: PushPayload = {};
@@ -101,7 +128,7 @@ self.addEventListener('push', (event: Event) => {
     vibrate: [80, 40, 80],
     data: { ...data, url: targetUrl, notificationId },
   } as NotificationOptions & { vibrate: number[] });
-  pushEvent.waitUntil(Promise.all([notifyOpenClients, showNotification]));
+  pushEvent.waitUntil(Promise.all([notifyOpenClients, showNotification, updatePwaBadge(1)]));
 });
 
 self.addEventListener('notificationclick', (event: Event) => {

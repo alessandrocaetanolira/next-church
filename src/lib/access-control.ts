@@ -1,5 +1,5 @@
 import { normalizePlanFeatures, PLAN_FEATURE_BY_PERMISSION, type PlanFeature } from './plan-features';
-import { hasPermissionKey, parsePermissions, type PermissionAction, type PermissionModule } from './permission-catalog';
+import { getEffectivePermissions, hasPermissionKey, type PermissionAction, type PermissionModule } from './permission-catalog';
 
 type AppUser = {
   email?: string | null;
@@ -33,9 +33,12 @@ export const APP_MODULE_PATHS = {
 
 export type AppModule = keyof typeof APP_MODULE_PATHS;
 
-function normalizePermissions(permissions: AppUser['permissions']) {
-  return parsePermissions(permissions);
-}
+const MODULE_PLAN_FEATURES: Partial<Record<AppModule, PlanFeature>> = {
+  members: 'members', groups: 'groups', schedules: 'tasks', materials: 'materials',
+  canteen: 'canteen', pastoral: 'pastoral', kids: 'kids', parking: 'parking',
+  socialProjects: 'social_projects', feed: 'feed', bible: 'bible', games: 'games',
+  notifications: 'notifications', settings: 'settings',
+};
 
 function normalizeTeamIds(teamIds: AppUser['teamIds']) {
   if (Array.isArray(teamIds)) {
@@ -59,11 +62,7 @@ export function hasPermission(user: AppUser | null | undefined, permission: stri
   const role = user.role?.toUpperCase();
   if (role === 'ADMIN') return true;
 
-  if (role === 'PASTOR' && ['tasks', 'teams', 'materials', 'pastor', 'settings'].includes(permission)) {
-    return true;
-  }
-
-  const permissions = normalizePermissions(user.permissions);
+  const permissions = getEffectivePermissions(role, user.permissions);
   return permissions.includes(permission.toLowerCase()) || permissions.some((item) => item.startsWith(`${permission.toLowerCase()}:`));
 }
 
@@ -76,15 +75,9 @@ export function hasActionPermission(
   if (!user || !hasPlanFeature(user, PLAN_FEATURE_BY_PERMISSION[module])) return false;
   if (user.isPlatformAdmin) return true;
 
-  if (hasPermissionKey(user.permissions, module, action)) return true;
-
   const role = user.role?.toUpperCase();
   if (role === 'ADMIN') return true;
-  if (role === 'PASTOR') {
-    return action === 'view' || action === 'manage_access';
-  }
-
-  return false;
+  return hasPermissionKey(getEffectivePermissions(role, user.permissions), module, action);
 }
 
 export function hasAnyActionPermission(
@@ -108,6 +101,18 @@ export function hasPlanFeature(user: AppUser | null | undefined, feature?: PlanF
   return normalizePlanFeatures(user.planFeatures).includes(feature);
 }
 
+export function isModulePlanAvailable(user: AppUser | null | undefined, module: AppModule) {
+  return hasPlanFeature(user, MODULE_PLAN_FEATURES[module]);
+}
+
+/** Permite exibir um módulo bloqueado pelo plano para informar o motivo ao usuário. */
+export function canSeeModuleEntry(user: AppUser | null | undefined, module: AppModule) {
+  if (!user) return false;
+  if (isModulePlanAvailable(user, module)) return canAccessRoute(user, APP_MODULE_PATHS[module]);
+  if (module === 'canteen') return hasPermissionKey(getEffectivePermissions(user.role, user.permissions), 'canteen', 'order');
+  return false;
+}
+
 export function hasTeamScopedAccess(user: AppUser | null | undefined, permission: 'tasks' | 'materials') {
   if (!user || !hasPermission(user, permission)) return false;
   const role = user.role?.toUpperCase();
@@ -127,9 +132,9 @@ export function canAccessRoute(user: AppUser | null | undefined, pathname: strin
     (pathname.startsWith('/notifications') && hasActionPermission(user, 'notifications', 'view')) ||
     (pathname.startsWith('/feed') && hasActionPermission(user, 'feed', 'view')) ||
     (pathname.startsWith('/groups') && hasAnyActionPermission(user, 'groups', ['view', 'request'])) ||
-    (pathname.startsWith('/social-projects') && hasPlanFeature(user, 'social_projects')) ||
-    (pathname.startsWith('/kids') && hasPlanFeature(user, 'kids')) ||
-    (pathname.startsWith('/parking') && hasPlanFeature(user, 'parking')) ||
+    (pathname.startsWith('/social-projects') && hasActionPermission(user, 'social_projects', 'view')) ||
+    (pathname.startsWith('/kids') && hasActionPermission(user, 'kids', 'view')) ||
+    (pathname.startsWith('/parking') && hasActionPermission(user, 'parking', 'view')) ||
     (pathname.startsWith('/bible') && hasActionPermission(user, 'bible', 'view')) ||
     (pathname.startsWith('/games') && hasActionPermission(user, 'games', 'view')) ||
     (pathname.startsWith('/jogos-novos') && hasActionPermission(user, 'games', 'view')) ||

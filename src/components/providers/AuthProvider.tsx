@@ -41,7 +41,7 @@ function SessionCacheBridge() {
         id: user.id ?? '',
         name: user.name ?? '',
         email: user.email ?? '',
-        role: (user.role ?? 'MEMBER').toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER',
+        role: (user.role ?? 'MEMBER').toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER',
         permissions: user.permissions ?? [],
         churchId: user.tenantId ?? '',
         tenantId: user.tenantId ?? '',

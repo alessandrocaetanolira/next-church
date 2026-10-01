@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AppImage } from '@/components/shared';
 import { getAccessibleModules } from '@/lib/access-control';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 
 const CHANGELOG = [
   {
@@ -94,7 +95,9 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { settings, updateSettings } = useAppSettings();
+  const { openDrawer, closeDrawer } = useDrawer();
   const [showAbout, setShowAbout] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [offline, setOffline] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
 
@@ -155,7 +158,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="flex h-16 items-center justify-between px-0 sm:px-4">
+        <div className="flex h-16 items-center justify-between pl-0 pr-3 sm:px-4">
           <div className="flex min-w-0 items-center gap-2">
             {mobileBackTarget ? (
               <Button variant="ghost" className="h-9 gap-1 px-1.5 text-sm" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
@@ -213,6 +216,41 @@ export function Header() {
                 <TooltipContent>Notificações</TooltipContent>
               </Tooltip>
 
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  className="relative h-9 w-9 rounded-full"
+                  aria-label="Abrir menu do usuário"
+                  onClick={() => openDrawer({
+                    contentClassName: 'max-h-[70dvh]',
+                    content: (
+                      <div className="space-y-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
+                        <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 dark:bg-muted/30">
+                          <Avatar className="h-10 w-10">
+                            {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">{initials}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{user?.name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
+                          </div>
+                        </div>
+                        {canAccessWallet ? <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/carteira'); }}><Wallet className="h-4 w-4" />Carteira</Button> : null}
+                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/minha-conta/perfil'); }}><UserRound className="h-4 w-4" />Perfil do usuário</Button>
+                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); setShowAbout(true); }}><Info className="h-4 w-4" />Sobre</Button>
+                        <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={() => { closeDrawer(); setShowLogoutConfirm(true); }}><LogOut className="h-4 w-4" />Sair</Button>
+                      </div>
+                    ),
+                  })}
+                >
+                  <Avatar className="h-9 w-9">
+                    {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">{initials}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </div>
+
+              <div className="hidden md:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">
@@ -246,12 +284,13 @@ export function Header() {
                     Sobre
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                  <DropdownMenuItem onClick={() => setShowLogoutConfirm(true)} className="text-destructive">
                     <LogOut className="w-4 h-4 mr-2" />
                     Sair
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
           </TooltipProvider>
         </div>
@@ -296,6 +335,19 @@ export function Header() {
             <p className="text-center text-xs text-muted-foreground pt-2">
               {settings.appName} v1.3.0 — Feito com ❤️
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Sair do aplicativo?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Sua sessão será encerrada neste dispositivo.</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { setShowLogoutConfirm(false); void logout(); }}>Sair</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -94,7 +94,15 @@ export function PwaOnboarding() {
   // Notification.permission é a fonte de verdade do navegador. Só exibimos a
   // modal quando ainda não houve decisão; permissões granted/denied não devem
   // disparar um novo pedido de permissão.
-  const canOfferNotifications = production && mounted && isAuthenticated && installResolved && serviceWorkerReady && push.supported && push.permission === 'default' && !push.subscribed && !notificationsDismissed;
+  const canOfferNotifications = production
+    && mounted
+    && isAuthenticated
+    && installResolved
+    && serviceWorkerReady
+    && push.supported
+    && !push.subscribed
+    && (push.permission === 'default' || push.permission === 'granted')
+    && (!notificationsDismissed || push.permission === 'granted');
 
   const dismissInstall = () => {
     writeFlag(INSTALL_DISMISSED_KEY);
@@ -164,14 +172,14 @@ export function PwaOnboarding() {
       <Dialog open={canOfferNotifications} onOpenChange={(open) => { if (!open) dismissNotifications(); }}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />Ativar notificações</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
             <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.</p>
           {push.error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{push.error}</p>}
           <DialogFooter className="gap-2 pt-2 sm:space-x-0">
             <Button variant="ghost" className="w-full sm:w-auto" onClick={dismissNotifications}>Agora não</Button>
-            <Button className="w-full sm:w-auto" onClick={() => void enableNotifications()} disabled={push.loading}>{push.loading ? 'Ativando...' : 'Ativar notificações'}</Button>
+            <Button className="w-full sm:w-auto" onClick={() => void enableNotifications()} disabled={push.loading}>{push.loading ? 'Sincronizando...' : push.permission === 'granted' ? 'Sincronizar agora' : 'Ativar notificações'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

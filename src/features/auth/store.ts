@@ -14,7 +14,7 @@ export interface User {
   name: string;
   email: string;
   image?: string | null;
-  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+  role: 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
   permissions: string[];
   churchId: string;
   tenantId: string;

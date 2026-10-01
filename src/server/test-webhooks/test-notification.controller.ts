@@ -9,7 +9,15 @@ const input = (body: unknown): TestNotificationInput => {
   const title = typeof value.title === 'string' ? value.title.trim() : '';
   const message = typeof value.message === 'string' ? value.message.trim() : '';
   if (!userEmail || !title || !message) throw new Error('userEmail, title e message são obrigatórios.');
-  return { userEmail, title, message, type: typeof value.type === 'string' && value.type.trim() ? value.type.trim() : 'test-webhook', href: typeof value.href === 'string' ? value.href : '/notifications' };
+  return {
+    userEmail,
+    title,
+    message,
+    type: typeof value.type === 'string' && value.type.trim() ? value.type.trim() : 'test-webhook',
+    href: typeof value.href === 'string' ? value.href : '/notifications',
+    role: typeof value.role === 'string' ? value.role.toUpperCase() : undefined,
+    permissions: Array.isArray(value.permissions) ? value.permissions.filter((permission): permission is string => typeof permission === 'string') : undefined,
+  };
 };
 
 function service(tenantId: string) {

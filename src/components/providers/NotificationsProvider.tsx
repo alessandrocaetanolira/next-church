@@ -42,10 +42,19 @@ export function NotificationsProvider() {
         const notification = data.notification as NotificationEventPayload | undefined;
         if (data.type === 'permissions.updated') {
           const access: Parameters<typeof updateAccess>[0] = {};
-          if (data.role) access.role = data.role.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+          if (data.role) access.role = data.role.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
           if (Array.isArray(data.permissions)) access.permissions = data.permissions;
           updateAccess(access);
-          void refreshSession();
+          void refreshSession().then((session) => {
+            const refreshedUser = session?.user as ({ role?: string; permissions?: string[]; planFeatures?: string[]; teamIds?: string[] } | undefined);
+            if (!refreshedUser) return;
+            updateAccess({
+              role: refreshedUser.role?.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER' | undefined,
+              permissions: Array.isArray(refreshedUser.permissions) ? refreshedUser.permissions : undefined,
+              planFeatures: Array.isArray(refreshedUser.planFeatures) ? refreshedUser.planFeatures : undefined,
+              teamIds: Array.isArray(refreshedUser.teamIds) ? refreshedUser.teamIds : undefined,
+            });
+          });
           return;
         }
         if (data.type !== 'notification' || !notification) return;

@@ -19,7 +19,7 @@ import { hasActionPermission } from '@/lib/access-control';
 import { membersApi } from '@/features/members/api/members.api';
 import { permissionOptions } from '@/features/members/components/member-permissions';
 
-type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'MEMBER';
+type MemberRole = 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
 
 interface ManagedMember {
   id: string;
@@ -46,6 +46,7 @@ const roleLabels: Record<MemberRole, string> = {
   PASTOR: 'Pastor',
   LEADER: 'Líder',
   MEMBER: 'Membro',
+  CANTEEN: 'Cantina',
 };
 
 const maritalStatusLabels: Record<string, string> = {

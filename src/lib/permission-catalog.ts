@@ -30,6 +30,9 @@ export const DEFAULT_MEMBER_PERMISSIONS = [
   'groups:view',
   'groups:request',
   'feed:share',
+  'canteen:view',
+  'canteen:catalog',
+  'canteen:order',
   'notifications:view',
 ] as const;
 
@@ -49,6 +52,33 @@ export const PERMISSION_CATALOG: Record<PermissionModule, readonly PermissionAct
   games: ['view'],
   notifications: ['view', 'update'],
   settings: ['view', 'update'],
+};
+
+function getPermissionKeysForModule(module: PermissionModule) {
+  return PERMISSION_CATALOG[module].map((action) => `${module}:${action}`);
+}
+
+/** Permissões padrão por perfil. Permissões extras continuam persistidas no usuário. */
+export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly string[]> = {
+  MEMBER: DEFAULT_MEMBER_PERMISSIONS,
+  LEADER: [
+    ...DEFAULT_MEMBER_PERMISSIONS,
+    'groups:create', 'groups:update', 'groups:manage_access',
+    'tasks:view', 'tasks:create', 'tasks:update',
+    'materials:view', 'materials:create', 'materials:update',
+  ],
+  CANTEEN: [
+    ...DEFAULT_MEMBER_PERMISSIONS,
+    ...getPermissionKeysForModule('canteen'),
+  ],
+  PASTOR: [
+    ...DEFAULT_MEMBER_PERMISSIONS,
+    'members:view', 'members:create', 'members:approve', 'members:manage_access',
+    'groups:view', 'groups:create', 'groups:update', 'groups:manage_access',
+    'tasks:view', 'tasks:create', 'tasks:update', 'tasks:delete', 'tasks:export',
+    'materials:view', 'materials:create', 'materials:update', 'materials:manage', 'materials:export',
+    'pastoral:view', 'pastoral:create', 'pastoral:update', 'pastoral:delete', 'pastoral:export',
+  ],
 };
 
 export function normalizePermission(value: string) {
@@ -79,5 +109,17 @@ export function hasPermissionKey(
 }
 
 export function getPermissionKeys(module: PermissionModule) {
-  return PERMISSION_CATALOG[module].map((action) => permissionKey(module, action));
+  return getPermissionKeysForModule(module);
+}
+
+export function getRoleDefaultPermissions(role: string | null | undefined) {
+  const normalizedRole = String(role ?? '').toUpperCase();
+  return [...(ROLE_DEFAULT_PERMISSIONS[normalizedRole] ?? [])];
+}
+
+export function getEffectivePermissions(role: string | null | undefined, permissions: string[] | string | null | undefined) {
+  const normalizedRole = String(role ?? '').toUpperCase();
+  const hasNoExplicitPermissions = permissions === null || permissions === undefined || (Array.isArray(permissions) && permissions.length === 0) || permissions === '';
+  const preset = hasNoExplicitPermissions && normalizedRole !== 'MEMBER' ? getRoleDefaultPermissions(normalizedRole) : [];
+  return Array.from(new Set([...preset, ...parsePermissions(permissions)]));
 }

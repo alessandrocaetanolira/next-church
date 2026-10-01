@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs';
-import { PERMISSION_MODULES, PERMISSION_CATALOG } from '@/lib/permission-catalog';
+import { getRoleDefaultPermissions, PERMISSION_MODULES, PERMISSION_CATALOG } from '@/lib/permission-catalog';
 import { ValidationError, NotFoundError } from '@/lib/http/errors';
 import { MemberAccessRepository } from './member-access.repository';
 
-const ALLOWED_ROLES = new Set(['ADMIN', 'PASTOR', 'LEADER', 'MEMBER']);
+const ALLOWED_ROLES = new Set(['ADMIN', 'PASTOR', 'LEADER', 'CANTEEN', 'MEMBER']);
 const ALLOWED_PERMISSIONS = new Set([
   ...PERMISSION_MODULES,
   ...PERMISSION_MODULES.flatMap((module) => PERMISSION_CATALOG[module].map((action) => `${module}:${action}`)),
@@ -42,12 +42,18 @@ export class MemberAccessService {
       ? await bcrypt.hash(password, 10)
       : existingUser?.passwordHash ?? null;
 
+    const demotingAdministrator = existingUser?.role === 'ADMIN' && role !== 'ADMIN';
+    const effectivePermissions = Array.from(new Set([
+      ...getRoleDefaultPermissions(role),
+      ...(demotingAdministrator ? [] : permissions),
+    ]));
+
     const user = await this.repository.saveUser({
       id: existingUser?.id,
       name: member.name,
       email: member.email,
       role,
-      permissions: permissions.join(','),
+      permissions: effectivePermissions.join(','),
       linkedMemberId: member.id,
       passwordHash,
     });
@@ -57,7 +63,7 @@ export class MemberAccessService {
       userId: user.id,
       email: user.email,
       role: user.role,
-      permissions,
+      permissions: effectivePermissions,
       hasPassword: Boolean(passwordHash),
     };
   }
