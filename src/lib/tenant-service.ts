@@ -3,8 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
 import { execFileSync } from 'child_process';
+import { randomUUID } from 'crypto';
 import { disconnectTenant, getDatabaseDirectory, getGlobalClient } from './prisma-factory';
 import { seedTenantStructure } from './tenant-seed';
+import { publishGlobalProvisioningEvent } from '@/infra/sse/sse-broker';
+import { notifyPlatformAdmin } from '@/server/notifications/platform-push.controller';
 
 /**
  * Serviço para gerenciamento de Tenants (Igrejas).
@@ -158,6 +161,72 @@ export class TenantService {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Falha ao provisionar tenant ${normalizedSlug}: ${message}`);
     }
+  }
+
+  /** Enfileira o provisionamento e libera a requisição HTTP imediatamente. */
+  static async enqueueTenantProvisioning(
+    slug: string,
+    name: string,
+    adminEmail: string,
+    adminPassword: string,
+    options: { databaseDirectory?: string; platformAdminId?: string } = {},
+  ) {
+    const normalizedSlug = TenantService.normalizeSlug(slug);
+    if (!normalizedSlug || !name.trim() || !adminEmail.trim() || adminPassword.length < 6) {
+      throw new Error('Dados invalidos para provisionamento da igreja.');
+    }
+    const globalClient = getGlobalClient(options.databaseDirectory);
+    const existing = await globalClient.church.findUnique({ where: { slug: normalizedSlug } });
+    if (existing && existing.status !== 'FAILED') throw new Error(`Igreja ja cadastrada: ${normalizedSlug}`);
+    const activeJob = await globalClient.provisioningJob.findFirst({
+      where: { slug: normalizedSlug, status: { in: ['QUEUED', 'RUNNING'] } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (activeJob) return activeJob;
+
+    const job = await globalClient.provisioningJob.create({
+      data: { runId: randomUUID(), slug: normalizedSlug, adminEmail: adminEmail.trim().toLowerCase(), status: 'QUEUED', step: 'queued', churchId: existing?.id },
+    });
+    if (options.platformAdminId) await globalClient.$executeRawUnsafe('UPDATE "ProvisioningJob" SET platformAdminId = ? WHERE id = ?', options.platformAdminId, job.id);
+    publishGlobalProvisioningEvent({ type: 'provisioning.updated', runId: job.runId, tenantId: job.churchId, status: 'QUEUED', step: 'queued' });
+    void TenantService.runProvisioningJob(job.runId, { slug, name, adminEmail, adminPassword, ...options });
+    return job;
+  }
+
+  static async runProvisioningJob(
+    runId: string,
+    input: { slug: string; name: string; adminEmail: string; adminPassword: string; databaseDirectory?: string; platformAdminId?: string },
+  ) {
+    const globalClient = getGlobalClient(input.databaseDirectory);
+    const job = await globalClient.provisioningJob.findUnique({ where: { runId } });
+    if (!job) return;
+    await globalClient.provisioningJob.update({ where: { runId }, data: { status: 'RUNNING', step: 'provisioning', startedAt: new Date(), attempts: { increment: 1 }, error: null } });
+    const [{ platformAdminId } = { platformAdminId: null }] = await globalClient.$queryRawUnsafe<Array<{ platformAdminId: string | null }>>('SELECT platformAdminId FROM "ProvisioningJob" WHERE runId = ? LIMIT 1', runId);
+    const effectivePlatformAdminId = input.platformAdminId ?? platformAdminId ?? undefined;
+    const startedListeners = publishGlobalProvisioningEvent({ type: 'provisioning.updated', runId, tenantId: job.churchId, status: 'RUNNING', step: 'provisioning' });
+    if (!startedListeners && effectivePlatformAdminId) void notifyPlatformAdmin(effectivePlatformAdminId, { type: 'provisioning.updated', title: 'Provisionamento iniciado', message: `A igreja ${input.name} está sendo preparada.`, href: '/admin/tenants' });
+    try {
+      const church = await TenantService.createTenant(input.slug, input.name, input.adminEmail, input.adminPassword, input);
+      await globalClient.provisioningJob.update({ where: { runId }, data: { churchId: church.id, status: 'ACTIVE', step: 'completed', finishedAt: new Date() } });
+      const activeListeners = publishGlobalProvisioningEvent({ type: 'provisioning.updated', runId, tenantId: church.id, status: 'ACTIVE', step: 'completed', finishedAt: new Date().toISOString() });
+      if (!activeListeners && effectivePlatformAdminId) void notifyPlatformAdmin(effectivePlatformAdminId, { type: 'provisioning.updated', title: 'Tenant disponível', message: `${input.name} está disponível no painel.`, href: '/admin/tenants' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const church = await globalClient.church.findUnique({ where: { slug: TenantService.normalizeSlug(input.slug) } });
+      await globalClient.provisioningJob.update({ where: { runId }, data: { churchId: church?.id, status: 'FAILED', step: 'failed', finishedAt: new Date(), error: message.slice(0, 1000) } });
+      const failedListeners = publishGlobalProvisioningEvent({ type: 'provisioning.updated', runId, tenantId: church?.id, status: 'FAILED', step: 'failed', message: message.slice(0, 200), finishedAt: new Date().toISOString() });
+      if (!failedListeners && effectivePlatformAdminId) void notifyPlatformAdmin(effectivePlatformAdminId, { type: 'provisioning.updated', title: 'Falha no provisionamento', message: `Não foi possível preparar ${input.name}.`, href: '/admin/tenants' });
+    }
+  }
+
+  static async retryTenantProvisioning(tenantId: string, adminPassword: string, platformAdminId: string) {
+    const globalClient = getGlobalClient();
+    const church = await globalClient.church.findUnique({ where: { id: tenantId } });
+    if (!church) throw new Error('Tenant não encontrado.');
+    if (church.status !== 'FAILED') throw new Error('Somente tenants com falha podem ser retentados.');
+    const failedJob = await globalClient.provisioningJob.findFirst({ where: { churchId: tenantId, status: 'FAILED' }, orderBy: { createdAt: 'desc' } });
+    if (!failedJob) throw new Error('Nenhuma execução falha encontrada para este tenant.');
+    return TenantService.enqueueTenantProvisioning(church.slug, church.name, failedJob.adminEmail, adminPassword, { platformAdminId });
   }
 
   /**

@@ -39,6 +39,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json(tenant);
 }
 
+/** Retenta somente um provisionamento FAILED, mantendo a execução idempotente. */
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await validateSuperAdmin();
+  if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  const { id } = await params;
+  try {
+    const body = await req.json();
+    const job = await TenantService.retryTenantProvisioning(id, String(body?.adminPassword ?? ''), session.user.id);
+    return NextResponse.json({ runId: job.runId, status: job.status, slug: job.slug }, { status: 202 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Não foi possível retentar o provisionamento.' }, { status: 400 });
+  }
+}
+
 /**
  * DELETE /api/admin/tenants/[id]
  * Inativa (Soft delete) um tenant.

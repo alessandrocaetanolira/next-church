@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { ChefHat, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
+import { toastRetry } from '@/lib/toast-actions';
 import { canteenOperationsApi } from '@/features/canteen/api/operations.api';
 import { queueSaleUpdate } from '@/features/canteen/lib/offline-sales';
 import { isNetworkError } from '@/lib/api';
@@ -51,7 +52,7 @@ export function PreparoView() {
         toast.success('Status salvo localmente e será sincronizado.');
         return;
       }
-      toast.error('Erro ao atualizar pedido.');
+      toastRetry('Erro ao atualizar pedido.', () => handleStatusChange(orderId, orderStatus));
     }
   };
 
@@ -66,7 +67,7 @@ export function PreparoView() {
         toast.success('Pedido marcado localmente para remoção.');
         return;
       }
-      toast.error('Erro ao retirar pedido da fila.');
+      toastRetry('Erro ao retirar pedido da fila.', () => handleRemoveFromQueue(orderId));
     }
   };
 

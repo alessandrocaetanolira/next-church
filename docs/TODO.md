@@ -26,6 +26,10 @@ continua fora de qualquer limpeza ou reconstrução.
 - [ ] Fase 6 — consolidar perfis e matriz de permissões.
 - [ ] Fases 7–10 — branding, observabilidade, testes de release e aceite final.
 
+Próximo foco: validar a Fase 2 em ambiente limpo de produção, incluindo criação
+assíncrona, falha, retry manual e fallback Push do admin global. O canal SSE global
+permanece exclusivo do admin de plataforma e isolado dos tenants.
+
 Cada item deve ser marcado somente no documento detalhado, com seu critério de
 aceite registrado.
 

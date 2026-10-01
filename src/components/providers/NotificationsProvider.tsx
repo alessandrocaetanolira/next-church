@@ -57,6 +57,10 @@ export function NotificationsProvider() {
           });
           return;
         }
+        if (data.type === 'provisioning.updated') {
+          window.dispatchEvent(new CustomEvent('church:provisioning-updated', { detail: data }));
+          return;
+        }
         if (data.type !== 'notification' || !notification) return;
 
         if (notification.type === 'feed.post.created') {

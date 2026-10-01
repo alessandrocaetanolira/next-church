@@ -27,6 +27,28 @@ model Church {
   provisionedAt DateTime?
   provisioningError String?
   branding      ChurchBranding?
+  provisioningJobs ProvisioningJob[]
+}
+
+model ProvisioningJob {
+  id                String   @id @default(cuid())
+  runId             String   @unique
+  churchId          String?
+  slug              String
+  adminEmail        String
+  platformAdminId   String?
+  status            String   @default("QUEUED")
+  step              String?
+  attempts          Int      @default(0)
+  error             String?
+  createdAt         DateTime @default(now())
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  updatedAt         DateTime @updatedAt
+  church            Church?  @relation(fields: [churchId], references: [id], onDelete: SetNull)
+
+  @@index([churchId])
+  @@index([status])
 }
 
 model ChurchBranding {
@@ -71,6 +93,8 @@ model PlatformAdmin {
   version      Int      @default(1)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  pushSubscriptions PlatformPushSubscription[]
+  notifications PlatformNotification[]
 }
 
 model Plan {
@@ -85,4 +109,30 @@ model Plan {
   active        Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model PlatformPushSubscription {
+  id String @id @default(cuid())
+  adminId String
+  endpoint String @unique
+  p256dh String
+  auth String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  admin PlatformAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  @@index([adminId])
+}
+
+model PlatformNotification {
+  id String @id @default(cuid())
+  adminId String
+  type String
+  title String
+  message String
+  href String?
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  admin PlatformAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  @@index([adminId, createdAt])
 }

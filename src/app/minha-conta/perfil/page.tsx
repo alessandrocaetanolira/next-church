@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Camera, ImagePlus, Save } from 'lucide-react';
+import { Camera, ImagePlus, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageShell, LoadingState } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getProfile, updateProfile, uploadProfileAvatar, uploadProfileCover, type UserProfile } from '@/services/profile/profile-api';
 import { maskPhone } from '@/lib/utils';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 type ProfileForm = Pick<UserProfile, 'name' | 'phone' | 'birthDate' | 'aboutMe' | 'maritalStatus'>;
 
@@ -39,6 +40,7 @@ export default function UserProfilePage() {
   const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mediaViewer, setMediaViewer] = useState<'cover' | 'avatar' | null>(null);
 
   useEffect(() => {
     void getProfile()
@@ -118,30 +120,31 @@ export default function UserProfilePage() {
 
   return (
     <PageShell size="narrow">
+      <Dialog open={mediaViewer !== null} onOpenChange={(open) => { if (!open) setMediaViewer(null); }}>
+        <DialogContent className="h-[100dvh] w-full max-w-none rounded-none border-0 bg-black p-0 text-white sm:rounded-none [&>button:last-child]:hidden">
+          <DialogTitle className="sr-only">{mediaViewer === 'cover' ? 'Capa do perfil' : 'Foto do perfil'}</DialogTitle>
+          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+            <Button type="button" variant="ghost" size="icon" className="rounded-full bg-black/45 text-white hover:bg-black/70 hover:text-white" onClick={() => setMediaViewer(null)} aria-label="Fechar imagem"><X className="h-5 w-5" /></Button>
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-sm font-medium text-white hover:bg-black/70">
+              <ImagePlus className="h-4 w-4" />Alterar imagem
+              <input type="file" accept="image/*" className="hidden" onChange={mediaViewer === 'cover' ? handleCoverChange : handleAvatarChange} />
+            </label>
+          </div>
+          <div className="flex h-full w-full items-center justify-center p-4">
+            <img src={mediaViewer === 'cover' ? coverPreview ?? '' : avatarPreview ?? ''} alt={mediaViewer === 'cover' ? 'Capa do perfil' : 'Foto do perfil'} className={mediaViewer === 'cover' ? 'max-h-full w-full object-contain' : 'max-h-[70vh] max-w-[90vw] rounded-full object-contain'} />
+          </div>
+        </DialogContent>
+      </Dialog>
       <form onSubmit={save} className="space-y-5">
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="relative aspect-[3/1] min-h-32 bg-muted">
-            {coverPreview ? <img src={coverPreview} alt="Capa do perfil" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Adicione uma capa ao seu perfil</div>}
-            <label className="absolute bottom-3 right-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-background/90 px-3 py-2 text-sm font-medium shadow-sm backdrop-blur hover:bg-background">
-              <ImagePlus className="h-4 w-4" />Alterar capa
-              <input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} />
-            </label>
+            {coverPreview ? <button type="button" className="block h-full w-full cursor-zoom-in text-left" onClick={() => setMediaViewer('cover')} aria-label="Ver capa do perfil em tela cheia"><img src={coverPreview} alt="Capa do perfil" className="h-full w-full object-cover" /></button> : <label className="flex h-full w-full cursor-pointer items-center justify-center gap-2 text-sm text-muted-foreground hover:bg-muted/70"><ImagePlus className="h-5 w-5" />Carregar imagem<input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} /></label>}
           </div>
-          <div className="px-4 py-3"><p className="font-medium">Capa do perfil</p><p className="text-xs text-muted-foreground">Use uma imagem horizontal para destacar seu perfil.</p></div>
+          <div className="flex items-center justify-between gap-3 px-4 py-3"><div><p className="font-medium">Capa do perfil</p><p className="text-xs text-muted-foreground">Use uma imagem horizontal para destacar seu perfil.</p></div>{coverPreview ? <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"><ImagePlus className="h-4 w-4" />Alterar<input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} /></label> : null}</div>
         </div>
         <div className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 sm:flex-row">
-          <Avatar className="h-24 w-24 border border-border">
-            {avatarPreview ? <AvatarImage src={avatarPreview} alt={form.name} /> : null}
-            <AvatarFallback className="bg-primary/10 text-2xl text-primary">{profileInitials}</AvatarFallback>
-          </Avatar>
-          <div className="text-center sm:text-left">
-            <p className="font-medium">Foto do perfil</p>
-            <p className="mt-1 text-xs text-muted-foreground">Sua foto ficará visível para outros membros da igreja.</p>
-            <label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline">
-              <Camera className="h-4 w-4" />Alterar foto
-              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-            </label>
-          </div>
+          {avatarPreview ? <button type="button" className="cursor-zoom-in rounded-full" onClick={() => setMediaViewer('avatar')} aria-label="Ver foto do perfil em tela cheia"><Avatar className="h-24 w-24 border border-border"><AvatarImage src={avatarPreview} alt={form.name} /><AvatarFallback className="bg-primary/10 text-2xl text-primary">{profileInitials}</AvatarFallback></Avatar></button> : <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:bg-muted/60"><Camera className="h-5 w-5" />Carregar<input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} /></label>}
+          <div className="text-center sm:text-left"><p className="font-medium">Foto do perfil</p><p className="mt-1 text-xs text-muted-foreground">Sua foto ficará visível para outros membros da igreja.</p><label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline"><Camera className="h-4 w-4" />{avatarPreview ? 'Alterar foto' : 'Carregar foto'}<input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} /></label></div>
         </div>
 
         <div className="space-y-2"><Label htmlFor="profile-name">Nome</Label><Input id="profile-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></div>

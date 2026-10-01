@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import { getAppBaseUrl } from '@/lib/app-base-url';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { listAdminTenants, updateAdminTenantStatus, type AdminTenant } from '@/services/admin/tenants-api';
+import { listAdminTenants, retryAdminTenantProvisioning, updateAdminTenantStatus, type AdminTenant } from '@/services/admin/tenants-api';
 
 type Tenant = AdminTenant;
 
@@ -46,6 +46,9 @@ export function TenantList() {
 
   useEffect(() => {
     fetchTenants();
+    const handleProvisioning = () => { void fetchTenants(); };
+    window.addEventListener('church:provisioning-updated', handleProvisioning);
+    return () => window.removeEventListener('church:provisioning-updated', handleProvisioning);
   }, []);
 
   const toggleStatus = async (tenant: Tenant) => {
@@ -55,6 +58,18 @@ export function TenantList() {
       await fetchTenants();
     } catch (error) {
       toast.error('Erro ao atualizar status');
+    }
+  };
+
+  const retryProvisioning = async (tenant: Tenant) => {
+    const adminPassword = window.prompt(`Informe novamente a senha do administrador de ${tenant.name}:`);
+    if (!adminPassword) return;
+    try {
+      await retryAdminTenantProvisioning(tenant.id, adminPassword);
+      toast.success('Retry do provisionamento iniciado.');
+      await fetchTenants();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível retentar o provisionamento.');
     }
   };
 
@@ -114,6 +129,11 @@ export function TenantList() {
                       <ShieldCheck className="mr-2 h-4 w-4" /> 
                       {tenant.active ? 'Desativar' : 'Ativar'}
                     </DropdownMenuItem>
+                    {tenant.status === 'FAILED' ? (
+                      <DropdownMenuItem onClick={() => retryProvisioning(tenant)}>
+                        Tentar provisionar novamente
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem className="text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" /> Excluir
                     </DropdownMenuItem>

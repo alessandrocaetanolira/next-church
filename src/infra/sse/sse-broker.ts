@@ -24,10 +24,20 @@ export type ServerNotificationEvent = {
 export type ServerTenantEvent = ServerNotificationEvent;
 
 type SseListener = (payload: ServerTenantEvent) => void;
+export type GlobalProvisioningEvent = {
+  type: 'provisioning.updated';
+  runId: string;
+  tenantId?: string | null;
+  status: string;
+  step?: string | null;
+  message?: string | null;
+  finishedAt?: string | null;
+};
 
 /** Broker de transporte em memória. A persistência continua no banco. */
 export class SseBroker {
   private readonly listeners = new Map<string, Set<SseListener>>();
+  private readonly globalListeners = new Map<string, Set<(payload: GlobalProvisioningEvent) => void>>();
 
   /**
    * Inscreve um cliente no canal privado do usuário dentro do tenant.
@@ -45,6 +55,29 @@ export class SseBroker {
       listeners.delete(listener);
       if (listeners.size === 0) this.listeners.delete(key);
     };
+  }
+
+  subscribeGlobalAdmin(adminId: string, listener: (payload: GlobalProvisioningEvent) => void) {
+    const current = this.globalListeners.get(adminId) ?? new Set<(payload: GlobalProvisioningEvent) => void>();
+    current.add(listener);
+    this.globalListeners.set(adminId, current);
+    return () => {
+      const listeners = this.globalListeners.get(adminId);
+      if (!listeners) return;
+      listeners.delete(listener);
+      if (listeners.size === 0) this.globalListeners.delete(adminId);
+    };
+  }
+
+  publishGlobalProvisioning(payload: GlobalProvisioningEvent) {
+    let delivered = 0;
+    for (const listeners of this.globalListeners.values()) {
+      for (const listener of listeners) {
+        listener(payload);
+        delivered += 1;
+      }
+    }
+    return delivered;
   }
 
   /** Publica um evento somente para os listeners do destinatário informado. */
@@ -97,4 +130,12 @@ export function publishPermissionsUpdated(
 /** Publica uma notificação já persistida no canal SSE do destinatário. */
 export function publishTenantEvent(payload: ServerNotificationEvent) {
   sseBroker.publish(payload);
+}
+
+export function subscribeGlobalAdminEvents(adminId: string, listener: (payload: GlobalProvisioningEvent) => void) {
+  return sseBroker.subscribeGlobalAdmin(adminId, listener);
+}
+
+export function publishGlobalProvisioningEvent(payload: GlobalProvisioningEvent) {
+  return sseBroker.publishGlobalProvisioning(payload);
 }

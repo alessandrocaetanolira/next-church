@@ -33,9 +33,10 @@ export function CreateTenantForm({ onCreated }: { onCreated: () => void }) {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
-      await createAdminTenant(data);
+      const job = await createAdminTenant(data);
 
-      toast.success('Igreja criada e banco provisionado com sucesso!');
+      toast.success('Provisionamento iniciado em segundo plano.');
+      toast.info(`Acompanhando ${job.slug} (${job.runId.slice(0, 8)}).`);
       reset();
       setOpen(false);
       onCreated();

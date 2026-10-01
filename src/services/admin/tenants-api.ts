@@ -16,8 +16,10 @@ export function listAdminTenants() {
   return apiRequest<AdminTenant[]>('/api/admin/tenants');
 }
 
+export type ProvisioningStart = { runId: string; slug: string; status: string };
+
 export function createAdminTenant(input: unknown) {
-  return apiRequest<AdminTenant>('/api/admin/tenants', { method: 'POST', body: JSON.stringify(input) });
+  return apiRequest<ProvisioningStart>('/api/admin/tenants', { method: 'POST', body: JSON.stringify(input) });
 }
 
 export function updateAdminTenantStatus(id: string, active: boolean) {
@@ -25,6 +27,10 @@ export function updateAdminTenantStatus(id: string, active: boolean) {
     method: 'PATCH',
     body: JSON.stringify({ active }),
   });
+}
+
+export function retryAdminTenantProvisioning(id: string, adminPassword: string) {
+  return apiRequest<ProvisioningStart>(`/api/admin/tenants/${id}`, { method: 'POST', body: JSON.stringify({ adminPassword }) });
 }
 
 export function updateAdminTenant(id: string, input: { name?: string; slug?: string; active?: boolean; plan?: string }) {

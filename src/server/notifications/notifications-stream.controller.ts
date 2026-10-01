@@ -1,5 +1,5 @@
 import { getTenantClient } from '@/lib/prisma-factory';
-import { subscribeToTenantEvents, type ServerTenantEvent } from '@/infra/sse/sse-broker';
+import { subscribeGlobalAdminEvents, subscribeToTenantEvents, type ServerTenantEvent } from '@/infra/sse/sse-broker';
 import { createSseStream } from '@/infra/sse/sse-stream';
 import { NotificationsRepository } from './notifications.repository';
 import { NotificationsService } from './notifications.service';
@@ -24,6 +24,14 @@ export async function openNotificationsStream(request: Request, tenantId: string
   const notifications = await service.listSince(email, lastSeen);
   for (const notification of notifications) deliver({ ...notification, tenantId });
   sse.write({ type: 'connected', timestamp: new Date().toISOString() });
+  request.signal.addEventListener('abort', unsubscribe, { once: true });
+  return sse.response();
+}
+
+export function openGlobalAdminStream(request: Request, adminId: string) {
+  const sse = createSseStream(request);
+  const unsubscribe = subscribeGlobalAdminEvents(adminId, (event) => sse.write(event));
+  sse.write({ type: 'connected', scope: 'global-admin', timestamp: new Date().toISOString() });
   request.signal.addEventListener('abort', unsubscribe, { once: true });
   return sse.response();
 }

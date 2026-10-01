@@ -35,7 +35,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast pointer-events-auto flex w-[calc(100vw-2rem)] max-w-sm items-start gap-3 rounded-lg border border-border/80 bg-card px-4 py-3 text-sm text-card-foreground shadow-lg animate__animated animate__faster animate__fadeInRight",
+            "group toast pointer-events-auto flex w-[calc(100vw-2rem)] max-w-sm items-start gap-3 rounded-lg border border-border/70 bg-card px-4 py-3 pr-11 text-sm text-card-foreground shadow-lg animate__animated animate__faster animate__fadeInRight",
           title: "font-semibold leading-5",
           description: "mt-0.5 text-sm leading-5 text-muted-foreground",
           success:
@@ -50,7 +50,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "[&_[data-icon]]:text-primary [&_[data-icon]]:border-primary/50",
           icon: "flex size-8 shrink-0 items-center justify-center rounded-full border-2 bg-transparent",
           closeButton:
-            "right-2 top-2 left-auto rounded-md border-0 bg-transparent p-1 text-muted-foreground opacity-100 hover:bg-muted hover:text-foreground",
+            "right-2 top-2 left-auto flex size-7 items-center justify-center rounded-full border-0 bg-muted/60 p-0 text-muted-foreground opacity-100 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card",
           actionButton:
             "rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90",
           cancelButton:

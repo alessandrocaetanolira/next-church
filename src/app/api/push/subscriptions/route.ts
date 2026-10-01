@@ -1,5 +1,6 @@
 import { auth } from '@/auth';
 import { registerPushSubscription, removePushSubscription } from '@/server/notifications/push-subscriptions.controller';
+import { registerPlatformPushSubscription, removePlatformPushSubscription } from '@/server/notifications/platform-push.controller';
 import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
@@ -9,7 +10,15 @@ export async function POST(request: Request) {
   const session = await auth();
   const tenantId = session?.user?.tenantId;
   const email = session?.user?.email;
+  const platformAdminId = session?.user?.isPlatformAdmin ? session.user.id : null;
   serverLogger.info('push-server', 'sessão resolvida', { authenticated: Boolean(session?.user), tenantId: tenantId || null, email: email || null });
+  if (platformAdminId) {
+    try {
+      return Response.json(await registerPlatformPushSubscription(platformAdminId, await request.json()));
+    } catch {
+      return Response.json({ error: 'Inscrição Push inválida.' }, { status: 400 });
+    }
+  }
   if (!tenantId || !email) {
     serverLogger.warn('push', 'registro rejeitado: sessão ausente ou sem tenant');
     return Response.json({ error: 'Não autorizado.' }, { status: 401 });
@@ -34,6 +43,14 @@ export async function DELETE(request: Request) {
   const session = await auth();
   const tenantId = session?.user?.tenantId;
   const email = session?.user?.email;
+  const platformAdminId = session?.user?.isPlatformAdmin ? session.user.id : null;
+  if (platformAdminId) {
+    try {
+      return Response.json(await removePlatformPushSubscription(platformAdminId, await request.json()));
+    } catch {
+      return Response.json({ error: 'Endpoint inválido.' }, { status: 400 });
+    }
+  }
   if (!tenantId || !email) return Response.json({ error: 'Não autorizado.' }, { status: 401 });
   try {
     return Response.json(await removePushSubscription(tenantId, email, await request.json()));

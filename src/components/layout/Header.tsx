@@ -236,7 +236,7 @@ export function Header() {
                           </div>
                         </div>
                         {canAccessWallet ? <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/carteira'); }}><Wallet className="h-4 w-4" />Carteira</Button> : null}
-                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/minha-conta/perfil'); }}><UserRound className="h-4 w-4" />Perfil do usuário</Button>
+                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/minha-conta/perfil'); }}><UserRound className="h-4 w-4" />Meu perfil</Button>
                         <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); setShowAbout(true); }}><Info className="h-4 w-4" />Sobre</Button>
                         <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={() => { closeDrawer(); setShowLogoutConfirm(true); }}><LogOut className="h-4 w-4" />Sair</Button>
                       </div>

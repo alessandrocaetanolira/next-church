@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
-    const church = await TenantService.createTenant(slug, name, adminEmail, adminPassword);
-    return NextResponse.json(church);
+    const job = await TenantService.enqueueTenantProvisioning(slug, name, adminEmail, adminPassword, { platformAdminId: session.user.id });
+    return NextResponse.json({ runId: job.runId, status: job.status, slug: job.slug }, { status: 202 });
   } catch (error: any) {
     console.error("API Error (Create Tenant):", error);
     return new NextResponse(error.message || "Internal Server Error", { status: 500 });

@@ -70,6 +70,8 @@ Modelo mínimo sugerido:
 ## Fase 5 — Quiz online
 
 - [x] Definir banco/conjunto de perguntas da partida no servidor.
+- [x] Seed idempotente de perguntas estruturais no provisionamento de cada tenant.
+- [x] Disponibilizar `npm run db:seed:tenant-quiz -- <slug>` para tenants existentes.
 - [x] Ocultar respostas corretas do payload inicial.
 - [x] Usar turnos alternados na primeira versão.
 - [x] Validar resposta no servidor e calcular pontos no servidor.

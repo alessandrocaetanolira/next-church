@@ -186,6 +186,12 @@ se forem necessários, usar a Opção B. Em ambas, `bible.db` permanece separado
 ## Fase 2 — provisionamento confiável (P0)
 
 - [ ] Fazer `TenantService.createTenant()` usar o mesmo diretório configurado pelo processo web.
+- [ ] Alterar a criação no painel para responder `202 Accepted` após persistir o tenant
+      com estado `PROVISIONING`, sem bloquear a requisição HTTP durante migrations.
+- [ ] Persistir um job de provisionamento no banco global com `runId`, tenant, etapa,
+      tentativas, timestamps, erro sanitizado e resultado final.
+- [ ] Executar o job em background com transições explícitas `PROVISIONING` → `ACTIVE`
+      ou `FAILED`, mantendo retry idempotente para a mesma execução.
 - [ ] Garantir que migrations estejam disponíveis no runtime do provisionamento.
 - [ ] Registrar stdout/stderr do `prisma migrate deploy` sem expor segredos.
 - [ ] Validar todas as migrations esperadas antes de marcar `ACTIVE`.
@@ -194,9 +200,39 @@ se forem necessários, usar a Opção B. Em ambas, `bible.db` permanece separado
 - [ ] Testar criação, retry, falha intermediária e publicação atômica.
 - [ ] Fazer o script inicial executar global, Bíblia e tenants em ordem explícita.
 - [ ] Garantir que o script de tenant nunca selecione `bible.db`.
+- [x] Publicar progresso e conclusão em canal SSE exclusivo do admin global,
+      separado dos canais SSE de cada tenant.
+- [x] Enviar Push e criar notificação persistida para o admin global quando o painel
+  estiver fechado ou sem listener SSE.
+- [ ] Garantir isolamento: eventos de provisionamento global nunca podem ser entregues
+      a usuários de tenants, e eventos de tenant nunca podem chegar ao admin global.
+- [x] Adicionar retry manual no painel sem criar jobs duplicados ou tenants duplicados.
 
 Aceite: tenant novo ativo possui schema completo, usuário admin, seed estrutural e
-relatório de migrations compatível com o release.
+relatório de migrations compatível com o release; o painel recebe a conclusão via
+SSE global ou Push fallback, e jobs falhos podem ser retentados com segurança.
+
+### Contrato de canais de eventos do provisionamento
+
+- Canal global: `global-admin:{platformAdminId}`; somente sessões com
+  `isPlatformAdmin=true` podem assinar.
+- Canal tenant: `{tenantId}:{userEmail}`; nunca aceita eventos destinados ao canal global.
+- Payload mínimo: `runId`, `tenantId`, `status`, `step`, `message`, `finishedAt`.
+- O payload não deve conter senha, hash, segredo de migration ou caminho absoluto do banco.
+
+Implementação concluída nesta etapa: `ProvisioningJob` persistido, endpoint de criação
+respondendo `202`, execução em background, stream `/api/events` separado para
+`isPlatformAdmin`, subscriptions Push globais e retry manual com senha reapresentada.
+Testes direcionados de notificações e provisionamento: **9 testes aprovados**.
+Permanece pendente o teste end-to-end em processo de produção limpo, incluindo
+restart durante um job e confirmação de Push no dispositivo do admin global.
+
+### Perguntas estruturais para desafios online
+
+O provisionamento executa um seed idempotente de perguntas de Quiz no banco do
+tenant. Isso é necessário porque desafios online são processados no servidor e
+não podem depender das perguntas locais armazenadas no Dexie do navegador. Para
+tenants existentes, executar `npm run db:seed:tenant-quiz -- <slug>`.
 
 ## Fase 3 — corrigir dados inválidos de membros (P0)
 

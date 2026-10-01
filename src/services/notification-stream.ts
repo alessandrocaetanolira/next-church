@@ -5,6 +5,12 @@ export type NotificationStreamPayload = {
   notification?: unknown;
   role?: string;
   permissions?: string[];
+  runId?: string;
+  tenantId?: string | null;
+  status?: string;
+  step?: string | null;
+  message?: string | null;
+  finishedAt?: string | null;
 };
 
 type StreamHandler = (payload: NotificationStreamPayload) => void;

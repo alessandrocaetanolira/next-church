@@ -14,6 +14,7 @@ import { type FeedPost } from '@/lib/db';
 import { Heart, MessageCircle, Send, BookOpen, Flame, Trophy, PenLine, Filter, Megaphone, Calendar, Target, Globe, Image as ImageIcon, BarChart3, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { toastRetry } from '@/lib/toast-actions';
 import { hasActionPermission } from '@/lib/access-control';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { createFeedPost, deleteFeedPost, listFeedOptions, listFeedPosts, toggleFeedLike, uploadFeedImage, type FeedGroupOption, type FeedMemberOption } from '@/services/feed/feed-api';
@@ -216,7 +217,7 @@ export default function FeedPage() {
     try {
       await loadPosts(1, false);
     } catch {
-      toast.error('Não foi possível atualizar o Feed.');
+      toastRetry('Não foi possível atualizar o Feed.', handleRefreshNewPosts);
     }
   };
 
@@ -227,7 +228,7 @@ export default function FeedPage() {
     try {
       await loadPosts(page + 1, true);
     } catch {
-      toast.error('Não foi possível carregar mais publicações.');
+      toastRetry('Não foi possível carregar mais publicações.', handleLoadMore);
     } finally {
       setLoadingMore(false);
     }
