@@ -215,6 +215,13 @@ pertence ao banco global. O setup inicial executa depois o orquestrador
 `db:tenant:migrate:all`, que também cobre tenants já existentes e cria backup antes
 de cada alteração.
 
+O provisionamento também adiciona perguntas estruturais para os desafios online. Em
+um tenant já existente, reaplique esse seed com:
+
+```bash
+npm run db:seed:tenant-quiz -- igreja-teste
+```
+
 Se os bancos dos tenants já existirem e apenas as migrations precisarem ser aplicadas:
 
 ```bash
