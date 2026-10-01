@@ -107,9 +107,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const linkedMember = user.linkedMemberId
             ? await tenantClient.member.findUnique({
                 where: { id: user.linkedMemberId },
-                select: { teamIds: true },
+                select: { teamIds: true, active: true, approved: true, deletedAt: true },
               })
             : null;
+          if (user.linkedMemberId && (!linkedMember || !linkedMember.active || !linkedMember.approved || linkedMember.deletedAt)) {
+            serverLogger.warn('Auth', 'Membro vinculado inativo, não aprovado ou removido', { email, churchSlug });
+            return null;
+          }
           const [userProfile] = await tenantClient.$queryRawUnsafe<Array<{ avatarUrl: string | null }>>(
             `SELECT avatarUrl FROM "User" WHERE id = ? LIMIT 1`,
             user.id,
@@ -129,6 +133,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             linkedMemberId: user.linkedMemberId,
             teamIds,
             version: user.version,
+            churchAuthVersion: church.authVersion,
+            authValid: true,
             isPlatformAdmin: false,
             planCode: church.plan,
             planFeatures,
@@ -155,9 +161,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.linkedMemberId = (user as any).linkedMemberId;
         token.teamIds = (user as any).teamIds;
         token.version = (user as any).version;
+        token.churchAuthVersion = (user as any).churchAuthVersion;
+        token.authValid = (user as any).authValid !== false;
         token.isPlatformAdmin = Boolean((user as any).isPlatformAdmin);
         token.planCode = (user as any).planCode as string | undefined;
         token.planFeatures = (user as any).planFeatures as string[] | undefined;
+      }
+
+      // Revalida o tenant a cada leitura do JWT para invalidar sessões antigas
+      // quando o tenant é desativado ou sua versão de autorização muda.
+      if (!user && token.tenantSlug && token.authValid !== false) {
+        try {
+          const church = await getGlobalClient().church.findUnique({ where: { slug: String(token.tenantSlug) } });
+          if (!church || !church.active || (church.status && church.status !== 'ACTIVE') || church.authVersion !== token.churchAuthVersion) {
+            token.authValid = false;
+          }
+        } catch (error) {
+          serverLogger.error('Auth', 'Não foi possível revalidar o tenant da sessão', error);
+          token.authValid = false;
+        }
       }
 
       // O SSE de permissões dispara `useSession().update()` no cliente. Como
@@ -185,6 +207,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               );
               token.picture = userProfile?.avatarUrl ?? null;
               token.version = currentUser.version;
+              token.authValid = Boolean(currentUser.active && !currentUser.deletedAt);
               const linkedMember = currentUser.linkedMemberId
                 ? await tenantClient.member.findUnique({ where: { id: currentUser.linkedMemberId }, select: { teamIds: true } })
                 : null;
@@ -212,6 +235,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (session.user as any).linkedMemberId = token.linkedMemberId as string | null | undefined;
         (session.user as any).teamIds = (token.teamIds as string[]) || [];
         (session.user as any).version = token.version as number;
+        (session.user as any).authValid = token.authValid !== false;
         (session.user as any).isPlatformAdmin = Boolean(token.isPlatformAdmin);
         (session.user as any).planCode = token.planCode as string | undefined;
         (session.user as any).planFeatures = (token.planFeatures as string[]) || undefined;

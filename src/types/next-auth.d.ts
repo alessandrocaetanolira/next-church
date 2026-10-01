@@ -12,6 +12,7 @@ declare module "next-auth" {
       linkedMemberId?: string | null;
       teamIds: string[];
       version: number;
+      authValid?: boolean;
       isPlatformAdmin: boolean;
       planCode?: string;
       planFeatures?: string[];
@@ -28,6 +29,8 @@ declare module "next-auth" {
     linkedMemberId?: string | null;
     teamIds: string[];
     version: number;
+    churchAuthVersion?: number;
+    authValid?: boolean;
     isPlatformAdmin: boolean;
     planCode?: string;
     planFeatures?: string[];
@@ -44,6 +47,8 @@ declare module "next-auth/jwt" {
     linkedMemberId?: string | null;
     teamIds: string[];
     version: number;
+    churchAuthVersion?: number;
+    authValid?: boolean;
     isPlatformAdmin: boolean;
     planCode?: string;
     planFeatures?: string[];

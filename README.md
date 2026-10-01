@@ -325,6 +325,7 @@ global usa a mesma tela deixando o campo de slug vazio.
 - [Arquitetura](docs/architecture.md)
 - [Design system](docs/design-system.md)
 - [TODO principal](docs/TODO.md)
+- [TODO de estabilização de produção](docs/production-stability-todo.md)
 - [Roadmap](docs/roadmap.md)
 - [Operacoes](docs/operations.md)
 - [TODO de arquitetura em camadas](docs/layered-architecture-todo.md)

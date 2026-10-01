@@ -182,7 +182,7 @@ export class TenantService {
     const current = await globalClient.church.findUnique({ where: { id } });
     if (!current) throw new Error('Igreja não encontrada.');
 
-    const updateData: { name?: string; slug?: string; active?: boolean; plan?: string } = {};
+    const updateData: { name?: string; slug?: string; active?: boolean; plan?: string; authVersion?: { increment: number } } = {};
     if (data.name !== undefined) {
       const name = data.name.trim();
       if (!name) throw new Error('O nome da igreja é obrigatório.');
@@ -197,7 +197,10 @@ export class TenantService {
       }
       updateData.slug = slug;
     }
-    if (data.active !== undefined) updateData.active = data.active;
+    if (data.active !== undefined) {
+      updateData.active = data.active;
+      if (data.active !== current.active) updateData.authVersion = { increment: 1 };
+    }
     if (data.plan !== undefined) updateData.plan = data.plan;
 
     return globalClient.church.update({
@@ -227,7 +230,7 @@ export class TenantService {
     // 1. Inativar acesso
     await globalClient.church.update({
       where: { id },
-      data: { active: false, status: 'ARCHIVED', deletedAt: new Date() }
+      data: { active: false, status: 'ARCHIVED', deletedAt: new Date(), authVersion: { increment: 1 } }
     });
 
     // 2. Mover banco para pasta de backup (Arquivamento)

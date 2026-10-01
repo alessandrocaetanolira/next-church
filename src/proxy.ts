@@ -62,6 +62,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", nextUrl));
   }
 
+  if (token.authValid === false) {
+    if (nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Sessão expirada. Faça login novamente." }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/auth/login?reason=session-expired", nextUrl));
+  }
+
   if (nextUrl.pathname.startsWith("/admin") && !token.isPlatformAdmin) {
     return NextResponse.redirect(new URL("/", nextUrl));
   }

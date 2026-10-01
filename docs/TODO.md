@@ -3,12 +3,31 @@
 Este é o índice canônico de trabalho. Os documentos de domínio abaixo mantêm o
 detalhamento técnico; este arquivo contém apenas o estado e a ordem de execução.
 
-## Próximo foco
+## Fonte de verdade e próximo foco
 
-As Prioridades 1, 2 e 3 estão concluídas. Antes de ampliar módulos, resolver os
-achados P1 da [auditoria técnica](./technical-audit-2026-09.md): alinhar PWA/Serwist
-ao bundler oficial, consolidar notificações e reduzir polling redundante. Em seguida,
-validar offline em dispositivos reais, branding por tenant e desafios online.
+Este arquivo é o índice canônico: define a ordem geral e aponta o estado resumido.
+O plano operacional vigente para os incidentes de produção está em
+[production-stability-todo.md](./production-stability-todo.md) e tem precedência sobre
+qualquer checklist antigo ou documento de domínio quando houver conflito.
+
+Antes de ampliar módulos, executar esse plano na ordem. As prioridades abaixo só
+podem avançar depois do aceite das Fases 0 a 6 (backup da Bíblia, banco consistente,
+provisionamento, autenticação, sessões revogáveis e dados íntegros). O `bible.db`
+continua fora de qualquer limpeza ou reconstrução.
+
+### Estado resumido do plano de produção
+
+- [ ] Fase 0 — preservar e validar o `bible.db`; congelar o release.
+- [ ] Fase 1 — escolher reconstrução limpa ou reparo incremental.
+- [ ] Fase 2 — corrigir migrations, schema e provisionamento de tenants.
+- [ ] Fase 3 — corrigir dados inválidos e concluir a integridade do banco.
+- [ ] Fase 4 — revogar usuários excluídos/desativados e corrigir login.
+- [ ] Fase 5 — revogar sessões quando tenant ou permissões mudarem.
+- [ ] Fase 6 — consolidar perfis e matriz de permissões.
+- [ ] Fases 7–10 — branding, observabilidade, testes de release e aceite final.
+
+Cada item deve ser marcado somente no documento detalhado, com seu critério de
+aceite registrado.
 
 ## Auditoria técnica — ação imediata
 
@@ -191,3 +210,4 @@ validar offline em dispositivos reais, branding por tenant e desafios online.
 - [Separação Web/Mobile](./web-mobile-separation-todo.md)
 - [Jogos](./games-todo.md)
 - [Auditoria técnica](./technical-audit-2026-09.md)
+- [Estabilização de produção](./production-stability-todo.md)

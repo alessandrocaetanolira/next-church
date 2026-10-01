@@ -19,6 +19,7 @@ model Church {
   plan         String   @default("FREE")
   status       String   @default("ACTIVE")
   active       Boolean  @default(true)
+  authVersion  Int      @default(1)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?

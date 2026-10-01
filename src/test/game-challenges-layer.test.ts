@@ -51,7 +51,7 @@ describe('convites de desafios', () => {
     }));
     expect(sendNotification).toHaveBeenCalledWith({}, 'tenant-test', expect.objectContaining({
       recipients: ['opponent@test.local'],
-      content: expect.objectContaining({ sourceId: 'challenge-1', href: '/quiz?challenge=challenge-1' }),
+      content: expect.objectContaining({ sourceId: 'challenge-1', href: '/quiz?challenge=challenge-1&game=quiz' }),
     }));
   });
 
