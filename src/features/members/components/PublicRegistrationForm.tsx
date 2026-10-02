@@ -66,6 +66,7 @@ export function PublicRegistrationForm() {
       if (active) {
         setBranding(value);
         setLogoFailed(false);
+        document.cookie = `church-tenant-slug=${encodeURIComponent(churchSlug)}; Path=/; Max-Age=31536000; SameSite=Lax`;
       }
     }).catch(() => {
       if (active) setBranding(null);
@@ -114,6 +115,8 @@ export function PublicRegistrationForm() {
 
       setSubmitted(true);
       toast.success('Cadastro enviado para aprovação.');
+    } catch {
+      toast.error('Não foi possível enviar seu cadastro. Verifique os dados e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -128,8 +131,9 @@ export function PublicRegistrationForm() {
           </div>
           <h2 className="text-xl font-bold">Cadastro enviado</h2>
           <p className="text-sm text-muted-foreground">
-            Seu acesso ficará disponível após aprovação do pastor ou administrador.
+            Recebemos seus dados. O acesso ficará disponível assim que a igreja concluir a validação.
           </p>
+          <p className="text-xs text-muted-foreground">Aguarde a confirmação antes de tentar entrar.</p>
           <Button asChild className="w-full">
             <Link href={loginHref}>Ir para o login</Link>
           </Button>
@@ -163,7 +167,7 @@ export function PublicRegistrationForm() {
         </div>
         <h1 className="text-xl font-bold">Cadastro de Membro</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Preencha seus dados para solicitar acesso {churchSlug ? `em ${churchSlug}` : ''}.
+          Preencha seus dados para solicitar acesso à comunidade.
         </p>
       </div>
 

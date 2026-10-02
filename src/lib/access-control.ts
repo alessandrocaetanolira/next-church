@@ -1,5 +1,5 @@
 import { normalizePlanFeatures, PLAN_FEATURE_BY_PERMISSION, type PlanFeature } from './plan-features';
-import { getEffectivePermissions, hasPermissionKey, type PermissionAction, type PermissionModule } from './permission-catalog';
+import { getEffectivePermissions, hasPermissionKey, parsePermissions, type PermissionAction, type PermissionModule } from './permission-catalog';
 
 type AppUser = {
   email?: string | null;
@@ -86,6 +86,13 @@ export function hasAnyActionPermission(
   actions: PermissionAction[],
 ) {
   return actions.some((action) => hasActionPermission(user, module, action));
+}
+
+/** Presença é uma capacidade administrativa explícita, separada de members:view. */
+export function canViewMemberPresence(user: AppUser | null | undefined) {
+  if (!user || user.isPlatformAdmin || !user.tenantId || !hasPlanFeature(user, 'members')) return false;
+  if (user.role?.toUpperCase() === 'ADMIN') return true;
+  return parsePermissions(user.permissions).includes('members:online:view');
 }
 
 export function canAccessCanteen(user: AppUser | null | undefined) {

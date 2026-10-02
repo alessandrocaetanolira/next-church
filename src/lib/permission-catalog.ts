@@ -21,6 +21,7 @@ export const PERMISSION_MODULES = [
 export type PermissionModule = typeof PERMISSION_MODULES[number];
 
 export type PermissionKey = `${PermissionModule}:${PermissionAction}`;
+export const SPECIAL_PERMISSION_KEYS = ['members:online:view'] as const;
 
 /** Acesso básico concedido a um membro após a aprovação do cadastro. */
 export const DEFAULT_MEMBER_PERMISSIONS = [
@@ -109,7 +110,9 @@ export function hasPermissionKey(
 }
 
 export function getPermissionKeys(module: PermissionModule) {
-  return getPermissionKeysForModule(module);
+  return module === 'members'
+    ? [...getPermissionKeysForModule(module), ...SPECIAL_PERMISSION_KEYS]
+    : getPermissionKeysForModule(module);
 }
 
 export function getRoleDefaultPermissions(role: string | null | undefined) {

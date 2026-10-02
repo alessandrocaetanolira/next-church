@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { PublicRegistrationForm } from '@/features/members/components/PublicRegistrationForm';
 import { LoadingState } from '@/components/common';
 import { Suspense } from 'react';
+import { getPublicTenantMetadata } from '@/lib/branding/public-metadata';
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ igreja?: string }> }): Promise<Metadata> {
+  const params = await searchParams;
+  return (await getPublicTenantMetadata(typeof params.igreja === 'string' ? params.igreja : '')) ?? {};
+}
 
 export default function RegisterPage() {
   return (

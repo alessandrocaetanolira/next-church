@@ -13,10 +13,11 @@ import { toast } from 'sonner';
 import { Eye, Plus, QrCode } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState, PageHeader, SearchField } from '@/components/common';
 import { WebPageLayout } from '@/components/shared/web';
-import { hasActionPermission } from '@/lib/access-control';
+import { canViewMemberPresence, hasActionPermission } from '@/lib/access-control';
 import { membersApi } from '@/features/members/api/members.api';
+import { presenceApi } from '@/services/presence-api';
 import { MembersWebTable } from '@/features/members/components/MembersWebTable';
-import { maritalStatusLabels, roleLabels, type ManagedMember } from '@/features/members/components/member-display';
+import { maritalStatusLabels, roleLabels, type ManagedMember, type MemberPresence } from '@/features/members/components/member-display';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 
 export default function MembersPage() {
@@ -25,12 +26,14 @@ export default function MembersPage() {
   const { user } = useAuth();
   const canCreate = hasActionPermission(user, 'members', 'create');
   const canUpdate = hasActionPermission(user, 'members', 'update');
+  const canViewPresence = canViewMemberPresence(user);
   const [members, setMembers] = useState<ManagedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [inviteDrawerOpen, setInviteDrawerOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<ManagedMember | null>(null);
+  const [presence, setPresence] = useState<MemberPresence>({});
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -51,6 +54,28 @@ export default function MembersPage() {
     setPageTitle('Membros');
     void fetchMembers();
   }, [fetchMembers, setPageTitle]);
+
+  useEffect(() => {
+    if (!canViewPresence) {
+      setPresence({});
+      return;
+    }
+    void presenceApi.list().then(({ presence: records }) => {
+      setPresence(Object.fromEntries(records.map((record) => [record.userId, { lastSeenAt: record.lastSeenAt }])));
+    }).catch(() => undefined);
+    const handlePresence = (event: Event) => {
+      const detail = (event as CustomEvent<{ type?: string; presence?: Array<{ userId: string; lastSeenAt: string }>; userId?: string; lastSeenAt?: string }>).detail;
+      if (detail?.type === 'presence.snapshot') {
+        setPresence(Object.fromEntries((detail.presence ?? []).map((record) => [record.userId, { lastSeenAt: record.lastSeenAt }])));
+      } else if (detail?.type === 'presence.updated' && detail.userId && detail.lastSeenAt) {
+        setPresence((current) => ({ ...current, [detail.userId as string]: { lastSeenAt: detail.lastSeenAt as string } }));
+      } else if (detail?.type === 'presence.removed' && detail.userId) {
+        setPresence((current) => { const next = { ...current }; delete next[detail.userId as string]; return next; });
+      }
+    };
+    window.addEventListener('church:presence-updated', handlePresence);
+    return () => window.removeEventListener('church:presence-updated', handlePresence);
+  }, [canViewPresence]);
 
   const filteredMembers = members.filter((member) => {
     const term = search.toLowerCase();
@@ -104,7 +129,7 @@ export default function MembersPage() {
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
                       {member.name.slice(0, 2).toUpperCase()}
                     </div>
-                    <div className="min-w-0"><p className="truncate font-medium">{member.name}</p>
+                    <div className="min-w-0"><p className="flex items-center gap-2 truncate font-medium"><span className={`h-2 w-2 rounded-full ${member.userId && presence[member.userId] ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />{member.name}</p>
                     <p className="text-sm text-muted-foreground">{member.email}</p>
                     <p className="text-sm text-muted-foreground">{member.phone}</p></div>
                   </div>
@@ -128,7 +153,7 @@ export default function MembersPage() {
           </div>
 
           <div className="hidden lg:block">
-            <MembersWebTable members={filteredMembers} onOpenMember={setSelectedMember} />
+            <MembersWebTable members={filteredMembers} onOpenMember={setSelectedMember} presence={presence} />
           </div>
         </>
       )}

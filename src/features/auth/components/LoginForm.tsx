@@ -2,7 +2,8 @@
  * features/auth/components/LoginForm.tsx
  * 
  * Componente de formulário de login do Church App.
- * Permite que o usuário insira suas credenciais e o slug da igreja (Multi-tenancy).
+ * Permite que o usuário insira suas credenciais no contexto da igreja recebido
+ * pelo link de acesso, sem expor identificadores internos na interface pública.
  * 
  * @returns {JSX.Element} Formulário de Login.
  */
@@ -148,8 +149,8 @@ export function LoginForm({
 
       if (!result || result.error || result.ok !== true) {
         const message = result?.error === 'Configuration'
-          ? 'O serviço de autenticação está indisponível. Verifique a configuração do servidor.'
-          : 'Credenciais inválidas, igreja não encontrada ou acesso negado.';
+          ? 'Não foi possível concluir o acesso agora. Tente novamente mais tarde.'
+          : 'Não foi possível entrar. Verifique seus dados e tente novamente.';
         setErrorMessage(message);
         toast.error(message);
       } else {
@@ -157,9 +158,8 @@ export function LoginForm({
         // Forçar redirecionamento via location para garantir limpeza de estados de cache do Next.js
         window.location.href = resolvedChurchSlug ? "/" : "/admin/tenants";
       }
-    } catch (err) {
-      console.error("Erro durante o login:", err);
-      const message = 'Não foi possível autenticar. Verifique sua conexão e tente novamente.';
+    } catch {
+      const message = 'Não foi possível entrar. Verifique sua conexão e tente novamente.';
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -209,19 +209,7 @@ export function LoginForm({
                 className="bg-muted/40 font-medium"
               />
             </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="churchSlug">Igreja (Slug) <span className="font-normal text-muted-foreground">(deixe vazio para administrador global)</span></Label>
-              <Input
-                id="churchSlug"
-                type="text"
-                value={churchSlug}
-                onChange={(e) => setChurchSlug(e.target.value.toLowerCase())}
-                placeholder="ex: igreja-central"
-                disabled={loading}
-              />
-            </div>
-          )}
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
@@ -271,12 +259,8 @@ export function LoginForm({
           >
             {loading ? "Entrando..." : "Entrar"}
           </Button>
-          <div className="text-center text-xs text-muted-foreground">
-            <p>{globalOnly ? 'Acesso restrito ao administrador global.' : 'O acesso da igreja é definido pelo slug desta rota.'}</p>
-          </div>
-          <Button asChild variant="ghost" className="w-full">
-            <Link href={registerHref}>Solicitar cadastro</Link>
-          </Button>
+          {!globalOnly ? <div className="text-center text-xs text-muted-foreground"><p>Use o link de acesso fornecido pela sua igreja.</p></div> : null}
+          {!globalOnly && churchSlug ? <Button asChild variant="ghost" className="w-full"><Link href={registerHref}>Solicitar cadastro</Link></Button> : null}
         </CardFooter>
       </form>
     </Card>

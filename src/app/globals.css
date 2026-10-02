@@ -250,6 +250,7 @@
   html {
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
   }
 
   body {
@@ -300,14 +301,38 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
-  /* Reserva a altura da BottomNav e a safe area para ações no fim de formulários. */
+  /* Área de conteúdo independente da navegação inferior no mobile. */
   .mobile-main {
-    padding-bottom: calc(5rem + 1rem + env(safe-area-inset-bottom, 0px));
-    scroll-padding-bottom: calc(5rem + 1rem + env(safe-area-inset-bottom, 0px));
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1rem;
+    scroll-padding-bottom: 1rem;
+  }
+
+  /* No mobile, o documento não rola: somente .mobile-main rola. Isso evita
+     que o Safari/iOS desloque a navegação inferior ao recalcular o visual
+     viewport depois de uma suspensão do PWA. */
+  .mobile-shell {
+    display: flex;
+    height: var(--app-viewport-height, 100dvh);
+    min-height: var(--app-viewport-height, 100dvh);
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .safe-top {
     padding-top: env(safe-area-inset-top, 0);
+  }
+
+  /* O zoom fica bloqueado no app para evitar ampliação acidental durante a
+     navegação. Visualizadores específicos, como mídia fullscreen, optam por
+     pinch-zoom explicitamente. */
+  .allow-pinch-zoom {
+    touch-action: pinch-zoom;
   }
 
   .min-h-screen-dvh {

@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AppImage } from '@/components/shared';
 import { getAccessibleModules } from '@/lib/access-control';
 import { useDrawer } from '@/components/providers/DrawerProvider';
+import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
 
 const CHANGELOG = [
   {
@@ -96,6 +97,7 @@ export function Header() {
   const router = useRouter();
   const { settings, updateSettings } = useAppSettings();
   const { openDrawer, closeDrawer } = useDrawer();
+  const fallbackLogo = user?.isPlatformAdmin ? PLATFORM_ADMIN_LOGO : '/pwa-192x192.png';
   const [showAbout, setShowAbout] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -168,13 +170,13 @@ export function Header() {
             ) : (
               <div className="-ml-2 flex h-13 w-[12.5rem] max-w-[54vw] items-center justify-start sm:ml-0 sm:h-9 sm:w-40 sm:max-w-none">
                 <AppImage
-                  src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                  src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
                   alt={settings.appName}
                   className="h-full w-full object-contain object-left dark:hidden"
                   onError={() => setLogoFailed(true)}
                 />
                 <AppImage
-                  src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'}
+                  src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
                   alt={settings.appName}
                   className="hidden h-full w-full object-contain object-left dark:block"
                   onError={() => setLogoFailed(true)}

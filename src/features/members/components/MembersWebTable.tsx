@@ -4,16 +4,19 @@ import { Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { WebDataTable } from '@/components/shared/web';
-import { maritalStatusLabels, roleLabels, type ManagedMember } from './member-display';
+import { maritalStatusLabels, roleLabels, type ManagedMember, type MemberPresence } from './member-display';
 
 interface MembersWebTableProps {
   members: ManagedMember[];
   onOpenMember: (member: ManagedMember) => void;
+  presence?: MemberPresence;
 }
 
-export function MembersWebTable({ members, onOpenMember }: MembersWebTableProps) {
+export function MembersWebTable({ members, onOpenMember, presence = {} }: MembersWebTableProps) {
   const columns = [
-    { key: 'name', header: 'Nome', render: (member: ManagedMember) => member.name },
+    { key: 'name', header: 'Nome', render: (member: ManagedMember) => (
+      <span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${member.userId && presence[member.userId] ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />{member.name}</span>
+    ) },
     { key: 'email', header: 'Email', render: (member: ManagedMember) => member.email },
     { key: 'phone', header: 'Telefone', render: (member: ManagedMember) => member.phone },
     {

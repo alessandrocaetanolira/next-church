@@ -9,6 +9,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { AppImage } from "@/components/shared";
+import { PLATFORM_ADMIN_LOGO } from "@/lib/branding/defaults";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 interface WebSidebarProps {
   children: ReactNode;
@@ -16,6 +18,8 @@ interface WebSidebarProps {
 
 export function WebSidebar({ children }: WebSidebarProps) {
   const { settings } = useAppSettings();
+  const { user } = useAuth();
+  const fallbackLogo = user?.isPlatformAdmin ? PLATFORM_ADMIN_LOGO : '/pwa-192x192.png';
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -24,12 +28,12 @@ export function WebSidebar({ children }: WebSidebarProps) {
           {settings.sidebarUseImage ? (
             <>
               <div className="flex h-10 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl group-data-[collapsible=icon]:hidden">
-                <AppImage src={settings.sidebarOpenLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || "/branding/a-mesa-church/header.png"} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="h-full w-full object-contain dark:hidden" />
-                <AppImage src={settings.sidebarOpenDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || "/branding/a-mesa-church/header.png"} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="hidden h-full w-full object-contain dark:block" />
+                <AppImage src={settings.sidebarOpenLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="h-full w-full object-contain dark:hidden" />
+                <AppImage src={settings.sidebarOpenDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="hidden h-full w-full object-contain dark:block" />
               </div>
               <div className="hidden h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl group-data-[collapsible=icon]:flex">
-                <AppImage src={settings.sidebarCollapsedLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || "/branding/a-mesa-church/header.png"} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="h-full w-full object-contain dark:hidden" />
-                <AppImage src={settings.sidebarCollapsedDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || "/branding/a-mesa-church/header.png"} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="hidden h-full w-full object-contain dark:block" />
+                <AppImage src={settings.sidebarCollapsedLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="h-full w-full object-contain dark:hidden" />
+                <AppImage src={settings.sidebarCollapsedDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="hidden h-full w-full object-contain dark:block" />
               </div>
             </>
           ) : (

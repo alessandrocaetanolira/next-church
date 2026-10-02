@@ -21,13 +21,36 @@ export function AppLayout({ children, hideMobileHeader = false }: AppLayoutProps
   // hidratação ou ao voltar de uma aba suspensa).
   useEffect(() => setLayoutReady(true), []);
 
+  useEffect(() => {
+    if (!isMobile || typeof window === 'undefined') return;
+
+    const updateViewportHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--app-viewport-height', `${height}px`);
+    };
+
+    updateViewportHeight();
+    window.visualViewport?.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('resize', updateViewportHeight);
+    window.addEventListener('pageshow', updateViewportHeight);
+    document.addEventListener('visibilitychange', updateViewportHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('resize', updateViewportHeight);
+      window.removeEventListener('pageshow', updateViewportHeight);
+      document.removeEventListener('visibilitychange', updateViewportHeight);
+      document.documentElement.style.removeProperty('--app-viewport-height');
+    };
+  }, [isMobile]);
+
   if (!layoutReady) {
-    return <div className="min-h-screen-dvh bg-background"><main>{children}</main></div>;
+    return <div className="mobile-shell bg-background"><main className="mobile-main">{children}</main></div>;
   }
 
   if (isMobile) {
     return (
-      <div className="min-h-screen-dvh bg-background">
+      <div className="mobile-shell bg-background">
         {!hideMobileHeader && <Header />}
         <main className="mobile-main">
           {children}

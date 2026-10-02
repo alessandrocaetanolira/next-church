@@ -11,6 +11,9 @@ export type NotificationStreamPayload = {
   step?: string | null;
   message?: string | null;
   finishedAt?: string | null;
+  presence?: Array<{ userId: string; lastSeenAt: string }>;
+  userId?: string;
+  lastSeenAt?: string;
 };
 
 type StreamHandler = (payload: NotificationStreamPayload) => void;

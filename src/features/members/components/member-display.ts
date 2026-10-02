@@ -19,6 +19,8 @@ export interface ManagedMember {
   hasAccess: boolean;
 }
 
+export type MemberPresence = Record<string, { lastSeenAt: string }>;
+
 export const roleLabels: Record<MemberRole, string> = {
   ADMIN: 'Admin',
   PASTOR: 'Pastor',

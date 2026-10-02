@@ -13,13 +13,20 @@ import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-const Toaster = ({ ...props }: ToasterProps) => {
+const Toaster = ({
+  offset = { top: "calc(4rem + env(safe-area-inset-top, 0px))" },
+  mobileOffset = { top: "calc(4rem + env(safe-area-inset-top, 0px))" },
+  ...props
+}: ToasterProps) => {
   const { theme = "system" } = useTheme()
 
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
       position="top-center"
+      offset={offset}
+      mobileOffset={mobileOffset}
+      swipeDirections={["top", "left", "right"]}
       closeButton
       expand={false}
       visibleToasts={4}

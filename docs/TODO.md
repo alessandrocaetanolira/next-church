@@ -26,9 +26,11 @@ continua fora de qualquer limpeza ou reconstrução.
 - [ ] Fase 6 — consolidar perfis e matriz de permissões.
 - [ ] Fases 7–10 — branding, observabilidade, testes de release e aceite final.
 
-Próximo foco: validar a Fase 2 em ambiente limpo de produção, incluindo criação
-assíncrona, falha, retry manual e fallback Push do admin global. O canal SSE global
-permanece exclusivo do admin de plataforma e isolado dos tenants.
+Próximo foco (adiado): validar a Fase 2 em ambiente limpo de produção, incluindo
+criação assíncrona, falha, retry manual e fallback Push do admin global. O tenant
+`g3` já foi criado pelo painel e teve provisionamento concluído sem erro; falta o
+aceite operacional completo. O canal SSE global permanece exclusivo do admin de
+plataforma e isolado dos tenants.
 
 Cada item deve ser marcado somente no documento detalhado, com seu critério de
 aceite registrado.
@@ -201,6 +203,20 @@ aceite registrado.
 - [x] Adicionar testes para remetente, entrega e eventos de crédito.
 - [ ] Implementar e-mail transacional com provider, templates, fila, retry e idempotência.
 
+## Prioridade 7.1 — Presença online por tenant
+
+- [ ] Implementar o plano completo de presença em
+      [presence-todo.md](./presence-todo.md).
+- [ ] Criar serviço exclusivo de presença com heartbeat, TTL e política de
+      acesso por tenant.
+- [ ] Reutilizar o SSE existente como transporte, mantendo uma única conexão
+      por janela; presença será um canal lógico tipado, sem misturar seus dados
+      com notificações persistidas.
+- [ ] Exibir presença na tela de Membros somente para administradores ou usuários
+      com `members:online:view`.
+- [ ] Cobrir isolamento, expiração, reconexão, logout e múltiplos tenants.
+- [ ] Planejar Redis/pub-sub antes de habilitar múltiplas instâncias.
+
 ## Prioridade 8 — Módulos de baixa prioridade
 
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
@@ -228,3 +244,4 @@ aceite registrado.
 - [Jogos](./games-todo.md)
 - [Auditoria técnica](./technical-audit-2026-09.md)
 - [Estabilização de produção](./production-stability-todo.md)
+- [Presença online por tenant](./presence-todo.md)

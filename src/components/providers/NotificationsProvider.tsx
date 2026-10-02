@@ -7,6 +7,7 @@ import { initializeNotificationCenter, upsertNotification } from '@/lib/notifica
 import { openNotificationStream } from '@/services/notification-stream';
 import { useAuthStore } from '@/features/auth/store';
 import { playNotificationBeep } from '@/lib/notification-sound';
+import { presenceApi } from '@/services/presence-api';
 
 type NotificationEventPayload = {
   id: string;
@@ -22,7 +23,7 @@ type NotificationEventPayload = {
 };
 
 export function NotificationsProvider() {
-  const { isAuthenticated, refreshSession } = useAuth();
+  const { isAuthenticated, refreshSession, user } = useAuth();
   const updateAccess = useAuthStore((state) => state.updateAccess);
 
   useEffect(() => {
@@ -37,6 +38,16 @@ export function NotificationsProvider() {
     navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
 
     const refresh = () => { void initializeNotificationCenter(true); };
+    const heartbeat = () => {
+      if (!navigator.onLine || !user?.tenantId) return;
+      void presenceApi.heartbeat().catch(() => undefined);
+    };
+    heartbeat();
+    const heartbeatTimer = window.setInterval(heartbeat, 40_000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') heartbeat();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
     const close = openNotificationStream((data) => {
       try {
         const notification = data.notification as NotificationEventPayload | undefined;
@@ -59,6 +70,10 @@ export function NotificationsProvider() {
         }
         if (data.type === 'provisioning.updated') {
           window.dispatchEvent(new CustomEvent('church:provisioning-updated', { detail: data }));
+          return;
+        }
+        if (data.type === 'presence.snapshot' || data.type === 'presence.updated' || data.type === 'presence.removed') {
+          window.dispatchEvent(new CustomEvent('church:presence-updated', { detail: data }));
           return;
         }
         if (data.type !== 'notification' || !notification) return;
@@ -92,11 +107,13 @@ export function NotificationsProvider() {
 
     return () => {
       close();
+      window.clearInterval(heartbeatTimer);
       navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
       window.removeEventListener('online', refresh);
       document.removeEventListener('visibilitychange', refresh);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isAuthenticated, refreshSession, updateAccess]);
+  }, [isAuthenticated, refreshSession, updateAccess, user?.tenantId]);
 
   return null;
 }

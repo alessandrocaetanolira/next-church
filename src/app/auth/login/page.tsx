@@ -9,11 +9,11 @@ import type { Metadata } from 'next';
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { LoadingState } from '@/components/common';
 import { Suspense } from 'react';
+import { getPublicTenantMetadata } from '@/lib/branding/public-metadata';
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ igreja?: string }> }): Promise<Metadata> {
   const { igreja } = await searchParams;
-  const slug = typeof igreja === 'string' ? igreja.trim().toLowerCase() : '';
-  return slug ? { manifest: `/api/public/manifest?igreja=${encodeURIComponent(slug)}` } : {};
+  return (await getPublicTenantMetadata(typeof igreja === 'string' ? igreja : '')) ?? {};
 }
 
 /**

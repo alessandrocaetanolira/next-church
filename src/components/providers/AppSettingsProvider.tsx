@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
 import { getUserBranding } from '@/services/settings/settings-api';
+import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
 
 export type ThemeVariant = 'default' | 'amber' | 'emerald' | 'violet' | 'rose' | 'slate';
 export type ThemeMode = 'system' | 'light' | 'dark';
@@ -103,6 +104,7 @@ const AppSettingsContext = createContext<AppSettingsContextType | undefined>(und
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
+  const isPlatformAdmin = Boolean((session?.user as { isPlatformAdmin?: boolean } | undefined)?.isPlatformAdmin);
   const tenantKey = (session?.user as { tenantSlug?: string; tenantId?: string } | undefined)?.tenantSlug
     || (session?.user as { tenantId?: string } | undefined)?.tenantId
     || null;
@@ -113,12 +115,29 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     setMounted(true);
     try {
       const stored = localStorage.getItem(settingsStorageKey(tenantKey));
-      setSettings(stored ? { ...defaultSettings, ...JSON.parse(stored) } : { ...defaultSettings });
+      const base = isPlatformAdmin
+        ? { ...defaultSettings, appName: 'Church Hub Admin', sidebarTitle: 'Church Hub Admin', sidebarSubtitle: 'Administração global', logoUrl: PLATFORM_ADMIN_LOGO, logoLightUrl: PLATFORM_ADMIN_LOGO, logoDarkUrl: PLATFORM_ADMIN_LOGO, sidebarLogoUrl: PLATFORM_ADMIN_LOGO, sidebarOpenLightUrl: PLATFORM_ADMIN_LOGO, sidebarOpenDarkUrl: PLATFORM_ADMIN_LOGO, sidebarCollapsedLightUrl: PLATFORM_ADMIN_LOGO, sidebarCollapsedDarkUrl: PLATFORM_ADMIN_LOGO }
+        : { ...defaultSettings };
+      const storedSettings = stored ? { ...base, ...JSON.parse(stored) } : base;
+      if (isPlatformAdmin) {
+        storedSettings.appName = 'Church Hub Admin';
+        storedSettings.sidebarTitle = 'Church Hub Admin';
+        storedSettings.sidebarSubtitle = 'Administração global';
+        storedSettings.logoUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.logoLightUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.logoDarkUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.sidebarLogoUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.sidebarOpenLightUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.sidebarOpenDarkUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.sidebarCollapsedLightUrl = PLATFORM_ADMIN_LOGO;
+        storedSettings.sidebarCollapsedDarkUrl = PLATFORM_ADMIN_LOGO;
+      }
+      setSettings(storedSettings);
     } catch {
       localStorage.removeItem(settingsStorageKey(tenantKey));
       setSettings({ ...defaultSettings });
     }
-  }, [tenantKey]);
+  }, [tenantKey, isPlatformAdmin]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -195,7 +214,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const tenantId = (session?.user as { tenantId?: string } | undefined)?.tenantId;
-    if (!tenantId || !tenantKey) return;
+    if (isPlatformAdmin || !tenantId || !tenantKey) return;
     document.cookie = `church-tenant-slug=${encodeURIComponent(tenantKey)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 
     const loadBranding = async () => {
@@ -226,7 +245,7 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     };
 
     void loadBranding();
-  }, [session?.user, tenantKey]);
+  }, [session?.user, tenantKey, isPlatformAdmin]);
 
   const updateSettings = (updates: Partial<AppSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));

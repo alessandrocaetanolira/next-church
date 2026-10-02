@@ -5,6 +5,7 @@ export const permissionOptions = [
   { id: 'members:delete', label: 'Membros: excluir' },
   { id: 'members:approve', label: 'Membros: aprovar' },
   { id: 'members:manage_access', label: 'Membros: acessos' },
+  { id: 'members:online:view', label: 'Membros: ver online' },
   { id: 'groups:update', label: 'Grupos: editar' },
   { id: 'tasks:create', label: 'Tarefas: criar' },
   { id: 'tasks:update', label: 'Tarefas: editar' },

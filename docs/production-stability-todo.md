@@ -225,7 +225,9 @@ respondendo `202`, execução em background, stream `/api/events` separado para
 `isPlatformAdmin`, subscriptions Push globais e retry manual com senha reapresentada.
 Testes direcionados de notificações e provisionamento: **9 testes aprovados**.
 Permanece pendente o teste end-to-end em processo de produção limpo, incluindo
-restart durante um job e confirmação de Push no dispositivo do admin global.
+restart durante um job e confirmação de Push no dispositivo do admin global. Essa
+validação foi adiada; o tenant `g3` criado pelo painel em 01/10/2026 concluiu o job
+com status `ACTIVE`, etapa `completed`, uma tentativa e sem erro.
 
 ### Perguntas estruturais para desafios online
 

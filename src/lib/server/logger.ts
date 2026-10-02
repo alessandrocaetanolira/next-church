@@ -4,8 +4,20 @@ import util from 'node:util';
 
 type LogData = unknown;
 
-function eventTimestamp() {
-  return new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+const logTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'America/Sao_Paulo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Apresenta logs no horário de Brasília; persistência e eventos continuam em UTC. */
+function eventTimestamp(date = new Date()) {
+  return logTimeFormatter.format(date);
 }
 
 function logFilePath() {
