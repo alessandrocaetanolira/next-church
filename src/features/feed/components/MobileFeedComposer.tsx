@@ -5,6 +5,7 @@ import type { FeedPost } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
+import { MentionTextarea } from './MentionTextarea';
 
 type Option = { id: string; name: string; email?: string | null };
 
@@ -122,7 +123,7 @@ export function MobileFeedComposer(props: MobileFeedComposerProps) {
 
         {requiresTitle ? <input value={props.title} onChange={(event) => props.onTitleChange(event.target.value)} placeholder="Título da publicação" className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary" /> : null}
         <div className="relative rounded-xl border border-border bg-background">
-          <textarea value={props.content} onChange={(event) => props.onContentChange(event.target.value)} onPaste={handlePaste} maxLength={500} rows={5} placeholder="No que você está pensando? Cole uma imagem ou link do YouTube..." className="w-full resize-none rounded-xl bg-transparent px-3 py-3 text-base outline-none placeholder:text-muted-foreground" />
+          <MentionTextarea members={props.members} value={props.content} onChange={(event) => props.onContentChange(event.target.value)} onPaste={handlePaste} maxLength={500} rows={5} placeholder="No que você está pensando? Cole uma imagem ou link do YouTube..." className="w-full resize-none rounded-xl border-0 bg-transparent px-3 py-3 text-base outline-none placeholder:text-muted-foreground focus-visible:ring-0" />
           <span className="absolute bottom-2 right-3 text-[11px] text-muted-foreground">{props.content.length}/500</span>
         </div>
 

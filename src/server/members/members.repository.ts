@@ -45,7 +45,7 @@ export class MembersRepository {
     const member = await this.prisma.member.findFirst({ where: { id, deletedAt: null, active: true, approved: true } });
     if (!member) return null;
     const user = await this.prisma.user.findFirst({ where: { deletedAt: null, active: true, OR: [{ linkedMemberId: id }, { email: member.email }] }, select: { avatarUrl: true, coverUrl: true, role: true } });
-    return { id: member.id, name: member.name, aboutMe: member.aboutMe, phone: member.phone, maritalStatus: member.maritalStatus, avatarUrl: user?.avatarUrl ?? null, coverUrl: user?.coverUrl ?? null, role: user?.role ?? 'MEMBER' };
+    return { id: member.id, name: member.name, email: member.email, aboutMe: member.aboutMe, phone: member.phone, maritalStatus: member.maritalStatus, avatarUrl: user?.avatarUrl ?? null, coverUrl: user?.coverUrl ?? null, role: user?.role ?? 'MEMBER' };
   }
 
   findByEmail(email: string) {

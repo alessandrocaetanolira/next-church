@@ -8,6 +8,7 @@ type RemoteMember = {
   phone?: string;
   creditBalance?: number;
   role?: string | null;
+  active?: boolean;
   deletedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -21,12 +22,12 @@ function toLocalMember(member: RemoteMember, existing?: LocalMember, tenantId?: 
     phone: member.phone,
     creditBalance: member.creditBalance ?? 0,
     role: member.role ?? existing?.role ?? 'MEMBER',
-    status: existing?.status ?? 'active',
+    status: member.active === false ? 'inactive' : 'active',
     avatarUrl: existing?.avatarUrl,
     createdAt: member.createdAt ?? existing?.createdAt ?? new Date().toISOString(),
     updatedAt: member.updatedAt ?? new Date().toISOString(),
     tenantId,
-    deletedAt: member.deletedAt ?? existing?.deletedAt ?? null,
+    deletedAt: member.deletedAt ?? null,
     _status: 'synced',
   };
 }
@@ -46,7 +47,25 @@ export async function syncCanteenMembersFromServer(tenantId?: string) {
     ? members.map((member) => toLocalMember(member, existingMap.get(member.id), tenantId))
     : [];
 
-  await db.members.bulkPut(normalized);
+  const remoteIds = new Set(normalized.map((member) => member.id));
+  const pendingIds = new Set(existingMembers.filter((member) => member._status === 'pending' || member._status === 'error').map((member) => member.id));
+
+  await db.transaction('rw', db.members, async () => {
+    await db.members.bulkPut(normalized.filter((member) => !pendingIds.has(member.id)));
+
+    // A API retorna a lista completa de membros ativos. Remova do cache os
+    // registros sincronizados que deixaram de existir no servidor para não
+    // exibir membros excluídos/arquivados na seleção da Cantina.
+    const staleIds = existingMembers
+      .filter((member) => !pendingIds.has(member.id) && !remoteIds.has(member.id))
+      .map((member) => member.id);
+    if (staleIds.length) await db.members.bulkDelete(staleIds);
+
+    const deletedIds = normalized
+      .filter((member) => member.deletedAt)
+      .map((member) => member.id);
+    if (deletedIds.length) await db.members.bulkDelete(deletedIds);
+  });
 
   const debtors = normalized.filter((member) => (member.creditBalance ?? 0) > 0);
   console.info('[canteen-fiado] sync members', {
@@ -59,5 +78,5 @@ export async function syncCanteenMembersFromServer(tenantId?: string) {
     })),
   });
 
-  return normalized;
+  return normalized.filter((member) => !member.deletedAt);
 }

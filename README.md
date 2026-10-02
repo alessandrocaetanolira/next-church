@@ -4,7 +4,7 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 
 ## Stack
 
-- Next.js 16.3.6 (App Router; desenvolvimento via Webpack enquanto a estabilidade do Turbopack é acompanhada)
+- Next.js 16.3.6 (App Router com Turbopack)
 - React 19.2
 - TypeScript
 - Tailwind CSS
@@ -21,9 +21,10 @@ Aplicativo Next.js para gestao de igrejas, com autenticacao, multi-tenancy, modu
 As Prioridades 1 (estabilização), 2 (template Web) e 3 (permissões e experiência
 de acesso) estão concluídas. A rota HTTP de seed foi removida, o convite inicial
 do Quiz agora é persistido e notificado, e o tenant atual `igreja-teste` usa o plano
-`PREMIUM` para liberar a Cantina. O próximo foco é validar o fluxo offline-first em
-dispositivos reais, manter o branding dinâmico por tenant e concluir a evolução
-dos jogos online. O acompanhamento detalhado está em
+`PREMIUM` para liberar a Cantina. O Feed agora hidrata avatares persistidos para
+publicações e comentários antigos, e o perfil público usa capa com avatar centralizado.
+O próximo foco é validar o fluxo offline-first em dispositivos reais, manter o
+branding dinâmico por tenant e concluir a evolução dos jogos online. O acompanhamento detalhado está em
 [docs/TODO.md](docs/TODO.md).
 
 ## Requisitos
@@ -173,7 +174,8 @@ npm run build
 ```
 
 O projeto usa Turbopack no desenvolvimento e no build, compatível com a integração
-Serwist atual. Em caso de chunks antigos no navegador, encerre o servidor, remova
+Serwist atual. O build informa a quantidade de entradas precacheadas do Service
+Worker. Em caso de chunks antigos no navegador, encerre o servidor, remova
 `.next` e faça um hard refresh. O service worker é desativado automaticamente em
 desenvolvimento.
 

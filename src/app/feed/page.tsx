@@ -22,6 +22,7 @@ import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { FeedWebPostList } from '@/features/feed/components/FeedWebPostList';
 import { WebPageLayout } from '@/components/shared/web';
 import { MobileFeedComposer } from '@/features/feed/components/MobileFeedComposer';
+import { MentionTextarea } from '@/features/feed/components/MentionTextarea';
 import { SharedFlatList } from '@/components/SharedFlatList';
 import { MobileCommentsDrawer } from '@/features/feed/components/MobileCommentsDrawer';
 import { HorizontalScroll } from '@/components/common';
@@ -487,7 +488,8 @@ export default function FeedPage() {
                   </div>
                 ) : null}
               </div>
-              <Textarea
+              <MentionTextarea
+                members={members}
                 placeholder="No que você está pensando?"
                 value={newPostContent}
                 onChange={(e) => setNewPostContent(e.target.value)}
@@ -575,7 +577,7 @@ export default function FeedPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 className="gap-4"
-                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} members={members} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
               />
             </div>
             <div className="md:hidden">
@@ -586,7 +588,7 @@ export default function FeedPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 className="gap-4"
-                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
+                renderItem={(post) => <FeedWebPostList posts={[post]} groups={groups} members={members} currentUserId={user?.email || ''} canUpdateFeed={canUpdateFeed} commentingOn={commentingOn} onLike={handleLike} onToggleComment={setCommentingOn} onOpenPost={(item) => router.push(`/feed/${item.id}`)} canDeletePost={canDeletePost} onDeletePost={setPostToDelete} />}
               />
             </div>
           </>

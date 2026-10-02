@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Camera, ImagePlus, Save, X } from 'lucide-react';
+import { Camera, ImagePlus, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageShell, LoadingState } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getProfile, updateProfile, uploadProfileAvatar, uploadProfileCover, type UserProfile } from '@/services/profile/profile-api';
 import { maskPhone } from '@/lib/utils';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { FullscreenMediaViewer } from '@/components/shared/FullscreenMediaViewer';
 
 type ProfileForm = Pick<UserProfile, 'name' | 'phone' | 'birthDate' | 'aboutMe' | 'maritalStatus'>;
 
@@ -120,21 +120,14 @@ export default function UserProfilePage() {
 
   return (
     <PageShell size="narrow">
-      <Dialog open={mediaViewer !== null} onOpenChange={(open) => { if (!open) setMediaViewer(null); }}>
-        <DialogContent className="h-[100dvh] w-full max-w-none rounded-none border-0 bg-black p-0 text-white sm:rounded-none [&>button:last-child]:hidden">
-          <DialogTitle className="sr-only">{mediaViewer === 'cover' ? 'Capa do perfil' : 'Foto do perfil'}</DialogTitle>
-          <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
-            <Button type="button" variant="ghost" size="icon" className="rounded-full bg-black/45 text-white hover:bg-black/70 hover:text-white" onClick={() => setMediaViewer(null)} aria-label="Fechar imagem"><X className="h-5 w-5" /></Button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-sm font-medium text-white hover:bg-black/70">
-              <ImagePlus className="h-4 w-4" />Alterar imagem
-              <input type="file" accept="image/*" className="hidden" onChange={mediaViewer === 'cover' ? handleCoverChange : handleAvatarChange} />
-            </label>
-          </div>
-          <div className="flex h-full w-full items-center justify-center p-4">
-            <img src={mediaViewer === 'cover' ? coverPreview ?? '' : avatarPreview ?? ''} alt={mediaViewer === 'cover' ? 'Capa do perfil' : 'Foto do perfil'} className={mediaViewer === 'cover' ? 'max-h-full w-full object-contain' : 'max-h-[70vh] max-w-[90vw] rounded-full object-contain'} />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <FullscreenMediaViewer
+        open={mediaViewer !== null}
+        onOpenChange={(open) => { if (!open) setMediaViewer(null); }}
+        src={mediaViewer === 'cover' ? coverPreview : avatarPreview}
+        alt={mediaViewer === 'cover' ? 'Capa do perfil' : 'Foto do perfil'}
+        kind={mediaViewer ?? 'cover'}
+        actions={<label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-sm font-medium text-white hover:bg-black/70"><ImagePlus className="h-4 w-4" />Alterar imagem<input type="file" accept="image/*" className="hidden" onChange={mediaViewer === 'cover' ? handleCoverChange : handleAvatarChange} /></label>}
+      />
       <form onSubmit={save} className="space-y-5">
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="relative aspect-[3/1] min-h-32 bg-muted">

@@ -41,7 +41,7 @@ export function BottomNav() {
   ].filter(item => item.show);
 
   return (
-    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 isolate border-t border-border bg-card/95 safe-bottom supports-[backdrop-filter]:bg-card/80">
+    <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 isolate border-t border-border/70 bg-card/80 backdrop-blur-xl supports-[backdrop-filter]:bg-card/65 safe-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {mainItems.map((item) => {
           const isActive = pathname === item.to;

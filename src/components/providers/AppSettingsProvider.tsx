@@ -153,6 +153,27 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
         root.style.removeProperty('--secondary');
         root.style.removeProperty('--secondary-foreground');
       }
+
+      // O metadata do Next é gerado no servidor e não acompanha a troca de
+      // tema feita no cliente. Atualize os metadados usados pelo navegador e
+      // pelo PWA para que a barra de status não permaneça com a cor anterior.
+      const themeColor = useDark ? '#09090b' : '#ffffff';
+      let themeColorMeta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+      if (!themeColorMeta) {
+        themeColorMeta = document.createElement('meta');
+        themeColorMeta.name = 'theme-color';
+        document.head.appendChild(themeColorMeta);
+      }
+      themeColorMeta.content = themeColor;
+
+      let statusBarMeta = document.head.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]');
+      if (!statusBarMeta) {
+        statusBarMeta = document.createElement('meta');
+        statusBarMeta.name = 'apple-mobile-web-app-status-bar-style';
+        document.head.appendChild(statusBarMeta);
+      }
+      statusBarMeta.content = useDark ? 'black-translucent' : 'default';
+      root.style.colorScheme = useDark ? 'dark' : 'light';
     };
 
     applyTheme();

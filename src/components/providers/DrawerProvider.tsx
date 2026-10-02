@@ -20,7 +20,12 @@ const DrawerContext = createContext<DrawerContextValue | null>(null);
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [drawer, setDrawer] = useState<DrawerOptions | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
-  const closeDrawer = useCallback(() => setDrawer(null), []);
+  const closeDrawer = useCallback(() => {
+    // Evita que o deslocamento calculado enquanto o teclado estava aberto
+    // sobreviva à animação de fechamento e deixe um vão no rodapé.
+    setKeyboardInset(0);
+    setDrawer(null);
+  }, []);
   const openDrawer = useCallback((options: DrawerOptions) => setDrawer(options), []);
 
   useEffect(() => {
@@ -31,7 +36,10 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
 
     const viewport = window.visualViewport;
     const updateKeyboardInset = () => {
-      setKeyboardInset(Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop));
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      // Barras do navegador podem alterar o visualViewport alguns pixels.
+      // Só reposicione o drawer quando houver evidência de teclado aberto.
+      setKeyboardInset(inset > 120 ? inset : 0);
     };
 
     updateKeyboardInset();

@@ -10,6 +10,27 @@ type FeedUser = { email?: string | null; name?: string | null; image?: string | 
 export class FeedService {
   constructor(private readonly repository: FeedRepository, private readonly prisma: TenantPrismaClient, private readonly tenantId: string) {}
 
+  private async enrichAvatars(posts: Array<Record<string, unknown>>) {
+    const emails = posts.flatMap((post) => [String(post.userId ?? ''), ...((post.comments as FeedComment[]).map((comment) => comment.userId))]);
+    const findUserAvatars = (this.repository as unknown as { findUserAvatars?: (values: string[]) => Promise<Map<string, string>> }).findUserAvatars;
+    const avatars = findUserAvatars ? await findUserAvatars.call(this.repository, emails) : new Map<string, string>();
+    return posts.map((post) => ({
+      ...post,
+      userAvatar: post.userAvatar || avatars.get(String(post.userId ?? '').toLowerCase()) || null,
+      comments: (post.comments as FeedComment[]).map((comment) => ({
+        ...comment,
+        userAvatar: comment.userAvatar || avatars.get(comment.userId.toLowerCase()) || null,
+      })),
+    }));
+  }
+
+  private async avatarFor(emailAddress: string, fallback?: string | null) {
+    if (fallback) return fallback;
+    const findUserAvatars = (this.repository as unknown as { findUserAvatars?: (values: string[]) => Promise<Map<string, string>> }).findUserAvatars;
+    if (!findUserAvatars) return null;
+    return (await findUserAvatars.call(this.repository, [emailAddress])).get(emailAddress.trim().toLowerCase()) ?? null;
+  }
+
   async list(email: string, groupIds: string[], page: number, limit: number, type: string | null, groupIdFilter: string | null) {
     const rows = await this.repository.list();
     const visible = rows.filter((post) => {
@@ -29,7 +50,7 @@ export class FeedService {
       return new Date(String(right.createdAt)).getTime() - new Date(String(left.createdAt)).getTime();
     });
     const skip = (page - 1) * limit;
-    const items = visible.slice(skip, skip + limit).map(FeedRepository.serialize);
+    const items = await this.enrichAvatars(visible.slice(skip, skip + limit).map(FeedRepository.serialize));
     return { items, hasMore: skip + items.length < visible.length, page };
   }
 
@@ -44,7 +65,7 @@ export class FeedService {
       || (visibility === 'individual' && serialized.targetUserIds.includes(email));
     if (!canView) throw new NotFoundError('Publicação não encontrada.');
 
-    return serialized;
+    return (await this.enrichAvatars([serialized]))[0];
   }
 
   async create(user: FeedUser, input: unknown) {
@@ -62,12 +83,13 @@ export class FeedService {
     if (postAsGroup && !group) throw new ValidationError('Grupo não encontrado.');
     const effectiveVisibility = postAsGroup ? 'group' : (canTargetFeed ? visibility : 'public');
     const id = FeedRepository.generateId();
+    const currentAvatar = await this.avatarFor(user.email ?? '', user.image);
     const handles = Array.from(content.matchAll(/@([\p{L}\p{N}._-]+)/gu)).map((match) => match[1]).filter(Boolean);
     const mentionTargets = await this.repository.findMentionTargets(handles);
     const mentions = mentionTargets.map((target) => ({ id: target.id, name: target.name, handle: target.handle }));
     const pinDays = Math.max(0, Math.min(30, Number(body.pinDays ?? 0)));
     const post = await this.repository.create({
-      id, userId: user.email as string, userName: postAsGroup ? group?.name ?? 'Grupo' : user.name || 'Usuário', userAvatar: postAsGroup ? null : user.image || null,
+      id, userId: user.email as string, userName: postAsGroup ? group?.name ?? 'Grupo' : user.name || 'Usuário', userAvatar: postAsGroup ? null : currentAvatar,
       senderType: postAsGroup ? 'group' : 'user', senderGroupId: postAsGroup ? groupId : null, type,
       title: typeof body.title === 'string' ? body.title.trim() || null : null, content,
       reference: typeof body.reference === 'string' ? body.reference.trim() || null : null,
@@ -120,7 +142,8 @@ export class FeedService {
     const existingComments = serialized.comments as FeedComment[];
     const parentExists = parentId ? existingComments.some((item) => item.id === parentId) : true;
     if (!parentExists) throw new ValidationError('Comentário de referência não encontrado.');
-    const comment: FeedComment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, userAvatar: actorAvatar || null, content, createdAt: new Date().toISOString() };
+    const currentAvatar = await this.avatarFor(actorEmail, actorAvatar);
+    const comment: FeedComment = { id: FeedRepository.generateId(), ...(parentId ? { parentId } : {}), userId: actorEmail, userName: actorName, userAvatar: currentAvatar, content, createdAt: new Date().toISOString() };
     const handles = Array.from(content.matchAll(/@([\p{L}\p{N}._-]+)/gu)).map((match) => match[1]).filter(Boolean);
     const mentionTargets = await this.repository.findMentionTargets(handles);
     comment.mentions = mentionTargets.map((target) => ({ id: target.id, name: target.name, handle: target.handle }));

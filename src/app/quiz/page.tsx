@@ -59,7 +59,14 @@ export default function QuizPage() {
     void getGameChallenge(challengeId).then((challenge) => {
       setOnlineChallenge(challenge);
       closeStream = openGameChallengeStream(challengeId, (event) => {
-        try { const data = JSON.parse(event.data) as { payload?: { snapshot?: GameChallenge } }; if (data.payload?.snapshot) setOnlineChallenge(data.payload.snapshot); } catch { /* evento inválido é ignorado */ }
+        try {
+          const data = JSON.parse(event.data) as { snapshot?: GameChallenge; payload?: { snapshot?: GameChallenge } };
+          const snapshot = data.payload?.snapshot ?? data.snapshot;
+          if (snapshot) {
+            setOnlineChallenge(snapshot);
+            setOnlineAnswer(null);
+          }
+        } catch { /* evento inválido é ignorado */ }
       });
     }).catch(() => toast.error('Não foi possível carregar este desafio.'));
     return () => closeStream?.();
@@ -67,14 +74,25 @@ export default function QuizPage() {
 
   const acceptOnlineChallenge = async () => {
     if (!onlineChallenge) return;
-    try { setOnlineChallenge(await acceptGameChallenge(onlineChallenge.id)); toast.success('Desafio aceito!'); }
+    try {
+      setOnlineAnswer(null);
+      setOnlineChallenge(await acceptGameChallenge(onlineChallenge.id));
+      toast.success('Desafio aceito!');
+    }
     catch (error) { toast.error(error instanceof Error ? error.message : 'Não foi possível aceitar o desafio.'); }
   };
 
   const answerOnlineChallenge = async (answerIndex: number) => {
     if (!onlineChallenge || onlineChallenge.currentTurnEmail?.toLowerCase() !== userEmail?.toLowerCase() || onlineAnswer !== null) return;
     setOnlineAnswer(answerIndex);
-    try { await playGameChallenge(onlineChallenge.id, { answerIndex, version: onlineChallenge.stateVersion ?? 0 }); }
+    try {
+      await playGameChallenge(onlineChallenge.id, { answerIndex, version: onlineChallenge.stateVersion ?? 0 });
+      // O SSE normalmente atualiza a tela. Esta leitura evita que uma conexão
+      // lenta deixe o jogador preso no estado anterior enquanto o evento chega.
+      const refreshed = await getGameChallenge(onlineChallenge.id);
+      setOnlineChallenge(refreshed);
+      setOnlineAnswer(null);
+    }
     catch (error) { setOnlineAnswer(null); toast.error(error instanceof Error ? error.message : 'Jogada recusada.'); }
   };
 
@@ -247,6 +265,13 @@ export default function QuizPage() {
   };
 
   const currentQ = questions[currentIndex];
+  const onlineTurnIsMine = onlineChallenge?.currentTurnEmail?.toLowerCase() === userEmail?.toLowerCase();
+  const onlineOpponentName = onlineChallenge
+    ? (onlineChallenge.challengerUserEmail.toLowerCase() === userEmail?.toLowerCase()
+      ? onlineChallenge.opponentName
+      : onlineChallenge.challengerName)
+    : 'outro jogador';
+  const onlineScores = onlineChallenge?.scores ?? {};
   
   const getRankIcon = (pos: number) => {
     if (pos === 0) return <Crown className="w-5 h-5 text-yellow-500" />;
@@ -261,13 +286,16 @@ export default function QuizPage() {
         {onlineChallenge?.status === 'pending' ? (
           <Card className="mb-4 border-primary/30 bg-primary/5"><CardContent className="flex items-center justify-between gap-3 p-4"><div><p className="font-semibold">{onlineChallenge.challengerName} desafiou você</p><p className="text-sm text-muted-foreground">Partida de {onlineChallenge.gameType === 'quiz-bomba' ? 'Quiz Bomba' : 'Quiz Bíblico'}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void acceptOnlineChallenge()}>Aceitar</Button><Button size="sm" variant="outline" onClick={() => void declineGameChallenge(onlineChallenge.id).then(() => setOnlineChallenge(null))}>Recusar</Button></div></CardContent></Card>
         ) : null}
-        {onlineChallenge?.status === 'active' && onlineChallenge.currentQuestionData ? (
-          <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio online</CardTitle><p className="text-sm text-muted-foreground">{onlineChallenge.currentTurnEmail?.toLowerCase() === userEmail?.toLowerCase() ? 'Sua vez' : 'Aguardando o outro jogador'}</p></CardHeader><CardContent className="space-y-3"><p className="font-medium">{onlineChallenge.currentQuestionData.question}</p>{onlineChallenge.currentQuestionData.options.map((option, index) => <Button key={option} variant={onlineAnswer === index ? 'default' : 'outline'} className="w-full justify-start" disabled={onlineChallenge.currentTurnEmail?.toLowerCase() !== userEmail?.toLowerCase() || onlineAnswer !== null} onClick={() => void answerOnlineChallenge(index)}>{option}</Button>)}</CardContent></Card>
+        {onlineChallenge?.status === 'active' ? (
+          <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio online</CardTitle><p className="text-sm text-muted-foreground">{onlineTurnIsMine ? 'Sua vez' : `Aguardando ${onlineOpponentName}`}</p><p className="text-xs text-muted-foreground">{onlineChallenge.challengerName} x {onlineChallenge.opponentName}</p></CardHeader><CardContent className="space-y-3">
+            {onlineChallenge.currentQuestionData ? <><p className="font-medium">{onlineChallenge.currentQuestionData.question}</p>{onlineChallenge.currentQuestionData.options.map((option, index) => <Button key={option} variant={onlineAnswer === index ? 'default' : 'outline'} className="w-full justify-start" disabled={!onlineTurnIsMine || onlineAnswer !== null} onClick={() => void answerOnlineChallenge(index)}>{option}</Button>)}</> : <p className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">Aguardando a próxima pergunta do desafio.</p>}
+            <div className="flex justify-between border-t border-border/60 pt-3 text-xs text-muted-foreground"><span>Você: {onlineScores[userEmail?.toLowerCase() ?? ''] ?? 0} pts</span><span>{onlineOpponentName}: {onlineScores[(onlineChallenge.challengerUserEmail.toLowerCase() === userEmail?.toLowerCase() ? onlineChallenge.opponentUserEmail : onlineChallenge.challengerUserEmail).toLowerCase()] ?? 0} pts</span></div>
+          </CardContent></Card>
         ) : null}
         {onlineChallenge?.status === 'completed' ? (
           <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio concluído</CardTitle></CardHeader><CardContent className="flex items-center justify-between gap-3"><p className="text-sm text-muted-foreground">A partida terminou. Compartilhe o resultado no feed.</p><Button size="sm" onClick={() => void shareOnlineResult()}>Compartilhar</Button></CardContent></Card>
         ) : null}
-        {gameState === 'menu' && (
+        {!onlineChallenge && gameState === 'menu' && (
           <div key="menu" className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 overflow-hidden">
               <CardHeader className="text-center pb-2">
@@ -390,7 +418,7 @@ export default function QuizPage() {
           </div>
         )}
 
-        {gameState === 'playing' && currentQ && (
+        {!onlineChallenge && gameState === 'playing' && currentQ && (
           <div key="playing" className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
             <div className="flex items-center justify-between">
               <Badge variant="secondary">{currentIndex + 1}/{questions.length}</Badge>
@@ -449,7 +477,7 @@ export default function QuizPage() {
           </div>
         )}
 
-        {gameState === 'result' && (
+        {!onlineChallenge && gameState === 'result' && (
           <div key="result" className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
             <Card className="text-center border-primary/20">
               <CardContent className="pt-8 pb-6 space-y-4">

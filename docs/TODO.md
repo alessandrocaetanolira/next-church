@@ -70,6 +70,10 @@ aceite registrado.
 - [x] Perfil do próprio usuário com avatar WebP e atualização de dados pessoais.
 - [x] Perfil do próprio usuário com capa horizontal em WebP, enviada em Base64 e
       servida somente para usuários autenticados do tenant.
+- [x] Perfil público com avatar centralizado sobre a capa, visualização de mídia em
+      tela cheia e métricas de engajamento.
+- [x] Avatar atual resolvido no servidor para publicações e comentários antigos do
+      Feed, com fallback por iniciais quando não houver arquivo válido.
 - [x] Permissões padrão para novos membros aprovados, incluindo Feed e Bíblia.
 - [x] Ranking geral da igreja agregando devocional, quiz e pontuações persistidas de jogos.
 - [x] Quiz: persistir tentativa antes de exibir o resultado, mantendo a tela de
@@ -183,6 +187,7 @@ aceite registrado.
 - [x] Validar fallback de logo após login e em light/dark.
 - [x] Criar `InfiniteScroll` compartilhado para listas mobile.
 - [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
+- [x] Aplicar transparência e blur ao `NavBottom`, preservando contraste e safe-area.
 - [x] Substituir menu de usuário mobile por drawer bottom padrão, com confirmação de logout.
 - [x] Consolidar `ErrorState`, `OfflineState`, `ActionMenu` e `FilterBar` compartilhados.
 - [ ] Extrair hooks e seções das telas client-side maiores (Dashboard, Minha Conta,
@@ -201,9 +206,11 @@ aceite registrado.
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
 - [x] Criar persistência inicial de pontuação de jogos e integrar o ranking ao perfil de engajamento.
 - [ ] Integrar todos os jogos solo ao endpoint de pontuação com `clientRunId`/idempotência.
-- [ ] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
-- [ ] Completar desafios entre membros: aceite/recusa, partida em dupla e resultado
-      persistido. O convite inicial de Quiz e sua notificação já estão disponíveis.
+- [x] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
+- [x] Implementar o fluxo inicial de desafios entre membros: aceite/recusa, partida
+      em dupla, jogadas server-side, snapshot SSE e compartilhamento do resultado.
+- [ ] Completar desafios entre membros com expiração/cancelamento observável, eventos
+      SSE tipados por etapa, reconexão testada e feature flag por tenant.
 - [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
 - [ ] Executar a separação progressiva Web/Mobile conforme [web-mobile-separation-todo.md](./web-mobile-separation-todo.md).

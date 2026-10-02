@@ -2,6 +2,7 @@ import { generateId } from '@/lib/id';
 import { ConflictError, NotFoundError, ValidationError } from '@/lib/http/errors';
 import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
 import { MembersRepository } from './members.repository';
+import { EngagementService } from '@/server/engagement/engagement.service';
 
 export class MembersService {
   constructor(private readonly repository: MembersRepository) {}
@@ -15,7 +16,29 @@ export class MembersService {
   }
 
   async getPublicProfile(id: string) {
-    return this.repository.findPublicProfile(id);
+    const profile = await this.repository.findPublicProfile(id);
+    if (!profile) return null;
+    const { email: _email, ...publicProfile } = profile;
+    return publicProfile;
+  }
+
+  async getPublicProfileWithEngagement(id: string, engagement: EngagementService) {
+    const profile = await this.repository.findPublicProfile(id);
+    if (!profile) return null;
+    const summary = await engagement.get(profile.email);
+    const { email: _email, ...publicProfile } = profile;
+    const leaderboard = summary.leaderboard ?? [];
+    const rankingEntry = leaderboard.find((item) => item.memberId === id);
+    return {
+      ...publicProfile,
+      engagement: {
+        points: rankingEntry?.points ?? summary.points ?? 0,
+        rank: rankingEntry ? leaderboard.findIndex((item) => item.memberId === id) + 1 : null,
+        devotionalPoints: rankingEntry?.devotionalPoints ?? 0,
+        gamePoints: rankingEntry?.gamePoints ?? 0,
+        gamesPlayed: rankingEntry?.gamesPlayed ?? 0,
+      },
+    };
   }
 
   async create(input: unknown) {

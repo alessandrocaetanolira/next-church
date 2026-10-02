@@ -35,7 +35,7 @@ export function CanteenCheckout() {
   const { user } = useAuth();
   const { items, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
   const tenantId = user?.tenantId ?? '';
-  const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]) || [];
+  const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId && !member.deletedAt && member.status !== 'inactive').toArray() : [], [tenantId]) || [];
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [selectedMember, setSelectedMember] = useState('');
   const [consumerType, setConsumerType] = useState<ConsumerType>('VISITOR');

@@ -24,6 +24,7 @@ import { getAppBaseUrl } from '@/lib/app-base-url';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { listAdminTenants, retryAdminTenantProvisioning, updateAdminTenantStatus, type AdminTenant } from '@/services/admin/tenants-api';
+import { SharedFlatList } from '@/components/SharedFlatList';
 
 type Tenant = AdminTenant;
 
@@ -53,9 +54,10 @@ export function TenantList() {
 
   const toggleStatus = async (tenant: Tenant) => {
     try {
-      await updateAdminTenantStatus(tenant.id, !tenant.active);
+      const updated = await updateAdminTenantStatus(tenant.id, !tenant.active);
       toast.success('Status atualizado!');
-      await fetchTenants();
+      setTenants((current) => current.map((item) => item.id === tenant.id ? { ...item, ...updated } : item));
+      setSelectedTenant((current) => current?.id === tenant.id ? { ...current, ...updated } : current);
     } catch (error) {
       toast.error('Erro ao atualizar status');
     }
@@ -77,7 +79,34 @@ export function TenantList() {
 
   return (
     <>
-    <div className="overflow-x-auto rounded-md border border-border">
+    <div className="md:hidden">
+      <SharedFlatList
+        data={tenants}
+        keyExtractor={(tenant) => tenant.id}
+        className="grid-cols-1"
+        emptyComponent={<div className="rounded-lg border border-border p-6 text-center text-sm text-muted-foreground">Nenhuma igreja cadastrada.</div>}
+        renderItem={(tenant) => (
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm" onClick={() => setSelectedTenant(tenant)}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{tenant.name}</p>
+                <p className="truncate text-sm text-muted-foreground">{tenant.slug}</p>
+              </div>
+              <Badge variant={tenant.active ? 'success' as any : 'destructive'}>{tenant.active ? 'Ativa' : 'Inativa'}</Badge>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant={tenant.plan === 'PREMIUM' ? 'default' : 'outline'}>{tenant.plan}</Badge>
+              <span>{tenant._count?.users ?? 0} usuários</span>
+            </div>
+            <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
+              <Button asChild size="sm" className="flex-1"><Link href={`/admin/tenants/${tenant.id}`}>Detalhes</Link></Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => void toggleStatus(tenant)}>{tenant.active ? 'Desativar' : 'Ativar'}</Button>
+            </div>
+          </div>
+        )}
+      />
+    </div>
+    <div className="hidden overflow-x-auto rounded-md border border-border md:block">
       <Table>
         <TableHeader>
           <TableRow>

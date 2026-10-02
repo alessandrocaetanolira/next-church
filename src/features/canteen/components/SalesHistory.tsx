@@ -59,7 +59,7 @@ export function SalesHistory() {
   const tenantId = user?.tenantId ?? '';
   const { settings } = useAppSettings();
   const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId).toArray().then((items) => items.sort((a, b) => b.createdAt.localeCompare(a.createdAt))) : [], [tenantId]);
-  const liveMembers = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId).toArray() : [], [tenantId]);
+  const liveMembers = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId && !member.deletedAt && member.status !== 'inactive').toArray() : [], [tenantId]);
   const members = useMemo(() => liveMembers ?? [], [liveMembers]);
   const [search, setSearch] = useState("");
   const [consumerFilter, setConsumerFilter] = useState<'ALL' | 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED'>('ALL');

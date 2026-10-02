@@ -37,6 +37,17 @@ export class FeedRepository {
     return group ?? null;
   }
 
+  async findUserAvatars(emails: string[]) {
+    const normalized = Array.from(new Set(emails.map((value) => value.trim().toLowerCase()).filter(Boolean)));
+    if (!normalized.length) return new Map<string, string>();
+    const placeholders = normalized.map(() => '?').join(',');
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ email: string; avatarUrl: string | null }>>(
+      `SELECT lower(email) AS email, avatarUrl FROM "User" WHERE lower(email) IN (${placeholders}) AND active = 1 AND deletedAt IS NULL`,
+      ...normalized,
+    );
+    return new Map(rows.filter((row) => row.avatarUrl).map((row) => [row.email, row.avatarUrl as string]));
+  }
+
   canManageGroup(role: string | null | undefined, memberId: string | null | undefined, groupId: string) {
     return canManageGroup(this.prisma, role, memberId, groupId);
   }
@@ -50,7 +61,17 @@ export class FeedRepository {
     `);
     const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const wanted = new Set(handles.map(normalize));
-    return rows.filter((row) => wanted.has(normalize(row.name)) || wanted.has(normalize(row.name.split(/\s+/)[0]))).map((row) => ({ ...row, handle: normalize(row.name) }));
+    return rows
+      .map((row) => {
+        const fullName = normalize(row.name);
+        const firstName = normalize(row.name.split(/\s+/)[0]);
+        const matchedHandle = handles.find((handle) => {
+          const normalizedHandle = normalize(handle);
+          return normalizedHandle === fullName || normalizedHandle === firstName;
+        });
+        return matchedHandle ? { ...row, handle: matchedHandle } : null;
+      })
+      .filter((row): row is { id: string; name: string; email: string; handle: string } => Boolean(row));
   }
 
   async create(data: FeedCreateData) {

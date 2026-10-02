@@ -24,7 +24,7 @@ export type GameChallenge = {
   currentTurnEmail?: string | null;
   currentQuestion?: number;
   stateVersion?: number;
-  scores?: string;
+  scores?: Record<string, number>;
   winnerEmail?: string | null;
   currentQuestionData?: { question: string; options: string[]; points: number } | null;
   memoryState?: { cards: Array<{ index: number; id: string }>; matched: number[]; revealed: number[] } | null;

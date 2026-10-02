@@ -23,6 +23,21 @@ Princípios:
 
 ## 2. Diagnóstico do frontend atual
 
+### 2.0 Atualizações recentes
+
+- `FullscreenMediaViewer` foi consolidado como componente compartilhado para capa e
+  avatar, com ações de edição somente no perfil do próprio usuário.
+- O perfil público posiciona o avatar centralizado sobre a capa sem recortar sua
+  parte inferior.
+- Feed desktop e mobile usam avatares persistidos; quando um post ou comentário
+  antigo não possui `userAvatar`, o service resolve a imagem atual do usuário no
+  banco do tenant antes de serializar a resposta.
+- O `NavBottom` mobile usa fundo translúcido com `backdrop-blur`, mantendo borda
+  semântica e área segura do dispositivo.
+- A tela de Quiz online é exclusiva durante uma partida: o estado do desafio não é
+  renderizado simultaneamente com o quiz solo. Após uma jogada, a UI recebe SSE e
+  também reconcilia o snapshot por HTTP para evitar o estado de espera obsoleto.
+
 ### 2.1 Organização encontrada
 
 Existem três estilos misturados:

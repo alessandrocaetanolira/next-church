@@ -13,6 +13,7 @@ import { AppImage } from '@/components/shared';
 import { getYouTubeEmbedUrl } from '@/lib/youtube';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MentionText } from './MentionText';
+import Link from 'next/link';
 
 const POST_TYPE_CONFIG = {
   announcement: { label: 'Aviso', icon: Megaphone, color: 'text-sky-500' },
@@ -41,6 +42,7 @@ type FeedGroup = { id: string; name: string };
 type FeedWebPostListProps = {
   posts: FeedPost[];
   groups: FeedGroup[];
+  members?: Array<{ id: string; name: string; email?: string | null }>;
   currentUserId: string;
   canUpdateFeed: boolean;
   commentingOn: string | number | null;
@@ -54,6 +56,7 @@ type FeedWebPostListProps = {
 export function FeedWebPostList({
   posts,
   groups,
+  members = [],
   currentUserId,
   canUpdateFeed,
   commentingOn,
@@ -75,9 +78,9 @@ export function FeedWebPostList({
             <Card className="cursor-pointer overflow-hidden rounded-[22px] border-border/70 bg-card shadow-sm transition-colors hover:border-primary/40" role="link" tabIndex={0} onClick={() => onOpenPost(post)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenPost(post); } }}>
               <CardContent className="space-y-4 p-4 sm:p-5">
                 <div className="flex items-start gap-2.5">
-                  <Avatar className="h-9 w-9 shrink-0">{post.userAvatar ? <AvatarImage src={post.userAvatar} alt={post.userName} /> : null}<AvatarFallback className="bg-primary/10 text-xs text-primary">{post.userName[0]}</AvatarFallback></Avatar>
+                  {(() => { const profileId = members.find((member) => member.email?.toLowerCase() === post.userId?.toLowerCase())?.id; const avatar = <Avatar className="h-9 w-9 shrink-0">{post.userAvatar ? <AvatarImage src={post.userAvatar} alt={post.userName} /> : null}<AvatarFallback className="bg-primary/10 text-xs text-primary">{post.userName[0]}</AvatarFallback></Avatar>; return profileId ? <Link href={`/perfil/${profileId}`} onClick={(event) => event.stopPropagation()} aria-label={`Ver perfil de ${post.userName}`}>{avatar}</Link> : avatar; })()}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold leading-4">{post.userName}</p>
+                    {(() => { const profileId = members.find((member) => member.email?.toLowerCase() === post.userId?.toLowerCase())?.id; return profileId ? <Link href={`/perfil/${profileId}`} onClick={(event) => event.stopPropagation()} className="truncate text-sm font-semibold leading-4 hover:text-primary">{post.userName}</Link> : <p className="truncate text-sm font-semibold leading-4">{post.userName}</p>; })()}
                     <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
                       <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true, locale: ptBR })}</span><span>•</span>
                       <Badge variant="outline" className={cn('h-5 gap-1 rounded-full px-1.5 text-[11px] font-medium', POST_TYPE_BADGE_CLASS[post.type])}><Icon className="h-3 w-3" />{config.label}</Badge>

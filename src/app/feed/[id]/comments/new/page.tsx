@@ -6,12 +6,12 @@ import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { MentionTextarea } from '@/features/feed/components/MentionTextarea';
 import { LoadingState } from '@/components/common';
 import { WebPageLayout } from '@/components/shared/web';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { FeedComment, FeedPost } from '@/lib/db';
-import { addFeedComment, getFeedPost } from '@/services/feed/feed-api';
+import { addFeedComment, getFeedPost, listFeedOptions, type FeedMemberOption } from '@/services/feed/feed-api';
 
 export default function NewFeedCommentPage() {
   const params = useParams<{ id: string }>();
@@ -23,6 +23,7 @@ export default function NewFeedCommentPage() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [members, setMembers] = useState<FeedMemberOption[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -30,6 +31,7 @@ export default function NewFeedCommentPage() {
       .then((item) => { if (active) setPost(item); })
       .catch(() => { if (active) toast.error('Não foi possível carregar a publicação.'); })
       .finally(() => { if (active) setLoading(false); });
+    void listFeedOptions().then(([, options]) => { if (active) setMembers(options); }).catch(() => undefined);
     return () => { active = false; };
   }, [params.id]);
 
@@ -82,7 +84,8 @@ export default function NewFeedCommentPage() {
               </div>
             ) : null}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Textarea
+              <MentionTextarea
+                members={members}
                 autoFocus
                 value={content}
                 onChange={(event) => setContent(event.target.value)}

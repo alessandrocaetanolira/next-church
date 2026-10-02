@@ -10,11 +10,11 @@ Permitir que um membro desafie outro membro em uma partida de Memória ou Quiz, 
 
 - [x] Criar uma camada própria em `src/server/game-challenges`.
 - [x] Criar serviços de cliente em `src/services/game-challenges`.
-- [ ] Não reutilizar estado local dos jogos solo como estado da partida online.
+- [x] Não reutilizar estado local dos jogos solo como estado da partida online.
 - [ ] Não alterar contratos existentes de `/api/events` para suportar jogadas.
 - [ ] Não alterar tabelas de Feed, Quiz solo ou Bíblia.
 - [x] Usar somente o banco do tenant para desafios.
-- [ ] Manter os jogos solo funcionando mesmo sem rede.
+- [x] Manter os jogos solo funcionando mesmo sem rede.
 - [ ] Ativar o modo online somente mediante `challengeId` válido.
 
 ## Fase 1 — Contrato e modelo de dados
@@ -26,7 +26,8 @@ Permitir que um membro desafie outro membro em uma partida de Memória ou Quiz, 
 - [x] Criar tabela de jogadas com sequência única por partida.
 - [x] Persistir versão do estado para controle de concorrência.
 - [x] Persistir placar, turno, prazo, vencedor e datas importantes.
-- [ ] Criar índices por tenant, participante, status e atualização.
+- [ ] Criar índices por participante, status e atualização; o isolamento físico já é
+      garantido pelo banco do tenant.
 - [ ] Garantir que nenhuma migration toque `bible.db`.
 
 Modelo mínimo sugerido:
@@ -86,7 +87,8 @@ Modelo mínimo sugerido:
 - [x] Autenticar a conexão pelo tenant e usuário da sessão.
 - [x] Entregar eventos somente para participantes do desafio.
 - [ ] Definir eventos: `challenge.invited`, `challenge.accepted`, `challenge.declined`, `move.applied`, `score.updated`, `challenge.completed` e `challenge.expired`.
-- [ ] Incluir `challengeId`, `gameType`, `sequence`, `version`, `currentTurn`, `scores` e estado público.
+- [x] Incluir `challengeId`, `sequence`, `version`, `currentTurn`, `scores` e estado público
+      no snapshot entregue pelo canal `ssegames`.
 - [x] Persistir a jogada antes de publicar o evento SSE.
 - [x] Enviar snapshot inicial para o cliente ao conectar/reconectar.
 - [ ] Não abrir uma segunda conexão para o SSE geral de notificações quando o provider existente puder distribuir eventos de jogos.
@@ -112,9 +114,12 @@ Modelo mínimo sugerido:
 
 ## Fase 9 — UI e compatibilidade
 
-- [ ] Criar componentes próprios para convite, sala, placar e resultado.
-- [ ] Adaptar Memória e Quiz sem duplicar o código dos modos solo.
-- [ ] Exibir estados de conexão, reconexão e conflito de jogada.
+- [x] Criar a primeira UI de convite, sala, placar e resultado integrada às páginas de Quiz e Memória.
+- [x] Adaptar Memória e Quiz sem reutilizar o estado local dos modos solo; o Quiz online
+      suprime a tela solo enquanto a partida está aberta.
+- [ ] Extrair os componentes visuais de convite/sala/placar para uma API de UI comum.
+- [x] Exibir claramente turno, oponente, placar e estado de espera; a reconexão e o
+      conflito ainda precisam de uma UI dedicada.
 - [ ] Permitir abandonar a tela e retornar sem perder a partida.
 - [ ] Adicionar entrada para aceitar convite por notificação.
 - [ ] Manter a UI do Feed independente do módulo.
@@ -126,7 +131,7 @@ Modelo mínimo sugerido:
 - [ ] Testar turno da Memória: acerto mantém turno e erro alterna.
 - [ ] Testar pontuação e idempotência de jogadas.
 - [ ] Testar respostas e pontuação do Quiz sem vazamento do gabarito.
-- [ ] Testar reconexão SSE e recuperação por snapshot.
+- [ ] Testar reconexão SSE e recuperação por snapshot em navegador e com conexão interrompida.
 - [ ] Testar isolamento do SSE geral, Feed e Bíblia.
 - [ ] Testar compartilhamento final sem duplicidade.
 - [ ] Executar `tsc`, lint, testes unitários e build antes de habilitar a funcionalidade.
