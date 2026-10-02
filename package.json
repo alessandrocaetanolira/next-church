@@ -7,6 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit --pretty false",
+    "typecheck:build": "tsc -p tsconfig.build.json --noEmit --pretty false",
     "test": "vitest run",
     "prisma:generate": "prisma generate --schema=prisma/global/schema.prisma && prisma generate --schema=prisma/tenant/schema.prisma && prisma generate --schema=prisma/bible/schema.prisma",
     "postinstall": "npm run prisma:generate",

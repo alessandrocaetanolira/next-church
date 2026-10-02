@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  typescript: {
+    tsconfigPath: "tsconfig.build.json",
+  },
   experimental: {
     useTypeScriptCli: false,
   },

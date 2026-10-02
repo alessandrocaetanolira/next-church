@@ -37,6 +37,11 @@ aceite registrado.
 
 ## Auditoria técnica — ação imediata
 
+- [x] Separar o typecheck do build sem reduzir a cobertura: o Next usa
+      `tsconfig.build.json`, enquanto `npm run typecheck` continua cobrindo testes
+      e scripts. Detalhes em [build-optimization.md](./build-optimization.md).
+- [ ] Medir separadamente o tempo de typecheck, tracing Prisma e Serwist em um
+      ambiente onde o Turbopack possa criar seus processos auxiliares.
 - [x] P0: remover a rota pública `/api/seed`; os dados de demonstração permanecem
       exclusivamente nos scripts explícitos de inicialização. Remover também as
       exceções públicas redundantes dos webhooks locais de teste no proxy.
