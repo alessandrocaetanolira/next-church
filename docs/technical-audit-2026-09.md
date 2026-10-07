@@ -78,9 +78,10 @@ e altura ou `aspect-ratio` para evitar deslocamento de layout. Medir antes/depoi
 
 ### Bibliotecas pesadas no cliente
 
-Exportações da cantina dependem de `jspdf`, `jspdf-autotable` e `xlsx`. Confirmar o
-ponto de importação no bundle e, se estiver na rota inicial da cantina, carregá-las
-somente no clique de exportação com `import()` dinâmico.
+Exportações da cantina usam `jspdf` e `jspdf-autotable` para PDF. A exportação de
+planilhas foi convertida para CSV compatível com Excel/LibreOffice e o pacote
+`xlsx@0.18.5` foi removido por possuir advisories sem correção publicada no npm.
+O CSV é gerado somente no clique de exportação.
 
 ### Branding e renderização dinâmica global
 

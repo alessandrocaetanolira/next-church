@@ -41,7 +41,10 @@ export class EngagementService {
     if (!/^[a-z0-9][a-z0-9_-]{1,48}$/.test(gameId)) throw new ValidationError('Jogo inválido.');
     if (!/^[a-zA-Z0-9_-]{8,100}$/.test(runId)) throw new ValidationError('Identificador da partida inválido.');
     if (!Number.isInteger(score) || score < 0 || score > 1000) throw new ValidationError('Pontuação inválida.');
-    const maxScoreByGame: Record<string, number> = { 'quiz-bomba': 410 };
+    const maxScoreByGame: Record<string, number> = {
+      'quiz-bomba': 410,
+      'caca-palavras': 120,
+    };
     if (maxScoreByGame[gameId] !== undefined && score > maxScoreByGame[gameId]) throw new ValidationError('Pontuação incompatível com o jogo.');
     const completedAt = body.completedAt ? new Date(String(body.completedAt)) : new Date();
     if (Number.isNaN(completedAt.getTime())) throw new ValidationError('Data da partida inválida.');

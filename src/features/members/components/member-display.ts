@@ -14,6 +14,7 @@ export interface ManagedMember {
   maritalStatus?: string | null;
   approved: boolean;
   userId: string | null;
+  avatarUrl?: string | null;
   role: MemberRole | null;
   permissions: string[];
   hasAccess: boolean;

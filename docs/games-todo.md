@@ -12,6 +12,9 @@ Este documento cobre os dois fluxos atuais:
 - [x] Criar um service único de resultados para jogos novos via `recordGameScore`.
 - [x] Definir contrato mínimo comum (`gameId`, `runId`, pontuação e data).
 - [x] Quiz Bomba mantém pontos acumulados, permite desistência e encerra ao concluir o conjunto de perguntas.
+- [x] Caça-Palavras gera tabuleiro completo e responsivo, registra 10 pontos por
+      palavra mais bônus de tempo de até 40 pontos, e revela respostas sem pontuar
+      quando o jogador desiste.
 - [ ] Manter a lógica de cada jogo independente da API e do Dexie.
 - [ ] Criar um hook comum para persistência e sincronização de resultados.
 
@@ -31,6 +34,8 @@ Este documento cobre os dois fluxos atuais:
 - [ ] Persistir resultados concluídos no Dexie por tenant e usuário.
 - [ ] Criar fila de resultados pendentes de sincronização.
 - [ ] Enviar resultados ao reconectar, com chave de idempotência.
+- [ ] Incluir os resultados do Caça-Palavras na fila comum offline, com estado de
+      sincronização visível e sem registrar partidas reveladas por desistência.
 - [ ] Permitir continuar uma partida interrompida quando aplicável.
 - [ ] Definir quais jogos podem funcionar totalmente offline.
 - [ ] Evitar armazenar dados privados no Cache Storage.

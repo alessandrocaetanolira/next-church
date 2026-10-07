@@ -1,12 +1,11 @@
 /**
  * features/canteen/services/export.ts
  * 
- * Utilitários para exportação de relatórios (PDF e Excel) e ações de cobrança (WhatsApp).
+ * Utilitários para exportação de relatórios (PDF e CSV compatível com Excel) e ações de cobrança (WhatsApp).
  */
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 
 function formatMoney(value: number) {
@@ -25,6 +24,31 @@ function getStatusLabel(status?: string | null) {
   if (status === 'ready') return 'Pronto';
   if (status === 'cancelled') return 'Cancelado';
   return 'Concluído';
+}
+
+function escapeCsvCell(value: unknown) {
+  const raw = value == null ? '' : String(value);
+  // Excel pode executar valores textuais iniciados por =, +, - ou @ como
+  // fórmulas. O apóstrofo mantém o conteúdo visível sem permitir execução.
+  const text = typeof value === 'string' && /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadCsv(filename: string, headers: string[], rows: unknown[][]) {
+  if (typeof window === 'undefined') return;
+  const content = [headers, ...rows]
+    .map((row) => row.map(escapeCsvCell).join(','))
+    .join('\r\n');
+  const blob = new Blob([`\uFEFF${content}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 /**
@@ -54,23 +78,23 @@ export function exportSalesPDF(sales: any[], appName: string = "Mesa App") {
 }
 
 /**
- * Exporta histórico de vendas para Excel.
+ * Exporta histórico de vendas em CSV compatível com Excel e LibreOffice.
  * 
  * @param {any[]} sales - Array de vendas.
  */
 export function exportSalesExcel(sales: any[]) {
-  const rows = sales.map((sale) => ({
-    data: format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm'),
-    pagamento: sale.paymentMethod,
-    consumidor: getConsumerLabel(sale),
-    status: getStatusLabel(sale.orderStatus),
-    itens: sale.items.map((item: any) => `${item.quantity}x ${item.name}`).join(', '),
-    total: sale.total,
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Vendas");
-  XLSX.writeFile(wb, `vendas_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  downloadCsv(
+    `vendas_${format(new Date(), 'yyyy-MM-dd')}.csv`,
+    ['Data', 'Pagamento', 'Consumidor', 'Status', 'Itens', 'Total'],
+    sales.map((sale) => [
+      format(new Date(sale.createdAt), 'dd/MM/yyyy HH:mm'),
+      sale.paymentMethod,
+      getConsumerLabel(sale),
+      getStatusLabel(sale.orderStatus),
+      sale.items.map((item: any) => `${item.quantity}x ${item.name}`).join(', '),
+      sale.total,
+    ]),
+  );
 }
 
 export function exportDebtPDF(members: any[], appName: string = "Mesa App") {
@@ -92,18 +116,13 @@ export function exportDebtPDF(members: any[], appName: string = "Mesa App") {
 }
 
 export function exportDebtExcel(members: any[]) {
-  const rows = members
-    .filter((member) => (member.creditBalance ?? 0) > 0)
-    .map((member) => ({
-      membro: member.name,
-      contato: member.phone || member.email || '',
-      saldo: member.creditBalance ?? 0,
-    }));
-
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Fiado');
-  XLSX.writeFile(wb, `fiado_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  downloadCsv(
+    `fiado_${format(new Date(), 'yyyy-MM-dd')}.csv`,
+    ['Membro', 'Contato', 'Saldo'],
+    members
+      .filter((member) => (member.creditBalance ?? 0) > 0)
+      .map((member) => [member.name, member.phone || member.email || '', member.creditBalance ?? 0]),
+  );
 }
 
 /**

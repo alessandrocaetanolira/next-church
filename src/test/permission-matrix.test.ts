@@ -26,6 +26,14 @@ describe('matriz de acesso por perfil', () => {
     expect(hasActionPermission(user, 'members', 'delete')).toBe(false);
   });
 
+  it('pastor mantém todas as ações do Feed mesmo com permissões persistidas', () => {
+    const user = { role: 'PASTOR', permissions: ['feed:view'], planFeatures: allFeatures };
+    expect(hasActionPermission(user, 'feed', 'publish')).toBe(true);
+    expect(hasActionPermission(user, 'feed', 'comment')).toBe(true);
+    expect(hasActionPermission(user, 'feed', 'moderate')).toBe(true);
+    expect(hasActionPermission(user, 'feed', 'delete')).toBe(true);
+  });
+
   it('líder herda o membro e recebe ações padrão de liderança', () => {
     const user = { role: 'LEADER', permissions: getRoleDefaultPermissions('LEADER'), planFeatures: allFeatures };
     expect(hasActionPermission(user, 'groups', 'update')).toBe(true);

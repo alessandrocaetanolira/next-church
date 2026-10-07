@@ -55,6 +55,17 @@ describe('convites de desafios', () => {
     }));
   });
 
+  it('abre desafios de memória na interface de memória', async () => {
+    const repository = repositoryMock();
+    const service = new GameChallengesService(repository, {} as never, 'tenant-test');
+
+    await service.inviteToQuiz(challenger, { opponentEmail: 'opponent@test.local', gameType: 'memory' });
+
+    expect(sendNotification).toHaveBeenLastCalledWith({}, 'tenant-test', expect.objectContaining({
+      content: expect.objectContaining({ href: '/jogos-novos/memoria?challenge=challenge-1' }),
+    }));
+  });
+
   it('impede desafio a si mesmo e convite duplicado pendente', async () => {
     const repository = repositoryMock();
     const service = new GameChallengesService(repository, {} as never, 'tenant-test');

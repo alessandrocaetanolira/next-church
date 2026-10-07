@@ -5,10 +5,11 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Share2, Bookmark, BookmarkCheck, Copy, X, NotebookPen, ScrollText } from 'lucide-react';
+import { Share2, Bookmark, BookmarkCheck, Copy, X, NotebookPen, ScrollText, Minus, Plus, Sun } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,6 +24,15 @@ import { createFeedPost } from '@/services/feed/feed-api';
 import { BibleWebNavigation } from '@/features/bible/components/BibleWebNavigation';
 import { useBibleReadingStore } from '@/features/bible/store';
 
+type ScreenWakeLockSentinel = {
+  release: () => Promise<void>;
+  addEventListener: (type: 'release', listener: () => void) => void;
+};
+
+type NavigatorWithWakeLock = Navigator & {
+  wakeLock?: { request: (type: 'screen') => Promise<ScreenWakeLockSentinel> };
+};
+
 export default function BiblePage() {
   const { data: session } = useSession();
   const user = session?.user;
@@ -34,7 +44,7 @@ export default function BiblePage() {
   const requestedVerse = Number(searchParams.get('verse'));
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
-  const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, setTenant, setTranslation, setBook, setChapter: setSelectedChapter } = useBibleReadingStore();
+  const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, fontSize, keepScreenAwake, setTenant, setTranslation, setBook, setChapter: setSelectedChapter, setFontSize, setKeepScreenAwake } = useBibleReadingStore();
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [books, setBooks] = useState<BibleBook[]>([]);
@@ -47,6 +57,7 @@ export default function BiblePage() {
   const [chaptersByBook, setChaptersByBook] = useState<Record<string, number[]>>({});
   const [contentSource, setContentSource] = useState<BibleContentSource>('network');
   const bibleReaderRef = useRef<HTMLDivElement>(null);
+  const wakeLockRef = useRef<ScreenWakeLockSentinel | null>(null);
 
   const toggleVerse = (index: number) => {
     setSelectedVerses(prev => 
@@ -125,6 +136,41 @@ export default function BiblePage() {
     const viewport = bibleReaderRef.current?.querySelector<HTMLElement>('[data-radix-scroll-area-viewport]');
     viewport?.scrollTo({ top: 0, behavior: 'auto' });
   }, [selectedBook?.abbrev, selectedChapter, translation]);
+
+  useEffect(() => {
+    const release = async () => {
+      const sentinel = wakeLockRef.current;
+      wakeLockRef.current = null;
+      if (sentinel) await sentinel.release().catch(() => undefined);
+    };
+
+    const request = async () => {
+      if (!keepScreenAwake || document.visibilityState !== 'visible') return;
+      const wakeLock = (navigator as NavigatorWithWakeLock).wakeLock;
+      if (!wakeLock || wakeLockRef.current) return;
+      try {
+        const sentinel = await wakeLock.request('screen');
+        wakeLockRef.current = sentinel;
+        sentinel.addEventListener('release', () => {
+          if (wakeLockRef.current === sentinel) wakeLockRef.current = null;
+        });
+      } catch {
+        // Alguns navegadores ou modos de economia de energia não oferecem Wake Lock.
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void request();
+      else void release();
+    };
+
+    void request();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      void release();
+    };
+  }, [keepScreenAwake]);
 
   const favorites = useLiveQuery(() =>
     userEmail && tenantId ? db.bibleFavorites.filter((item) => item.userId === userEmail && item.tenantId === tenantId).toArray() : [],
@@ -346,6 +392,34 @@ export default function BiblePage() {
     });
   }, [availableChapters, closeDrawer, openDrawer, selectedChapter, setSelectedChapter]);
 
+  const openReadingSettings = useCallback(() => {
+    openDrawer({
+      content: <>
+        <DrawerHeader className="border-b text-left"><DrawerTitle>Preferências de leitura</DrawerTitle></DrawerHeader>
+        <div className="space-y-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="space-y-3">
+            <div>
+              <p className="font-medium">Tamanho da fonte</p>
+              <p className="text-sm text-muted-foreground">Ajuste para uma leitura mais confortável.</p>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3">
+              <Button type="button" variant="outline" size="icon" onClick={() => setFontSize(fontSize - 1)} disabled={fontSize <= 15} aria-label="Diminuir fonte"><Minus className="h-4 w-4" /></Button>
+              <span className="min-w-20 text-center text-lg font-semibold" style={{ fontSize: `${fontSize}px` }}>Aa</span>
+              <Button type="button" variant="outline" size="icon" onClick={() => setFontSize(fontSize + 1)} disabled={fontSize >= 26} aria-label="Aumentar fonte"><Plus className="h-4 w-4" /></Button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/60 p-3">
+            <div className="flex gap-3">
+              <Sun className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div><p className="font-medium">Manter tela ligada</p><p className="text-sm text-muted-foreground">Evita que a tela apague durante a leitura.</p></div>
+            </div>
+            <Switch checked={keepScreenAwake} onCheckedChange={setKeepScreenAwake} aria-label="Manter tela ligada" />
+          </div>
+        </div>
+      </>,
+    });
+  }, [fontSize, keepScreenAwake, openDrawer, setFontSize, setKeepScreenAwake]);
+
   const selectBook = (book: BibleBook) => {
     setSelectedBook(book);
     setBook(book.abbrev);
@@ -373,7 +447,7 @@ export default function BiblePage() {
 
   return (
     <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col md:h-[calc(100dvh-4rem)]">
-      <BibleWebNavigation translation={translation} selectedBook={selectedBook} selectedChapter={selectedChapter} contentSource={contentSource} books={books} chaptersByBook={chaptersByBook} expandedBook={expandedBook} bookListOpen={bookListOpen} onBookListOpenChange={setBookListOpen} onToggleBook={(book) => void toggleBook(book)} onSelectChapter={selectChapterFromDrawer} onOpenTranslation={openTranslationDrawer} onOpenChapter={openChapterDrawer} onOpenSavedItems={openSavedItemsDrawer} />
+      <BibleWebNavigation translation={translation} selectedBook={selectedBook} selectedChapter={selectedChapter} contentSource={contentSource} books={books} chaptersByBook={chaptersByBook} expandedBook={expandedBook} bookListOpen={bookListOpen} onBookListOpenChange={setBookListOpen} onToggleBook={(book) => void toggleBook(book)} onSelectChapter={selectChapterFromDrawer} onOpenTranslation={openTranslationDrawer} onOpenChapter={openChapterDrawer} onOpenSavedItems={openSavedItemsDrawer} onOpenReadingSettings={openReadingSettings} />
 
       <ScrollArea ref={bibleReaderRef} className="flex-1 bg-background/50">
         <div className="max-w-2xl mx-auto px-5 py-8 pb-32">
@@ -387,7 +461,8 @@ export default function BiblePage() {
                   : marker.hasAnnotation
                     ? 'bg-violet-500/15'
                     : '';
-              return <p key={i} className={cn('flex items-start gap-2 text-[17px] leading-8 py-1 px-3 rounded-lg cursor-pointer', selectedVerses.includes(i) ? 'bg-primary/20 text-foreground font-medium' : cn(markerBackground, 'hover:bg-muted/50'))}
+              return <p key={i} className={cn('flex items-start gap-2 rounded-lg px-3 py-1 cursor-pointer', selectedVerses.includes(i) ? 'bg-primary/20 text-foreground font-medium' : cn(markerBackground, 'hover:bg-muted/50'))}
+              style={{ fontSize: `${fontSize}px`, lineHeight: 1.9 }}
               onClick={() => toggleVerse(i)}>
                 <span className="shrink-0"><sup className="text-[10px] font-bold text-primary/60">{i + 1}</sup></span>
                 <span className="min-w-0 flex-1">{v}</span>

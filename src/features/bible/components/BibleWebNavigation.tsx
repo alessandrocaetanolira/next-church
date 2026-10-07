@@ -1,6 +1,6 @@
 'use client';
 
-import { BookmarkCheck, ChevronDown, ChevronsUpDown, List, WifiOff } from 'lucide-react';
+import { BookmarkCheck, ChevronDown, ChevronsUpDown, List, Settings2, WifiOff } from 'lucide-react';
 import type { BibleBook, BibleContentSource, BibleTranslation } from '@/features/bible/api/bible.api';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
@@ -23,6 +23,7 @@ type BibleWebNavigationProps = {
   onOpenTranslation: () => void;
   onOpenChapter: () => void;
   onOpenSavedItems: () => void;
+  onOpenReadingSettings: () => void;
 };
 
 export function BibleWebNavigation({
@@ -40,6 +41,7 @@ export function BibleWebNavigation({
   onOpenTranslation,
   onOpenChapter,
   onOpenSavedItems,
+  onOpenReadingSettings,
 }: BibleWebNavigationProps) {
   const otBooks = books.filter((book) => book.testament === 'AT');
   const ntBooks = books.filter((book) => book.testament === 'NT');
@@ -47,12 +49,12 @@ export function BibleWebNavigation({
   return (
     <div className="space-y-2 border-b border-border bg-card px-4 py-3">
       <div className="flex items-center gap-2">
-        <Button type="button" variant="outline" className="w-[78px] justify-between bg-background px-2" onClick={onOpenTranslation}>
+        <Button type="button" variant="outline" className="w-16 shrink-0 justify-between bg-background px-2" onClick={onOpenTranslation}>
           {translation}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" />
         </Button>
         <Drawer open={bookListOpen} onOpenChange={onBookListOpenChange}>
           <DrawerTrigger asChild>
-            <Button variant="outline" className="flex-[2] justify-start gap-2 bg-background font-semibold"><List className="h-4 w-4" />{selectedBook?.name || 'Selecione...'}</Button>
+            <Button variant="outline" className="min-w-0 flex-1 justify-start gap-2 overflow-hidden bg-background font-semibold"><List className="h-4 w-4 shrink-0" /><span className="truncate">{selectedBook?.name || 'Selecione...'}</span></Button>
           </DrawerTrigger>
           <DrawerContent className="max-h-[82dvh]">
             <DrawerHeader className="border-b text-left"><DrawerTitle>Livros da Bíblia</DrawerTitle></DrawerHeader>
@@ -81,8 +83,9 @@ export function BibleWebNavigation({
             </ScrollArea>
           </DrawerContent>
         </Drawer>
-        <Button type="button" variant="outline" className="w-[100px] justify-between bg-background px-2" onClick={onOpenChapter}>Cap {selectedChapter}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /></Button>
-        <Button size="icon" variant="ghost" onClick={onOpenSavedItems} aria-label="Itens salvos"><BookmarkCheck className="h-5 w-5" /></Button>
+        <Button type="button" variant="outline" className="w-[84px] shrink-0 justify-between bg-background px-2" onClick={onOpenChapter}>Cap {selectedChapter}<ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground" /></Button>
+        <Button size="icon" variant="ghost" className="shrink-0" onClick={onOpenSavedItems} aria-label="Itens salvos"><BookmarkCheck className="h-5 w-5" /></Button>
+        <Button size="icon" variant="ghost" className="shrink-0" onClick={onOpenReadingSettings} aria-label="Preferências de leitura"><Settings2 className="h-5 w-5" /></Button>
       </div>
       {contentSource === 'cache' && <p className="flex items-center gap-1 text-xs text-muted-foreground"><WifiOff className="h-3.5 w-3.5" /> Conteúdo salvo no dispositivo</p>}
     </div>

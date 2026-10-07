@@ -13,7 +13,6 @@ type DeferredInstallPrompt = Event & {
 };
 
 const INSTALL_DISMISSED_KEY = 'church-pwa-install-dismissed-v1';
-const NOTIFICATIONS_DISMISSED_KEY = 'church-pwa-notifications-dismissed-v1';
 
 function isIosBrowser() {
   if (typeof navigator === 'undefined') return false;
@@ -47,7 +46,7 @@ export function PwaOnboarding() {
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(true);
-  const [notificationsDismissed, setNotificationsDismissed] = useState(true);
+  const [notificationsPromptClosed, setNotificationsPromptClosed] = useState(false);
   const [installResolved, setInstallResolved] = useState(false);
   const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
 
@@ -60,9 +59,8 @@ export function PwaOnboarding() {
     setInstalled(isStandalone());
     const dismissed = readFlag(INSTALL_DISMISSED_KEY);
     setInstallDismissed(dismissed);
-    setNotificationsDismissed(readFlag(NOTIFICATIONS_DISMISSED_KEY));
     // O app instalado ou já dispensado não deve bloquear o onboarding de
-    // notificações aguardando uma nova decisão de instalação.
+    // notificações. A permissão Push é independente da instalação do PWA.
     setInstallResolved(isStandalone() || dismissed);
 
     const handleBeforeInstallPrompt = (event: Event) => {
@@ -97,12 +95,11 @@ export function PwaOnboarding() {
   const canOfferNotifications = production
     && mounted
     && isAuthenticated
-    && installResolved
     && serviceWorkerReady
     && push.supported
     && !push.subscribed
+    && !notificationsPromptClosed
     && (push.permission === 'default' || push.permission === 'granted')
-    && (!notificationsDismissed || push.permission === 'granted');
 
   const dismissInstall = () => {
     writeFlag(INSTALL_DISMISSED_KEY);
@@ -131,8 +128,7 @@ export function PwaOnboarding() {
   };
 
   const dismissNotifications = () => {
-    writeFlag(NOTIFICATIONS_DISMISSED_KEY);
-    setNotificationsDismissed(true);
+    setNotificationsPromptClosed(true);
   };
 
   const enableNotifications = async () => {
@@ -143,7 +139,7 @@ export function PwaOnboarding() {
   return (
     <>
       <Dialog open={canOfferInstall} onOpenChange={(open) => { if (!open) dismissInstall(); }}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
+        <DialogContent className="max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Download className="h-5 w-5 text-primary" />Instalar o Church App</DialogTitle>
             <DialogDescription>Tenha acesso rápido à igreja, notificações e recursos offline.</DialogDescription>
@@ -170,7 +166,7 @@ export function PwaOnboarding() {
       </Dialog>
 
       <Dialog open={canOfferNotifications} onOpenChange={(open) => { if (!open) dismissNotifications(); }}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
+        <DialogContent className="max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
             <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>

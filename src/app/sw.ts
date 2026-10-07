@@ -94,8 +94,22 @@ function updatePwaBadge(delta: number) {
         const count = Math.max(0, Number(read.result ?? 0) + delta);
         const write = db.transaction(BADGE_STORE_NAME, 'readwrite').objectStore(BADGE_STORE_NAME).put(count, BADGE_KEY);
         write.onsuccess = () => {
-          const registration = self.registration as ServiceWorkerRegistration & { setAppBadge?: (value?: number) => Promise<void> };
-          void registration.setAppBadge?.(count).catch(() => undefined);
+          // No contexto do Service Worker, a Badging API pertence ao
+          // WorkerNavigator, não ao ServiceWorkerRegistration. A chamada no
+          // registration era silenciosamente ignorada e o ícone não recebia
+          // o contador mesmo após o Push chegar.
+          const appBadge = self.navigator as WorkerNavigator & {
+            setAppBadge?: (value?: number) => Promise<void>;
+            clearAppBadge?: () => Promise<void>;
+          };
+          const operation = count > 0 ? appBadge.setAppBadge?.(count) : appBadge.clearAppBadge?.();
+          if (!operation) {
+            console.warn('[push-worker] Badging API indisponível neste dispositivo.');
+          } else {
+            void operation.catch((error: unknown) => {
+              console.warn('[push-worker] não foi possível atualizar o badge do app.', error);
+            });
+          }
           resolve();
         };
         write.onerror = () => resolve();

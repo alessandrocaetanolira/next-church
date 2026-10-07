@@ -175,9 +175,19 @@ npm run build
 
 O projeto usa Turbopack no desenvolvimento e no build, compatível com a integração
 Serwist atual. O build informa a quantidade de entradas precacheadas do Service
-Worker. Em caso de chunks antigos no navegador, encerre o servidor, remova
-`.next` e faça um hard refresh. O service worker é desativado automaticamente em
-desenvolvimento.
+Worker. O teste offline deve usar obrigatoriamente o artefato de produção:
+
+```bash
+npm run build
+npm run start
+```
+
+`npm run dev` não é um teste válido de PWA/offline. Em produção, o único worker
+esperado é `/serwist/sw.js`, com scope `/`; versões antigas podem ainda estar
+registradas como `/sw.js` no navegador e precisam ser removidas durante a validação.
+Em caso de chunks ou workers antigos, encerre o servidor, remova `.next`, gere um
+novo build e faça um hard refresh. O roteiro completo está em
+[docs/offline-first-todo.md](docs/offline-first-todo.md).
 
 Os testes automatizados usam Vitest:
 
@@ -350,10 +360,10 @@ As validações devem ser executadas na raiz do projeto:
 - `npx tsc --noEmit` concluiu sem erros na última verificação.
 - `npx eslint src/app src/components src/features src/server src/lib src/auth.ts`
   concluiu sem erros e sem warnings.
-- `npm run build` usa Webpack e deve ser o build oficial enquanto a integração
-  Turbopack/Serwist não for validada para produção.
-- `npm run dev` também usa Webpack para evitar falhas de HMR e chunks obsoletos
-  observadas no desenvolvimento com Turbopack.
+- `npm run build` usa Turbopack e gera o Service Worker Serwist; a validação offline
+  real ainda está pendente.
+- `npm run dev` serve para desenvolvimento e não registra o worker de produção; não
+  deve ser usado como evidência de funcionamento offline.
 - `npm test` passou na última validação fora do sandbox: 41 arquivos, 136 testes
   aprovados e nenhum teste ignorado.
 - O escopo de líderes foi aplicado para grupos, materiais e tarefas. `teamIds`

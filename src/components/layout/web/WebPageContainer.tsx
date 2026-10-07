@@ -20,7 +20,7 @@ export function WebPageContainer({
 }: WebPageContainerProps) {
   return (
     <div
-      className={cn("mx-auto w-full space-y-6 px-6 py-6", sizeClassName[size], className)}
+      className={cn("mx-auto w-full min-w-0 max-w-full space-y-6 px-4 py-5 sm:px-6 sm:py-6", sizeClassName[size], className)}
       {...props}
     >
       {children}

@@ -2,16 +2,22 @@
 
 import { useRouter } from "next/navigation";
 import { gamesCatalog } from "@/features/new-games/catalog";
+import { GameChallengesButton } from '@/features/game-challenges/GameChallengesDrawer';
 
 export function GamesHome() {
   const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="px-4 pb-4 pt-8 text-center">
-        <div className="mb-2 text-5xl">✝️</div>
-        <h1 className="font-display text-3xl font-bold text-foreground">Jogos Bíblicos</h1>
-        <p className="mt-1 text-muted-foreground">Aprenda e divirta-se com a Palavra</p>
+      <header className="px-4 pb-4 pt-8">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-1 text-4xl">✝️</div>
+            <h1 className="font-display text-3xl font-bold text-foreground">Jogos Bíblicos</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Aprenda e divirta-se com a Palavra</p>
+          </div>
+          <GameChallengesButton />
+        </div>
       </header>
 
       <main className="mx-auto max-w-lg px-4 pb-8">

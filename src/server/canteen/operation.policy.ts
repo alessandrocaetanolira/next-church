@@ -5,7 +5,7 @@ type PolicyUser = Parameters<typeof hasActionPermission>[0];
 
 export class CanteenOperationPolicy {
   static assertView(user: PolicyUser) {
-    if (!hasAnyActionPermission(user, 'canteen', ['catalog', 'view', 'operate'])) throw new ForbiddenError('Você não tem permissão para ver o estado da cantina.');
+    if (!hasAnyActionPermission(user, 'canteen', ['catalog', 'view', 'operate', 'sell', 'order'])) throw new ForbiddenError('Você não tem permissão para ver o estado da cantina.');
   }
 
   static assertOperate(user: PolicyUser) {

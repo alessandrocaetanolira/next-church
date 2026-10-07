@@ -74,7 +74,7 @@ export function MobileFeedComposer(props: MobileFeedComposerProps) {
       <header className="sticky top-0 z-10 flex h-16 items-end justify-between border-b border-border bg-background/95 px-4 pb-2 pt-safe backdrop-blur">
         <button type="button" onClick={props.onClose} className="text-sm text-foreground">Cancelar</button>
         <h1 className="text-base font-bold">Nova publicação</h1>
-        <Button type="button" size="sm" className="h-8 rounded-lg px-3 text-xs" disabled={!canPublish || props.disabled} onClick={props.onPublish}>Publicar</Button>
+        <span className="w-[4.5rem]" aria-hidden="true" />
       </header>
 
       <main className="space-y-4 px-4 pb-8 pt-4">
@@ -83,14 +83,17 @@ export function MobileFeedComposer(props: MobileFeedComposerProps) {
             <Avatar className="h-9 w-9 shrink-0">{props.userAvatar ? <AvatarImage src={props.userAvatar} alt={props.userName} /> : null}<AvatarFallback className="bg-primary/10 text-sm font-semibold text-primary">{props.userInitial}</AvatarFallback></Avatar>
             <span className="truncate text-sm font-medium">{props.userName}</span>
           </div>
-          <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-            <Globe2 className="h-4 w-4" />
-            <select value={props.visibility} onChange={(event) => props.onVisibilityChange(event.target.value as NonNullable<FeedPost['visibility']>)} className="max-w-[105px] bg-transparent text-right text-xs outline-none">
-              <option value="public">Todos</option>
-              <option value="group">Grupo</option>
-              <option value="individual">Individual</option>
-            </select>
-          </label>
+          <div className="flex shrink-0 items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Globe2 className="h-4 w-4" />
+              <select value={props.visibility} onChange={(event) => props.onVisibilityChange(event.target.value as NonNullable<FeedPost['visibility']>)} className="max-w-[105px] bg-transparent text-right text-xs outline-none">
+                <option value="public">Todos</option>
+                <option value="group">Grupo</option>
+                <option value="individual">Individual</option>
+              </select>
+            </label>
+            <Button type="button" size="sm" className="h-8 rounded-lg px-3 text-xs" disabled={!canPublish || props.disabled} onClick={props.onPublish}>Publicar</Button>
+          </div>
         </div>
 
         <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1">

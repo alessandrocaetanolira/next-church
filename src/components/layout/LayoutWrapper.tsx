@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingState } from '@/components/common';
 import { Toaster } from "@/components/ui/sonner";
 import { NotificationsProvider } from '@/components/providers/NotificationsProvider';
+import { getMobileBackTarget } from './mobile-route-chrome';
 
 export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -45,7 +46,10 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/admin/login");
   const isFullscreenGameRoute = pathname === "/games/caca-palavras";
-  const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos');
+  // O perfil social já possui um cabeçalho próprio sobre a capa, incluindo o
+  // retorno contextual. Montar o Header global duplicaria a navegação.
+  const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos') || pathname.startsWith('/perfil/');
+  const hideMobileBottomNav = Boolean(getMobileBackTarget(pathname));
 
   if (isLoading && !authFallbackReady) {
     return <LoadingState label="Carregando aplicação..." className="min-h-screen bg-background" />;
@@ -71,7 +75,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppLayout hideMobileHeader={hideMobileHeader}>
+    <AppLayout hideMobileHeader={hideMobileHeader} hideMobileBottomNav={hideMobileBottomNav}>
       <NotificationsProvider />
       {children}
       <Toaster position="top-center" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LogOut, Info, WifiOff, Monitor, Sun, Moon, Wallet, UserRound } from 'lucide-react';
+import { ChevronLeft, LogOut, Info, WifiOff, Monitor, Sun, Moon, Wallet, UserRound } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAppSettings } from '@/components/providers/AppSettingsProvider';
@@ -23,6 +23,7 @@ import { AppImage } from '@/components/shared';
 import { getAccessibleModules } from '@/lib/access-control';
 import { useDrawer } from '@/components/providers/DrawerProvider';
 import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
+import { getMobileBackTarget } from './mobile-route-chrome';
 
 const CHANGELOG = [
   {
@@ -137,36 +138,33 @@ export function Header() {
 
   const ThemeIcon = themeButton.icon;
 
-  const mobileBackTarget = (() => {
-    if (/^\/feed\/[^/]+\/comments\/new$/.test(pathname)) return { href: `/feed/${pathname.split('/')[2]}`, label: 'Publicação' };
-    if (/^\/feed\/[^/]+$/.test(pathname)) return { href: '/feed', label: 'Feed' };
-    if (pathname === '/members/new') return { href: '/members', label: 'Membros' };
-    if (pathname === '/groups/new') return { href: '/groups', label: 'Grupos' };
-    if (pathname === '/minha-conta/perfil') return { href: '/minha-conta', label: 'Minha conta' };
-    if (/^\/groups\/[^/]+\/edit$/.test(pathname)) return { href: `/groups/${pathname.split('/')[2]}`, label: 'Grupo' };
-    if (pathname === '/kids/new') return { href: '/kids', label: 'Infantil' };
-    if (/^\/kids\/[^/]+\/edit$/.test(pathname)) return { href: '/kids', label: 'Infantil' };
-    if (/^\/members\/[^/]+\/(edit|access)$/.test(pathname)) return { href: `/members/${pathname.split('/')[2]}`, label: 'Membro' };
-    if (/^\/members\/[^/]+$/.test(pathname)) return { href: '/members', label: 'Membros' };
-    if (/^\/groups\/[^/]+$/.test(pathname)) return { href: '/groups', label: 'Grupos' };
-    if (pathname === '/schedules/new') return { href: '/schedules', label: 'Escalas' };
-    if (pathname === '/cantina/products/new') return { href: '/cantina', label: 'Cantina' };
-    if (pathname === '/cantina/checkout') return { href: '/cantina?tab=pdv', label: 'PDV' };
-    if (/^\/cantina\/products\/[^/]+\/edit$/.test(pathname)) return { href: `/cantina/products/${pathname.split('/')[3]}`, label: 'Produto' };
-    if (/^\/cantina\/products\/[^/]+$/.test(pathname)) return { href: '/cantina', label: 'Cantina' };
-    return null;
-  })();
+  const mobileBackTarget = getMobileBackTarget(pathname);
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-        <div className="flex h-16 items-center justify-between pl-0 pr-3 sm:px-4">
+      <header className={mobileBackTarget ? 'sticky top-0 z-40 border-transparent bg-transparent md:border-b md:border-border md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60' : 'sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}>
+        <div className={`relative flex h-16 items-center justify-between ${mobileBackTarget ? 'px-3 sm:px-4' : 'pl-0 pr-3 sm:px-4'}`}>
           <div className="flex min-w-0 items-center gap-2">
             {mobileBackTarget ? (
-              <Button variant="ghost" className="h-9 gap-1 px-1.5 text-sm" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
-                <ArrowLeft className="h-5 w-5" />
-                <span className="max-w-28 truncate">{mobileBackTarget.label}</span>
-              </Button>
+              <>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full md:hidden" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
+                  <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
+                </Button>
+                <div className="hidden md:flex md:h-9 md:w-40 md:items-center">
+                  <AppImage
+                    src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
+                    alt={settings.appName}
+                    className="h-full w-full object-contain object-left dark:hidden"
+                    onError={() => setLogoFailed(true)}
+                  />
+                  <AppImage
+                    src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
+                    alt={settings.appName}
+                    className="hidden h-full w-full object-contain object-left dark:block"
+                    onError={() => setLogoFailed(true)}
+                  />
+                </div>
+              </>
             ) : (
               <div className="-ml-2 flex h-13 w-[12.5rem] max-w-[54vw] items-center justify-start sm:ml-0 sm:h-9 sm:w-40 sm:max-w-none">
                 <AppImage
@@ -185,9 +183,11 @@ export function Header() {
             )}
           </div>
 
+          {mobileBackTarget ? <h1 className="pointer-events-none absolute inset-x-16 truncate text-center text-base font-semibold md:hidden">{mobileBackTarget.title}</h1> : null}
+
           <TooltipProvider>
             <div className="flex items-center gap-1.5">
-              {offline && (
+              {offline && <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-destructive/10 text-destructive">
@@ -197,9 +197,9 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>Sem conexão — dados salvos localmente</TooltipContent>
                 </Tooltip>
-              )}
+              </div>}
 
-              {isMember && (
+              {isMember && <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={handleCycleThemeMode}>
@@ -209,16 +209,18 @@ export function Header() {
                   </TooltipTrigger>
                   <TooltipContent>Alterna entre Sistema, Claro e Escuro</TooltipContent>
                 </Tooltip>
-              )}
+              </div>}
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <NotificationBell />
-                </TooltipTrigger>
-                <TooltipContent>Notificações</TooltipContent>
-              </Tooltip>
+              <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <NotificationBell />
+                  </TooltipTrigger>
+                  <TooltipContent>Notificações</TooltipContent>
+                </Tooltip>
+              </div>
 
-              <div className="md:hidden">
+              <div className={mobileBackTarget ? 'hidden' : 'md:hidden'}>
                 <Button
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"

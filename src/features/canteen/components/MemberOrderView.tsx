@@ -15,15 +15,17 @@ import { db } from '@/lib/db';
 import { generateId } from '@/lib/id';
 import { formatCurrency } from '@/lib/utils';
 import { queueSaleCreate } from '@/features/canteen/lib/offline-sales';
+import { useCanteenCartOwner } from '@/features/canteen/hooks/use-canteen-cart-owner';
 
 export function MemberOrderView() {
   const { user } = useAuth();
   const products = useProducts();
   const { items, addItem, incrementItem, decrementItem, clearCart, total } = useCartStore();
+  const cartReady = useCanteenCartOwner();
   const [submitting, setSubmitting] = useState(false);
 
   const submitOrder = async () => {
-    if (!items.length || submitting) return;
+    if (!cartReady || !items.length || submitting) return;
     setSubmitting(true);
     const payload = {
       id: generateId(), total, items, consumerType: 'MEMBER' as const, paymentMethod: 'pending' as const, orderStatus: 'pending' as const,
@@ -56,11 +58,11 @@ export function MemberOrderView() {
           <div className="flex items-start justify-between gap-2"><h3 className="font-semibold">{product.name}</h3><Badge variant="outline">{product.category}</Badge></div>
           <p className="text-sm text-muted-foreground">{product.description || 'Produto da cantina'}</p>
           <div className="flex items-center justify-between"><span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-            {item ? <div className="flex items-center gap-2"><Button size="icon" variant="outline" onClick={() => decrementItem(product.id)}><Minus className="h-4 w-4" /></Button><span>{item.quantity}</span><Button size="icon" variant="outline" disabled={item.quantity >= product.stock} onClick={() => incrementItem(product.id)}><Plus className="h-4 w-4" /></Button></div> : <Button size="sm" disabled={product.stock <= 0} onClick={() => addItem({ productId: product.id, name: product.name, price: product.price, quantity: 1 })}><Plus className="mr-1 h-4 w-4" />Adicionar</Button>}
+            {item ? <div className="flex items-center gap-2"><Button size="icon" variant="outline" disabled={!cartReady} onClick={() => decrementItem(product.id)}><Minus className="h-4 w-4" /></Button><span>{item.quantity}</span><Button size="icon" variant="outline" disabled={!cartReady || item.quantity >= product.stock} onClick={() => incrementItem(product.id)}><Plus className="h-4 w-4" /></Button></div> : <Button size="sm" disabled={!cartReady || product.stock <= 0} onClick={() => addItem({ productId: product.id, name: product.name, price: product.price, quantity: 1 })}><Plus className="mr-1 h-4 w-4" />Adicionar</Button>}
           </div>
         </CardContent></Card>;
       })}
     </div>
-    <Card><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" /><span>{items.reduce((sum, item) => sum + item.quantity, 0)} item(ns)</span><strong>{formatCurrency(total)}</strong></div><Button disabled={!items.length || submitting} onClick={() => void submitOrder()}>{submitting ? 'Enviando...' : 'Enviar pedido'}</Button></CardContent></Card>
+    <Card><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" /><span>{items.reduce((sum, item) => sum + item.quantity, 0)} item(ns)</span><strong>{formatCurrency(total)}</strong></div><Button disabled={!cartReady || !items.length || submitting} onClick={() => void submitOrder()}>{submitting ? 'Enviando...' : 'Enviar pedido'}</Button></CardContent></Card>
   </div>;
 }

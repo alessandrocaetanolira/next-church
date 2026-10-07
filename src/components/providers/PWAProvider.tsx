@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSync } from '@/features/sync/hooks/use-sync';
 import { PwaOnboarding } from '@/components/pwa/PwaOnboarding';
+import { PushSubscriptionProvider } from '@/hooks/use-push-subscription';
 
 function PWASyncEffect() {
   const { performFullSync, isAuthenticated } = useSync();
@@ -34,5 +35,11 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  return <>{children}{mounted ? <PWASyncEffect /> : null}{mounted ? <PwaOnboarding /> : null}</>;
+  return (
+    <PushSubscriptionProvider>
+      {children}
+      {mounted ? <PWASyncEffect /> : null}
+      {mounted ? <PwaOnboarding /> : null}
+    </PushSubscriptionProvider>
+  );
 }

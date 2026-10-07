@@ -42,7 +42,6 @@ export default function SettingsPage() {
 
   useEffect(() => { setPageTitle('Configurações'); }, [setPageTitle]);
 
-
   const handleSaveBranding = async () => {
     try { await saveBranding(); toast.success('Branding atualizado.'); }
     catch { toast.error('Erro ao salvar branding.'); }
@@ -202,12 +201,19 @@ export default function SettingsPage() {
         {!push.supported ? (
           <p className="text-sm text-muted-foreground">{push.supportIssue ?? 'Este navegador não oferece notificações Push.'}</p>
         ) : push.subscribed ? (
-          <Button variant="outline" className="w-full" onClick={() => void push.unsubscribe()} disabled={push.loading}>
-            {push.loading ? 'Desativando...' : 'Desativar notificações Push'}
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {push.permission === 'granted' ? (
+              <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
+                {push.loading ? 'Sincronizando...' : 'Sincronizar notificações'}
+              </Button>
+            ) : null}
+            <Button variant="outline" className="w-full" onClick={() => void push.unsubscribe()} disabled={push.loading}>
+              {push.loading ? 'Desativando...' : 'Desativar notificações Push'}
+            </Button>
+          </div>
         ) : (
-          <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
-            {push.loading ? 'Ativando...' : 'Ativar notificações Push'}
+            <Button className="w-full" onClick={() => void push.subscribe()} disabled={push.loading}>
+            {push.loading ? 'Sincronizando...' : push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações Push'}
           </Button>
         )}
         {push.permission === 'granted' && !push.subscribed && !push.loading && (

@@ -6,7 +6,6 @@ import {
   Info,
   LoaderCircle,
   OctagonAlert,
-  X,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
@@ -27,7 +26,6 @@ const Toaster = ({
       offset={offset}
       mobileOffset={mobileOffset}
       swipeDirections={["top", "left", "right"]}
-      closeButton
       expand={false}
       visibleToasts={4}
       icons={{
@@ -36,7 +34,6 @@ const Toaster = ({
         warning: <CircleAlert className="size-4" strokeWidth={2.5} />,
         error: <OctagonAlert className="size-4" strokeWidth={2.5} />,
         loading: <LoaderCircle className="size-4 animate-spin" strokeWidth={2.5} />,
-        close: <X className="size-4" />,
       }}
       className="toaster group"
       toastOptions={{
@@ -56,8 +53,6 @@ const Toaster = ({
           loading:
             "[&_[data-icon]]:text-primary [&_[data-icon]]:border-primary/50",
           icon: "flex size-8 shrink-0 items-center justify-center rounded-full border-2 bg-transparent",
-          closeButton:
-            "right-2 top-2 left-auto flex size-7 items-center justify-center rounded-full border-0 bg-muted/60 p-0 text-muted-foreground opacity-100 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card",
           actionButton:
             "rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90",
           cancelButton:

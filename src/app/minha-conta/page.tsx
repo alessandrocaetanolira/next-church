@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useMemo, useEffect, useRef } from 'react';
+import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useUIStore } from '@/features/ui/store';
 import { useProducts } from '@/features/canteen/hooks/use-products';
@@ -16,10 +16,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { db, type LocalProduct, type LocalSale, type CartItem } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { 
-  Wallet, ShoppingBag, Receipt, MessageCircle, QrCode, Plus, Minus, UserRound,
+  Wallet, ShoppingBag, Receipt, MessageCircle, QrCode, Plus, Minus, UserRound, Bell,
   ShoppingCart, AlertCircle, Gift, ArrowLeft, Package
 } from 'lucide-react';
 import { AppImage } from '@/components/shared';
+import { SharedFlatList } from '@/components/SharedFlatList';
 import { LoadingState } from '@/components/common';
 import { 
   getLoyaltyConfig, getLoyaltyProgress, isLoyaltyActive, 
@@ -29,14 +30,16 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { getMemberFinancials } from '@/services/members/member-account-api';
 import { createMemberSale } from '@/services/canteen/member-sales-api';
 import { isNetworkError } from '@/services/api/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
-import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
+import { syncMemberSalesFromServer, type MemberWalletLedgerEntry } from '@/features/canteen/lib/sync-member-sales';
 import { generateId } from '@/lib/id';
 import { hasActionPermission } from '@/lib/access-control';
+import { usePushSubscription } from '@/hooks/use-push-subscription';
+import { apiClient } from '@/lib/api';
+import type { MemberWalletPayload } from '@/features/canteen/lib/sync-member-sales';
 
 type FinancialMember = {
   id: string;
@@ -45,6 +48,8 @@ type FinancialMember = {
   phone?: string;
   creditBalance?: number;
 };
+
+type WalletSummary = { debits: number; payments: number; balance: number };
 
 const TRANSACTIONS_PAGE_SIZE = 12;
 
@@ -61,6 +66,7 @@ function MyAccountPageContent() {
   const canCatalog = hasActionPermission(user, 'canteen', 'catalog');
   const canOrder = canCatalog && hasActionPermission(user, 'canteen', 'order');
   const { notifications } = useNotificationCenter();
+  const push = usePushSubscription();
   const setPageTitle = useUIStore((state) => state.setPageTitle);
   
   const requestedView = searchParams.get('view') === 'order' && canOrder ? 'order' : 'profile';
@@ -72,10 +78,13 @@ function MyAccountPageContent() {
 
   const [financialMember, setFinancialMember] = useState<FinancialMember | null>(null);
   const [serverTransactions, setServerTransactions] = useState<LocalSale[]>([]);
+  const [walletLedger, setWalletLedger] = useState<MemberWalletLedgerEntry[]>([]);
+  const [walletSummary, setWalletSummary] = useState<WalletSummary | null>(null);
+  const [ledgerNextCursor, setLedgerNextCursor] = useState<string | null>(null);
+  const [loadingMoreLedger, setLoadingMoreLedger] = useState(false);
   const [visibleTransactionCount, setVisibleTransactionCount] = useState(TRANSACTIONS_PAGE_SIZE);
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   const syncingRef = useRef(false);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setPageTitle(view === 'order' ? 'Fazer Pedido' : 'Carteira');
@@ -92,11 +101,14 @@ function MyAccountPageContent() {
       if (!session) return;
 
       try {
-        const payload = await getMemberFinancials<{ member?: FinancialMember; sales?: LocalSale[] }>();
+        const payload = await syncMemberSalesFromServer(tenantId);
         if (!active) return;
 
         setFinancialMember(payload.member ?? null);
         setServerTransactions(Array.isArray(payload.sales) ? payload.sales : []);
+        setWalletLedger(Array.isArray(payload.ledger) ? payload.ledger : []);
+        setWalletSummary(payload.summary ?? null);
+        setLedgerNextCursor(payload.ledgerNextCursor ?? null);
       } catch {
         // Fallback silencioso para Dexie local
       }
@@ -107,7 +119,7 @@ function MyAccountPageContent() {
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session, tenantId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,7 +132,10 @@ function MyAccountPageContent() {
         const payload = await syncMemberSalesFromServer(tenantId);
         if (!cancelled) {
           setFinancialMember(payload.member ?? null);
-          setServerTransactions(Array.isArray(payload.sales) ? payload.sales as LocalSale[] : []);
+          setServerTransactions(Array.isArray(payload.sales) ? payload.sales : []);
+          setWalletLedger(Array.isArray(payload.ledger) ? payload.ledger : []);
+          setWalletSummary(payload.summary ?? null);
+          setLedgerNextCursor(payload.ledgerNextCursor ?? null);
         }
       } catch {
         // Próxima notificação ou navegação tentará novamente.
@@ -133,7 +148,7 @@ function MyAccountPageContent() {
     const hasNewMemberOrderEvent = notifications.some((notification) => {
       const isNew = !nextIds.has(notification.id);
       nextIds.add(notification.id);
-      return isNew && notification.type.startsWith('canteen-order-');
+      return isNew && (notification.type.startsWith('canteen-order-') || notification.type.startsWith('canteen-credit-'));
     });
 
     seenNotificationIdsRef.current = nextIds;
@@ -146,6 +161,25 @@ function MyAccountPageContent() {
       cancelled = true;
     };
   }, [notifications, tenantId]);
+
+  const loadMoreLedger = useCallback(async () => {
+    if (!ledgerNextCursor || loadingMoreLedger) return;
+    setLoadingMoreLedger(true);
+    try {
+      const payload = await apiClient.get<MemberWalletPayload>('/api/members/me/financials', {
+        cache: 'no-store', query: { ledgerCursor: ledgerNextCursor },
+      });
+      setWalletLedger((current) => {
+        const knownIds = new Set(current.map((entry) => entry.id));
+        return [...current, ...(payload.ledger ?? []).filter((entry) => !knownIds.has(entry.id))];
+      });
+      setLedgerNextCursor(payload.ledgerNextCursor ?? null);
+    } catch {
+      toast.error('Não foi possível carregar mais lançamentos do extrato.');
+    } finally {
+      setLoadingMoreLedger(false);
+    }
+  }, [ledgerNextCursor, loadingMoreLedger]);
 
   // Data Queries
   const products = useProducts(canCatalog);
@@ -191,46 +225,9 @@ function MyAccountPageContent() {
     [resolvedTransactions, visibleTransactionCount]
   );
 
-  const groupedTransactions = useMemo(() => {
-    const groups: Array<{ label: string; items: LocalSale[] }> = [];
-
-    visibleTransactions.forEach((transaction) => {
-      const label = getMonthLabel(transaction.createdAt);
-      const lastGroup = groups[groups.length - 1];
-
-      if (!lastGroup || lastGroup.label !== label) {
-        groups.push({ label, items: [transaction] });
-        return;
-      }
-
-      lastGroup.items.push(transaction);
-    });
-
-    return groups;
-  }, [visibleTransactions]);
-
   useEffect(() => {
     setVisibleTransactionCount(TRANSACTIONS_PAGE_SIZE);
   }, [resolvedTransactions.length]);
-
-  useEffect(() => {
-    const node = loadMoreRef.current;
-    if (!node || visibleTransactionCount >= resolvedTransactions.length) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setVisibleTransactionCount((current) =>
-            Math.min(current + TRANSACTIONS_PAGE_SIZE, resolvedTransactions.length)
-          );
-        }
-      },
-      { rootMargin: '200px 0px' }
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [resolvedTransactions.length, visibleTransactionCount]);
 
   // Filter Logic
   const categories = useMemo(() => {
@@ -579,6 +576,11 @@ function MyAccountPageContent() {
                   </Button>
                 )}
               </div>
+              {walletSummary ? <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-4 text-center">
+                <div><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cobranças</p><p className="mt-1 text-sm font-semibold text-destructive">R$ {walletSummary.debits.toFixed(2)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Pagamentos</p><p className="mt-1 text-sm font-semibold text-success">R$ {walletSummary.payments.toFixed(2)}</p></div>
+                <div><p className="text-[10px] uppercase tracking-wide text-muted-foreground">Situação</p><p className={cn('mt-1 text-sm font-semibold', walletSummary.balance > 0 ? 'text-warning' : 'text-success')}>{walletSummary.balance > 0 ? 'Pendente' : 'Em dia'}</p></div>
+              </div> : null}
             </CardContent>
           </Card>
         ) : (
@@ -589,6 +591,44 @@ function MyAccountPageContent() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="border-border">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Bell className="h-6 w-6 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Alertas</p>
+              <p className="mt-1 text-sm text-foreground">
+                {push.subscribed ? 'Você receberá avisos de pedidos, cobranças e atualizações.' : 'Ative para receber avisos importantes neste dispositivo.'}
+              </p>
+              {push.error ? <p className="mt-1 text-xs text-destructive">{push.error}</p> : null}
+              {!push.supported && push.supportIssue ? <p className="mt-1 text-xs text-muted-foreground">{push.supportIssue}</p> : null}
+            </div>
+            {push.subscribed ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={push.loading}
+                onClick={() => void push.unsubscribe()}
+              >
+                Desativar
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                disabled={!push.supported || push.loading || push.permission === 'denied'}
+                onClick={() => void push.subscribe().then((enabled) => {
+                  if (enabled) toast.success('Alertas ativados neste dispositivo.');
+                })}
+              >
+                {push.loading ? 'Ativando...' : push.permission === 'denied' ? 'Bloqueado' : 'Ativar'}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Loyalty */}
         {isLoyaltyActive(loyaltyConfig) && linkedMember && loyaltyProgress && (
@@ -642,43 +682,63 @@ function MyAccountPageContent() {
               Carteira
             </h3>
           </div>
-          <div className="space-y-5">
-            {groupedTransactions.map((group) => (
-              <div key={group.label} className="space-y-2">
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                  {group.label}
+          <SharedFlatList
+            data={visibleTransactions}
+            keyExtractor={(transaction) => transaction.id}
+            className="grid-cols-1"
+            hasMore={visibleTransactionCount < resolvedTransactions.length}
+            onEndReached={() => setVisibleTransactionCount((current) => Math.min(current + TRANSACTIONS_PAGE_SIZE, resolvedTransactions.length))}
+            renderItem={(transaction) => <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold', transaction.paymentMethod === 'fiado' ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success')}>
+                  {transaction.paymentMethod === 'fiado' ? '-' : '+'}
                 </div>
-                <div className="space-y-2">
-                  {group.items.map((transaction) => (
-                    <div key={transaction.id} className="bg-card rounded-xl p-3 border border-border flex items-center justify-between shadow-sm">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold",
-                          transaction.paymentMethod === 'fiado' ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
-                        )}>
-                          {transaction.paymentMethod === 'fiado' ? '-' : '+'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm line-clamp-1">{transaction.items?.length || 0} itens</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {format(new Date(transaction.createdAt), "dd MMM 'às' HH:mm", { locale: ptBR })}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="font-bold text-sm">R$ {transaction.total.toFixed(2)}</span>
-                    </div>
-                  ))}
+                <div>
+                  <p className="line-clamp-1 text-sm font-medium">{transaction.items?.length || 0} itens</p>
+                  <p className="text-[10px] text-muted-foreground">{format(new Date(transaction.createdAt), "dd MMM 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
               </div>
-            ))}
-            {visibleTransactionCount < resolvedTransactions.length ? (
-              <div ref={loadMoreRef} className="py-4 text-center text-xs text-muted-foreground">
-                Carregando mais movimentações...
-              </div>
-            ) : null}
-          </div>
+              <span className="text-sm font-bold">R$ {transaction.total.toFixed(2)}</span>
+            </div>}
+          />
         </div>
       )}
+
+      {resolvedMember && walletLedger.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              Extrato de débitos e pagamentos
+            </h3>
+          </div>
+          <SharedFlatList
+            data={walletLedger}
+            keyExtractor={(entry) => entry.id}
+            className="grid-cols-1"
+            hasMore={Boolean(ledgerNextCursor)}
+            loadingMore={loadingMoreLedger}
+            onEndReached={loadMoreLedger}
+            renderItem={(entry) => {
+              const isPayment = entry.type === 'payment';
+              return <div key={entry.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3 shadow-sm">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold', isPayment ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive')}>
+                    {isPayment ? '+' : '-'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{isPayment ? 'Pagamento recebido' : 'Compra em fiado'}</p>
+                    <p className="text-[10px] text-muted-foreground">{entry.notes || format(new Date(entry.createdAt), "dd MMM 'às' HH:mm", { locale: ptBR })}</p>
+                  </div>
+                </div>
+                <span className={cn('text-sm font-bold', isPayment ? 'text-success' : 'text-destructive')}>
+                  {isPayment ? '-' : '+'} R$ {entry.amount.toFixed(2)}
+                </span>
+              </div>;
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

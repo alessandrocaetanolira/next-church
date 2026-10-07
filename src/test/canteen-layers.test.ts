@@ -3,6 +3,7 @@ import { CanteenSalesService } from '@/server/canteen/sales.service';
 import { CanteenSalesDetailService } from '@/server/canteen/sales-detail.service';
 import { CanteenLedgerService } from '@/server/canteen/ledger.service';
 import { CanteenOperationService } from '@/server/canteen/operation.service';
+import { CanteenOperationPolicy } from '@/server/canteen/operation.policy';
 import type { CanteenSalesRepository, SaleRecord } from '@/server/canteen/sales.repository';
 import type { CanteenLedgerRepository } from '@/server/canteen/ledger.repository';
 import type { CanteenOperationRepository } from '@/server/canteen/operation.repository';
@@ -53,6 +54,12 @@ describe('regras transacionais da cantina', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getStatusMock.mockResolvedValue({ isOpen: true });
+  });
+
+  it('permite consultar o status para quem pode vender ou fazer pedidos', () => {
+    expect(() => CanteenOperationPolicy.assertView(member)).not.toThrow();
+    expect(() => CanteenOperationPolicy.assertView({ role: 'MEMBER', permissions: ['canteen:sell'], planFeatures: ['canteen'] })).not.toThrow();
+    expect(() => CanteenOperationPolicy.assertView({ role: 'MEMBER', permissions: [], planFeatures: ['canteen'] })).toThrow('estado da cantina');
   });
 
   it('aceita pedido pendente de membro e notifica a cantina', async () => {

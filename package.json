@@ -74,7 +74,6 @@
     "tailwind-merge": "^3.5.0",
     "vaul": "^1.1.2",
     "web-push": "^3.6.7",
-    "xlsx": "^0.18.5",
     "zod": "^4.6.5",
     "zustand": "^5.0.12"
   },
@@ -88,7 +87,6 @@
     "@types/node": "^20.19.37",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
     "esbuild": "^0.28.2",

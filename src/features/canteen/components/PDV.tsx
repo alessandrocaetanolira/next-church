@@ -14,12 +14,14 @@ import { useCartStore } from '../store/useCartStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceCream, Sandwich } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceCream, Sandwich, Store } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { AppImage } from '@/components/shared';
 import { toast } from 'sonner';
 import { cn, formatCurrency } from '@/lib/utils';
 import { HorizontalScroll } from '@/components/common';
+import { useCanteenStatus } from '../hooks/use-canteen-status';
+import { useCanteenCartOwner } from '../hooks/use-canteen-cart-owner';
 
 // Mapeamento de Ícones por Categoria
 const CATEGORY_ICONS: Record<string, any> = {
@@ -38,9 +40,11 @@ interface CartContentProps {
     total: number;
     getProductStock: (productId: string) => number;
     onCheckout: () => void;
+    canCheckout: boolean;
+    checkoutMessage: string | null;
 }
 
-const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, onCheckout }: CartContentProps) => (
+const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, onCheckout, canCheckout, checkoutMessage }: CartContentProps) => (
     <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto p-4 space-y-3">
             {items.length === 0 ? (
@@ -81,11 +85,15 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
             )}
         </div>
         <div className="p-4 border-t border-border bg-card">
+            {checkoutMessage ? <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-xs text-warning-foreground">
+                <Store className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <span>{checkoutMessage}</span>
+            </div> : null}
             <div className="flex justify-between items-center mb-4">
                 <span className="text-muted-foreground">Total</span>
                 <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
             </div>
-            <Button className="w-full h-12 text-lg" disabled={items.length === 0} onClick={onCheckout}>
+            <Button className="w-full h-12 text-lg" disabled={items.length === 0 || !canCheckout} onClick={onCheckout}>
                 Finalizar Venda
             </Button>
         </div>
@@ -96,9 +104,11 @@ export function PDV() {
   const router = useRouter();
   const products = useProducts();
   const { items, addItem, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
+  const cartReady = useCanteenCartOwner();
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [search, setSearch] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
+  const { status: canteenStatus, loading: loadingCanteenStatus } = useCanteenStatus();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
@@ -114,6 +124,7 @@ export function PDV() {
     products.find((product) => product.id === productId)?.stock ?? 0;
 
   const handleAddToCart = (productId: string) => {
+    if (!cartReady) return;
     const product = products.find((entry) => entry.id === productId);
     if (!product) return;
 
@@ -132,6 +143,7 @@ export function PDV() {
   };
 
   const handleIncrementItem = (productId: string) => {
+    if (!cartReady) return;
     const product = products.find((entry) => entry.id === productId);
     const item = items.find((entry) => entry.productId === productId);
     if (!product || !item) return;
@@ -145,10 +157,19 @@ export function PDV() {
   };
 
   const openCheckout = () => {
+    if (!cartReady) return;
     if (items.length === 0) return;
+    if (!canteenStatus.isOpen) {
+      toast.error(loadingCanteenStatus ? 'Confirmando o status da cantina…' : 'A cantina está fechada no momento.');
+      return;
+    }
     setCartOpen(false);
     router.push('/cantina/checkout');
   };
+  const canCheckout = canteenStatus.isOpen && !loadingCanteenStatus;
+  const checkoutMessage = loadingCanteenStatus
+    ? 'Confirmando se a cantina está aberta…'
+    : canteenStatus.isOpen ? null : 'A cantina está fechada. Abra a operação para finalizar vendas.';
 
   return (
     <div className="space-y-4">
@@ -270,6 +291,8 @@ export function PDV() {
             total={total}
             getProductStock={getProductStock}
             onCheckout={openCheckout}
+            canCheckout={canCheckout}
+            checkoutMessage={checkoutMessage}
           />
         </div>
       </div>
@@ -304,6 +327,8 @@ export function PDV() {
                           total={total}
                           getProductStock={getProductStock}
                           onCheckout={openCheckout}
+                          canCheckout={canCheckout}
+                          checkoutMessage={checkoutMessage}
                         />
                     </div>
                 </DrawerContent>

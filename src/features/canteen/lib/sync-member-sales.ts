@@ -1,7 +1,17 @@
 import { db, type LocalMember, type LocalSale } from '@/lib/db';
 import { fetchMemberFinancials } from '@/services/sync/sync-api';
 
-type FinancialPayload = {
+export type MemberWalletLedgerEntry = {
+  id: string;
+  type: string;
+  amount: number;
+  saleId?: string | null;
+  notes?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+};
+
+export type MemberWalletPayload = {
   member?: {
     id: string;
     name: string;
@@ -26,9 +36,12 @@ type FinancialPayload = {
     createdBy: string;
     createdAt: string;
   }>;
+  summary?: { debits: number; payments: number; balance: number } | null;
+  ledger?: MemberWalletLedgerEntry[];
+  ledgerNextCursor?: string | null;
 };
 
-function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number], tenantId?: string): LocalSale {
+function toLocalSale(sale: NonNullable<MemberWalletPayload['sales']>[number], tenantId?: string): LocalSale {
   return {
     id: sale.id,
     total: sale.total,
@@ -51,7 +64,7 @@ function toLocalSale(sale: NonNullable<FinancialPayload['sales']>[number], tenan
 }
 
 export async function syncMemberSalesFromServer(tenantId?: string) {
-  const response = await fetchMemberFinancials<FinancialPayload>();
+  const response = await fetchMemberFinancials<MemberWalletPayload>();
   if (!response.ok) {
     throw new Error('Falha ao buscar movimentações do membro');
   }
@@ -81,5 +94,5 @@ export async function syncMemberSalesFromServer(tenantId?: string) {
     await db.members.put(nextMember);
   }
 
-  return payload;
+  return { ...payload, sales };
 }

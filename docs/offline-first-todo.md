@@ -24,6 +24,41 @@ e pelos assets; o Dexie será responsável pelos dados e pela fila de sincroniza
 - [x] Criar assets iniciais de branding A Mesa Church para TopHeader e PWA.
 - [x] Aplicar automaticamente o branding inicial ao tenant `igreja-teste` no setup.
 
+## Diagnóstico vigente — 2026-10-06
+
+O teste é feito com `next start`, não com `next dev`. Em produção, o provider registra
+`/serwist/sw.js`; o registro manual antigo `/sw.js` foi removido no commit de migração
+para Serwist. Um navegador que já instalou `/sw.js` pode continuar controlado por esse
+worker antigo, porque a remoção do arquivo não cancela registros existentes. Além
+disso, alterações no Service Worker só entram em vigor depois de um novo `build` e do
+reinício do processo `next start`.
+
+O bundle analisado em `.next/server/app/serwist/sw.js.body` continha 111 entradas,
+incluindo `/`, `/bible`, `/auth/login` e `/offline`. Isso confirma a geração do worker,
+mas não confirma que o navegador está usando esse artefato. A Bíblia não deve ser
+cacheada pelo Service Worker: seu conteúdo é gerenciado pelo Dexie e precisa ser
+baixado previamente pelo usuário. As rotas `/api/*` permanecem `NetworkOnly`.
+
+### Checklist de diagnóstico sem alteração de código
+
+1. Executar `npm run build`.
+2. Executar `npm run start` usando exatamente o build recém-gerado.
+3. Abrir o app online e verificar em DevTools → Application → Service Workers se o
+   script ativo é `/serwist/sw.js`, com scope `/` e estado `activated`.
+4. Se aparecer `/sw.js`, remover o registro antigo e limpar os dados do site antes de
+   repetir o teste.
+5. Conferir no Cache Storage o precache do shell e visitar online as rotas que serão
+   usadas offline.
+6. Baixar uma versão da Bíblia e testar abertura e refresh com a rede desativada.
+
+### Correção planejada, ainda não implementada
+
+- [ ] Remover, uma única vez, registros antigos cujo script seja `/sw.js`, sem criar um
+      segundo mecanismo de registro.
+- [ ] Manter o registro exclusivamente pelo `SerwistProvider`.
+- [ ] Consolidar `defaultCache` e as entradas de navegação no código versionado.
+- [ ] Adicionar smoke test de ativação, controle da página e refresh offline.
+
 ## Fase 1 — Shell PWA offline
 
 - [x] Gerar o Service Worker durante `next build`.

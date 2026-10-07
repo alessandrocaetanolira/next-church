@@ -13,7 +13,7 @@ export function MemoryOnline() {
   const { data: session } = useSession();
   const email = session?.user?.email?.toLowerCase() ?? '';
 
-  useWinnerSound(challenge?.status === 'completed' && challenge.winnerEmail?.toLowerCase() === email);
+  useWinnerSound(Boolean(challenge?.status === 'completed' && challenge.winnerEmail));
 
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get('challenge');

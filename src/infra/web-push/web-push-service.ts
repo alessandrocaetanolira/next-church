@@ -1,4 +1,5 @@
 import webpush, { type PushSubscription } from 'web-push';
+import { serverLogger } from '@/lib/server/logger';
 
 /** Conteúdo mínimo transportado pelo Service Worker para uma notificação Push. */
 export type WebPushPayload = {
@@ -26,7 +27,14 @@ export class WebPushService {
     const subject = process.env.VAPID_SUBJECT;
     const publicKey = process.env.VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
-    if (!subject || !publicKey || !privateKey) return false;
+    if (!subject || !publicKey || !privateKey) {
+      serverLogger.error('push-server', 'VAPID não configurado', {
+        hasSubject: Boolean(subject),
+        hasPublicKey: Boolean(publicKey),
+        hasPrivateKey: Boolean(privateKey),
+      });
+      return false;
+    }
     webpush.setVapidDetails(subject, publicKey, privateKey);
     this.configured = true;
     return true;
@@ -57,6 +65,14 @@ export class WebPushService {
         sent += 1;
       } catch (error) {
         const statusCode = (error as { statusCode?: number }).statusCode;
+        const errorBody = (error as { body?: unknown }).body;
+        serverLogger.error('push-server', 'falha ao entregar push', {
+          subscriptionId: subscription.id,
+          endpoint: subscription.endpoint.slice(0, 100),
+          statusCode: statusCode ?? null,
+          message: error instanceof Error ? error.message : String(error),
+          body: typeof errorBody === 'string' ? errorBody.slice(0, 500) : errorBody ?? null,
+        });
         if (statusCode === 404 || statusCode === 410) expiredIds.push(subscription.id);
         else failed += 1;
       }

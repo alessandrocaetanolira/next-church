@@ -89,6 +89,9 @@ export function NotificationsProvider() {
         }
 
         const added = upsertNotification(notification);
+        if (notification.sourceType === 'gameChallenge') {
+          window.dispatchEvent(new CustomEvent('church:game-challenge-updated', { detail: notification }));
+        }
         if (added) {
           toast.info(notification.title, {
             description: notification.message,

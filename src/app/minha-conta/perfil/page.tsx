@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Camera, ImagePlus, Save } from 'lucide-react';
+import { ImagePlus, Save, UserRound, Mail, Phone, LockKeyhole, Globe2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageShell, LoadingState } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getProfile, updateProfile, uploadProfileAvatar, uploadProfileCover, type UserProfile } from '@/services/profile/profile-api';
 import { maskPhone } from '@/lib/utils';
 import { FullscreenMediaViewer } from '@/components/shared/FullscreenMediaViewer';
+import { ProfileHero, ProfileInfoRow, ProfileMediaAction, ProfileSection } from '@/components/profile/ProfilePrimitives';
 
 type ProfileForm = Pick<UserProfile, 'name' | 'phone' | 'birthDate' | 'aboutMe' | 'maritalStatus'>;
 
@@ -128,26 +128,33 @@ export default function UserProfilePage() {
         kind={mediaViewer ?? 'cover'}
         actions={<label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-black/45 px-3 py-2 text-sm font-medium text-white hover:bg-black/70"><ImagePlus className="h-4 w-4" />Alterar imagem<input type="file" accept="image/*" className="hidden" onChange={mediaViewer === 'cover' ? handleCoverChange : handleAvatarChange} /></label>}
       />
-      <form onSubmit={save} className="space-y-5">
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="relative aspect-[3/1] min-h-32 bg-muted">
-            {coverPreview ? <button type="button" className="block h-full w-full cursor-zoom-in text-left" onClick={() => setMediaViewer('cover')} aria-label="Ver capa do perfil em tela cheia"><img src={coverPreview} alt="Capa do perfil" className="h-full w-full object-cover" /></button> : <label className="flex h-full w-full cursor-pointer items-center justify-center gap-2 text-sm text-muted-foreground hover:bg-muted/70"><ImagePlus className="h-5 w-5" />Carregar imagem<input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} /></label>}
-          </div>
-          <div className="flex items-center justify-between gap-3 px-4 py-3"><div><p className="font-medium">Capa do perfil</p><p className="text-xs text-muted-foreground">Use uma imagem horizontal para destacar seu perfil.</p></div>{coverPreview ? <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"><ImagePlus className="h-4 w-4" />Alterar<input type="file" accept="image/*" className="hidden" onChange={handleCoverChange} /></label> : null}</div>
-        </div>
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-border p-5 sm:flex-row">
-          {avatarPreview ? <button type="button" className="cursor-zoom-in rounded-full" onClick={() => setMediaViewer('avatar')} aria-label="Ver foto do perfil em tela cheia"><Avatar className="h-24 w-24 border border-border"><AvatarImage src={avatarPreview} alt={form.name} /><AvatarFallback className="bg-primary/10 text-2xl text-primary">{profileInitials}</AvatarFallback></Avatar></button> : <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-full border border-dashed border-border text-xs text-muted-foreground hover:bg-muted/60"><Camera className="h-5 w-5" />Carregar<input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} /></label>}
-          <div className="text-center sm:text-left"><p className="font-medium">Foto do perfil</p><p className="mt-1 text-xs text-muted-foreground">Sua foto ficará visível para outros membros da igreja.</p><label className="mt-3 inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-primary hover:underline"><Camera className="h-4 w-4" />{avatarPreview ? 'Alterar foto' : 'Carregar foto'}<input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} /></label></div>
+      <form onSubmit={save} className="space-y-6">
+        <ProfileHero name={form.name} email={profile.email} initials={profileInitials} avatarUrl={avatarPreview} coverUrl={coverPreview} onViewAvatar={() => setMediaViewer('avatar')} onViewCover={() => setMediaViewer('cover')} onAvatarChange={handleAvatarChange} onCoverChange={handleCoverChange} />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ProfileMediaAction icon={UserRound} title="Foto do perfil" description="Visível para outros membros da igreja." onClick={() => setMediaViewer('avatar')} />
+          <ProfileMediaAction icon={ImagePlus} title="Capa do perfil" description="Use uma imagem horizontal para destacar seu perfil." tone="violet" onClick={() => setMediaViewer('cover')} />
         </div>
 
-        <div className="space-y-2"><Label htmlFor="profile-name">Nome</Label><Input id="profile-name" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} /></div>
-        <div className="space-y-2"><Label>E-mail</Label><Input value={profile.email} disabled /><p className="text-xs text-muted-foreground">O e-mail de acesso não pode ser alterado nesta tela.</p></div>
-        <div className="space-y-2"><Label htmlFor="profile-phone">Telefone</Label><Input id="profile-phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={15} value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="(00) 00000-0000" /></div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2"><Label htmlFor="profile-birth-date">Nascimento</Label><Input id="profile-birth-date" type="date" value={form.birthDate ?? ''} onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))} /></div>
-          <div className="space-y-2"><Label>Estado civil</Label><Select value={form.maritalStatus} onValueChange={(value) => setForm((current) => ({ ...current, maritalStatus: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent></Select></div>
-        </div>
-        <div className="space-y-2"><Label htmlFor="profile-about">Sobre você</Label><Textarea id="profile-about" rows={5} value={form.aboutMe} onChange={(event) => setForm((current) => ({ ...current, aboutMe: event.target.value }))} placeholder="Conte um pouco sobre você" /></div>
+        <ProfileSection title="Informações pessoais">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+            <ProfileInfoRow icon={UserRound} label="Nome"><Input id="profile-name" aria-label="Nome" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="mt-1 h-8 border-0 p-0 shadow-none focus-visible:ring-0" /></ProfileInfoRow>
+            <ProfileInfoRow icon={Mail} label="E-mail" value={profile.email} />
+            <ProfileInfoRow icon={Phone} label="Telefone"><Input id="profile-phone" aria-label="Telefone" type="tel" inputMode="tel" autoComplete="tel" maxLength={15} value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: maskPhone(event.target.value) }))} placeholder="(00) 00000-0000" className="mt-1 h-8 border-0 p-0 shadow-none focus-visible:ring-0" /></ProfileInfoRow>
+            <ProfileInfoRow icon={UserRound} label="Nascimento"><Input id="profile-birth-date" aria-label="Nascimento" type="date" value={form.birthDate ?? ''} onChange={(event) => setForm((current) => ({ ...current, birthDate: event.target.value }))} className="mt-1 h-8 border-0 p-0 shadow-none focus-visible:ring-0" /></ProfileInfoRow>
+            <ProfileInfoRow icon={UserRound} label="Estado civil"><Select value={form.maritalStatus} onValueChange={(value) => setForm((current) => ({ ...current, maritalStatus: value }))}><SelectTrigger className="mt-1 h-8 border-0 p-0 shadow-none focus:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="single">Solteiro(a)</SelectItem><SelectItem value="married">Casado(a)</SelectItem><SelectItem value="divorced">Divorciado(a)</SelectItem><SelectItem value="widowed">Viúvo(a)</SelectItem></SelectContent></Select></ProfileInfoRow>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm"><Label htmlFor="profile-about">Sobre você</Label><Textarea id="profile-about" rows={4} value={form.aboutMe} onChange={(event) => setForm((current) => ({ ...current, aboutMe: event.target.value }))} placeholder="Conte um pouco sobre você" className="mt-2 resize-none" /></div>
+        </ProfileSection>
+
+        <ProfileSection title="Segurança">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><ProfileInfoRow icon={LockKeyhole} label="Alterar senha" value="Defina uma nova senha para sua conta." /></div>
+        </ProfileSection>
+
+        <ProfileSection title="Preferências">
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><ProfileInfoRow icon={Globe2} label="Idioma" value="Português (Brasil)" /></div>
+        </ProfileSection>
+
         <Button type="submit" className="w-full" disabled={saving}><Save className="mr-2 h-4 w-4" />{saving ? 'Salvando...' : 'Salvar alterações'}</Button>
       </form>
     </PageShell>

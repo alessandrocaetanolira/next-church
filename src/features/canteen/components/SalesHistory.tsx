@@ -305,7 +305,7 @@ export function SalesHistory() {
                 <FileText className="mr-1 h-4 w-4" /> PDF
               </Button>
               <Button variant="outline" size="sm" onClick={() => exportSalesExcel(filteredSales)}>
-                <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+                <FileSpreadsheet className="mr-1 h-4 w-4" /> CSV (Excel)
               </Button>
             </div>
           </div>
@@ -381,7 +381,7 @@ export function SalesHistory() {
                 <FileText className="mr-1 h-4 w-4" /> PDF
               </Button>
               <Button variant="outline" size="sm" onClick={() => exportDebtExcel(members)}>
-                <FileSpreadsheet className="mr-1 h-4 w-4" /> Excel
+                <FileSpreadsheet className="mr-1 h-4 w-4" /> CSV (Excel)
               </Button>
             </div>
           </div>

@@ -74,6 +74,7 @@ export const ROLE_DEFAULT_PERMISSIONS: Record<string, readonly string[]> = {
   ],
   PASTOR: [
     ...DEFAULT_MEMBER_PERMISSIONS,
+    ...getPermissionKeysForModule('feed'),
     'members:view', 'members:create', 'members:approve', 'members:manage_access',
     'groups:view', 'groups:create', 'groups:update', 'groups:manage_access',
     'tasks:view', 'tasks:create', 'tasks:update', 'tasks:delete', 'tasks:export',
@@ -123,6 +124,13 @@ export function getRoleDefaultPermissions(role: string | null | undefined) {
 export function getEffectivePermissions(role: string | null | undefined, permissions: string[] | string | null | undefined) {
   const normalizedRole = String(role ?? '').toUpperCase();
   const hasNoExplicitPermissions = permissions === null || permissions === undefined || (Array.isArray(permissions) && permissions.length === 0) || permissions === '';
-  const preset = hasNoExplicitPermissions && normalizedRole !== 'MEMBER' ? getRoleDefaultPermissions(normalizedRole) : [];
+  // O pastor mantém o conjunto padrão do perfil mesmo quando há permissões
+  // adicionais persistidas. Isso garante que uma edição pontual não remova
+  // ações estruturais do perfil, especialmente as operações completas do Feed.
+  const preset = normalizedRole === 'PASTOR'
+    ? getRoleDefaultPermissions(normalizedRole)
+    : hasNoExplicitPermissions && normalizedRole !== 'MEMBER'
+      ? getRoleDefaultPermissions(normalizedRole)
+      : [];
   return Array.from(new Set([...preset, ...parsePermissions(permissions)]));
 }

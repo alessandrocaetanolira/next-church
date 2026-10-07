@@ -94,13 +94,13 @@ export function CanteenContainer() {
   }, [tabFromUrl, canSell, canOperate, canManageProducts, canViewSales, canManageCanteen, firstAvailableTab]);
 
   useEffect(() => {
-    if (!canViewSales && !canOperate) return;
+    if (!canViewSales && !canOperate && !canSell && !canOrder) return;
     void getCanteenStatus()
       .then((status) => {
         if (status) setCanteenStatus({ isOpen: Boolean(status.isOpen), openedAt: status.openedAt ?? null });
       })
       .catch(() => undefined);
-  }, [canViewSales, canOperate]);
+  }, [canViewSales, canOperate, canSell, canOrder]);
 
   const toggleCanteen = async () => {
     if (!canOperate || updatingStatus) return;
@@ -137,7 +137,7 @@ export function CanteenContainer() {
     const hasNewCanteenEvent = notifications.some((notification) => {
       const isNew = !nextIds.has(notification.id);
       nextIds.add(notification.id);
-      return isNew && notification.type.startsWith('canteen-order-');
+      return isNew && (notification.type.startsWith('canteen-order-') || notification.type.startsWith('canteen-credit-'));
     });
 
     seenNotificationIdsRef.current = nextIds;

@@ -64,7 +64,9 @@ export default function FeedPage() {
   const role = user?.role?.toUpperCase() ?? 'MEMBER';
   const canPostAnnouncement = ['ADMIN', 'PASTOR'].includes(role);
   const canTargetFeed = ['ADMIN', 'PASTOR'].includes(role);
-  const canCreatePost = hasActionPermission(user, 'feed', 'publish') || hasActionPermission(user, 'feed', 'create');
+  const canCreatePost = ['ADMIN', 'PASTOR'].includes(role)
+    || hasActionPermission(user, 'feed', 'publish')
+    || hasActionPermission(user, 'feed', 'create');
   const canUpdateFeed = hasActionPermission(user, 'feed', 'comment') || hasActionPermission(user, 'feed', 'update');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
 

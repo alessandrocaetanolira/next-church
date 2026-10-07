@@ -168,7 +168,32 @@ aceite registrado.
 - [x] Revisar modal inicial de notificações para recuperar subscriptions concedidas
       mas ainda não registradas.
 
+### Pendência crítica — recuperação do Service Worker em produção
+
+Diagnóstico registrado em 2026-10-06: o app é executado com `next start`, portanto
+o worker deve ser validado somente após `npm run build`. O worker atual é servido em
+`/serwist/sw.js`, enquanto versões anteriores usavam `/sw.js`; clientes que ainda
+possuem o registro antigo podem continuar sob controle dele mesmo após a remoção do
+arquivo legado. O build existente contém 111 entradas de precache, incluindo `/`,
+`/bible`, `/auth/login` e `/offline`, mas essa evidência precisa ser repetida após o
+build do release que será publicado.
+
+- [ ] Criar limpeza única e segura de registros antigos somente de `/sw.js`, sem
+      reintroduzir registro manual ou manter dois mecanismos de Service Worker.
+- [ ] Confirmar que o único registro ativo em produção é `/serwist/sw.js`, com scope `/`.
+- [ ] Executar `npm run build` e `npm run start` no mesmo artefato antes do aceite offline.
+- [ ] Confirmar no navegador que o Service Worker está `activated` e controlando a página.
+- [ ] Confirmar no Cache Storage o precache do shell, chunks e fallback `/offline`.
+- [ ] Testar abertura e refresh offline em Android, iOS e desktop após uma visita online.
+- [ ] Confirmar que a Bíblia previamente baixada no Dexie abre offline; APIs continuam
+      `NetworkOnly` e não devem ser duplicadas no Cache Storage.
+- [ ] Registrar teste de regressão para impedir que o shell offline dependa de um build
+      antigo ou de um Service Worker legado.
+
 ## Prioridade 5 — Cantina
+
+- [ ] Executar o plano de integridade operacional da Cantina e dados reais do
+      Dashboard em [dashboard-canteen-todo.md](./dashboard-canteen-todo.md).
 
 - [x] Enfileirar criação, atualização de status e arquivamento de pedidos no Dexie
       quando a aplicação estiver offline, mantendo o registro local como `pending`.
@@ -226,7 +251,13 @@ aceite registrado.
 
 - [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
 - [x] Criar persistência inicial de pontuação de jogos e integrar o ranking ao perfil de engajamento.
+- [x] Integrar Caça-Palavras ao ranking: 10 pontos por palavra, bônus de tempo
+      limitado a 40 pontos, envio idempotente somente ao concluir e desistência sem
+      pontuação.
 - [ ] Integrar todos os jogos solo ao endpoint de pontuação com `clientRunId`/idempotência.
+- [ ] Evoluir resultados dos jogos solo com fila offline por tenant/usuário, retry
+      visível e histórico de partidas; o Caça-Palavras já usa o contrato online e
+      será incluído nessa fila comum.
 - [x] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
 - [x] Implementar o fluxo inicial de desafios entre membros: aceite/recusa, partida
       em dupla, jogadas server-side, snapshot SSE e compartilhamento do resultado.
@@ -236,6 +267,24 @@ aceite registrado.
 - [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
 - [ ] Executar a separação progressiva Web/Mobile conforme [web-mobile-separation-todo.md](./web-mobile-separation-todo.md).
 
+## Radar — integrações nativas futuras
+
+- [ ] Consolidar compartilhamentos externos com a **Web Share API**: versículos,
+      publicações do Feed, perfis e resultados de jogos devem abrir a folha de
+      compartilhamento nativa, com fallback acessível quando indisponível.
+- [ ] Avaliar a **Web Share Target API** para receber texto, links e, depois de
+      definir limites/validação de upload, imagens de outros apps como rascunho
+      autenticado de publicação ou material. Exigir seleção explícita do tenant e
+      nunca aceitar conteúdo diretamente como publicado.
+- [ ] Avaliar **Media Session API** somente quando houver áudio contínuo (pregações,
+      devocionais narrados ou mídia do Feed). Não usar para efeitos curtos, como o
+      som de vitória dos jogos.
+- [ ] Melhorar a apresentação de instalação do PWA no Android: adicionar
+      `description` e `screenshots` ao `manifest.ts`, com capturas mobile e desktop
+      do branding padrão, dados fictícios e sem conteúdo de tenant. Validar a
+      interface avançada de instalação em Chrome Android, sem depender dela para o
+      fluxo de instalação nem alterar o comportamento do iOS.
+
 ## Documentos detalhados
 
 - [Roadmap](./roadmap.md)
@@ -243,6 +292,7 @@ aceite registrado.
 - [Separação de tenants](./tenant-separation-todo.md)
 - [Offline-first](./offline-first-todo.md)
 - [Bíblia offline](./bible-offline-todo.md)
+- [Dashboard e Cantina — dados e operação](./dashboard-canteen-todo.md)
 - [E-mail transacional](./email-todo.md)
 - [Frontend](./frontend-todo.md)
 - [Separação Web/Mobile](./web-mobile-separation-todo.md)

@@ -304,13 +304,31 @@
   /* Área de conteúdo independente da navegação inferior no mobile. */
   .mobile-main {
     min-height: 0;
+    min-width: 0;
     flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 1rem;
-    scroll-padding-bottom: 1rem;
+    /* O BottomNav fica fixo no viewport e não participa mais do fluxo flex.
+       Mantemos espaço reservado para que o último conteúdo não fique atrás
+       da navegação, inclusive em aparelhos com safe area inferior. */
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-main--without-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    scroll-padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Páginas compartilhadas frequentemente são flex/grid. Sem min-width: 0,
+     um conteúdo longo pode aumentar o layout além do viewport e ser cortado
+     pelo overflow do shell mobile. Barras horizontais intencionais mantêm
+     seu próprio overflow-x-auto. */
+  .mobile-main > * {
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* No mobile, o documento não rola: somente .mobile-main rola. Isso evita
@@ -513,9 +531,11 @@
 
   .letter-cell {
     @apply flex select-none items-center justify-center rounded-md border font-bold uppercase transition-colors duration-150;
-    width: min(8.2vw, 2.5rem);
-    height: min(8.2vw, 2.5rem);
-    font-size: min(3.6vw, 1.125rem);
+    /* The grid owns its width. Fixed cells made 12×12 boards overflow mobile. */
+    min-width: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    font-size: clamp(0.625rem, 3.35vw, 1.125rem);
     font-family: 'Inter', system-ui, sans-serif;
     -webkit-user-select: none;
     user-select: none;
@@ -524,10 +544,16 @@
   }
 
   .word-found {
-    background-color: hsl(var(--primary) / 0.22);
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: inset 0 0 0 1px hsl(var(--primary-foreground) / 0.16);
   }
 
   .word-selecting {
-    background-color: hsl(var(--primary) / 0.14);
+    border-color: hsl(var(--primary) / 0.8);
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.16);
   }
 }

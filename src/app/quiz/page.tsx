@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import { WebPageLayout } from '@/components/shared/web';
 import { useWinnerSound } from '@/features/new-games/hooks/use-winner-sound';
 
 export default function QuizPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
   const userEmail = user?.email;
@@ -45,7 +47,7 @@ export default function QuizPage() {
   const [onlineChallenge, setOnlineChallenge] = useState<GameChallenge | null>(null);
   const [onlineAnswer, setOnlineAnswer] = useState<number | null>(null);
 
-  useWinnerSound(onlineChallenge?.status === 'completed' && onlineChallenge.winnerEmail?.toLowerCase() === userEmail?.toLowerCase());
+  useWinnerSound(Boolean(onlineChallenge?.status === 'completed' && onlineChallenge.winnerEmail));
 
   useEffect(() => {
     setPageTitle('Quiz Bíblico');
@@ -57,6 +59,13 @@ export default function QuizPage() {
     if (!challengeId) return;
     let closeStream: (() => void) | undefined;
     void getGameChallenge(challengeId).then((challenge) => {
+      // Compatibilidade para notificações antigas, emitidas quando desafios de
+      // memória apontavam para /quiz. A partida deve sempre abrir na interface
+      // que conhece o tabuleiro e as jogadas de memória.
+      if (challenge.gameType === 'memory') {
+        router.replace(`/jogos-novos/memoria?challenge=${encodeURIComponent(challengeId)}`);
+        return;
+      }
       setOnlineChallenge(challenge);
       closeStream = openGameChallengeStream(challengeId, (event) => {
         try {
@@ -70,7 +79,7 @@ export default function QuizPage() {
       });
     }).catch(() => toast.error('Não foi possível carregar este desafio.'));
     return () => closeStream?.();
-  }, []);
+  }, [router]);
 
   const acceptOnlineChallenge = async () => {
     if (!onlineChallenge) return;

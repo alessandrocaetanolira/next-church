@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { pushApi } from '@/services/api/push';
 
 function decodeVapidKey(value: string) {
@@ -9,7 +9,36 @@ function decodeVapidKey(value: string) {
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0));
 }
 
-export function usePushSubscription() {
+async function waitForServiceWorkerReady(timeoutMs = 8_000) {
+  const registration = await navigator.serviceWorker.getRegistration('/');
+  console.info('[push-client] estado do service worker', {
+    found: Boolean(registration),
+    scope: registration?.scope,
+    active: Boolean(registration?.active),
+    installing: Boolean(registration?.installing),
+    waiting: Boolean(registration?.waiting),
+  });
+
+  const timeout = new Promise<never>((_, reject) => {
+    window.setTimeout(() => reject(new Error('O Service Worker não ficou ativo. Feche e abra o app após executar o build de produção.')), timeoutMs);
+  });
+  return Promise.race([navigator.serviceWorker.ready, timeout]);
+}
+
+type PushSubscriptionState = {
+  supported: boolean;
+  supportIssue: string | null;
+  permission: NotificationPermission;
+  subscribed: boolean;
+  loading: boolean;
+  error: string | null;
+  subscribe: () => Promise<boolean>;
+  unsubscribe: () => Promise<boolean>;
+};
+
+const PushSubscriptionContext = createContext<PushSubscriptionState | null>(null);
+
+function usePushSubscriptionState(): PushSubscriptionState {
   const supportIssue = typeof window === 'undefined'
     ? null
     : !window.isSecureContext
@@ -31,7 +60,7 @@ export function usePushSubscription() {
 
   const registerCurrentSubscription = useCallback(async () => {
     if (!supported) return false;
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await waitForServiceWorkerReady();
     const subscription = await registration.pushManager.getSubscription();
     if (!subscription) return false;
     await pushApi.register(subscription.toJSON());
@@ -56,7 +85,8 @@ export function usePushSubscription() {
         if (nextPermission === 'denied') setError('A permissão foi bloqueada pelo navegador. Reative-a nas configurações do site.');
         return false;
       }
-      const registration = await navigator.serviceWorker.ready;
+      console.info('[push-client] aguardando service worker');
+      const registration = await waitForServiceWorkerReady();
       console.info('[push-client] service worker pronto', { scope: registration.scope, active: Boolean(registration.active) });
       const subscription = await registration.pushManager.getSubscription()
         ?? await (async () => {
@@ -105,5 +135,16 @@ export function usePushSubscription() {
     }
   }, [supported]);
 
-  return { supported, supportIssue, permission, subscribed, loading, error, subscribe, unsubscribe };
+  return useMemo(() => ({ supported, supportIssue, permission, subscribed, loading, error, subscribe, unsubscribe }), [supported, supportIssue, permission, subscribed, loading, error, subscribe, unsubscribe]);
+}
+
+export function PushSubscriptionProvider({ children }: { children: React.ReactNode }) {
+  const value = usePushSubscriptionState();
+  return createElement(PushSubscriptionContext.Provider, { value }, children);
+}
+
+export function usePushSubscription() {
+  const context = useContext(PushSubscriptionContext);
+  if (!context) throw new Error('usePushSubscription deve ser usado dentro de PushSubscriptionProvider.');
+  return context;
 }

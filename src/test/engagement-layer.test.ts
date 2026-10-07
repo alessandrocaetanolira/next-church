@@ -37,4 +37,28 @@ describe('camadas de engajamento', () => {
 
     expect(repository.updateProfile).toHaveBeenLastCalledWith('profile-1', 1, null, [1]);
   });
+
+  it('registra a pontuação válida do caça-palavras e rejeita valores acima do máximo', async () => {
+    const repository = repositoryMock();
+    (repository as unknown as { findGameScoreByRunId: ReturnType<typeof vi.fn>; createGameScore: ReturnType<typeof vi.fn> }).findGameScoreByRunId = vi.fn().mockResolvedValue(null);
+    (repository as unknown as { findGameScoreByRunId: ReturnType<typeof vi.fn>; createGameScore: ReturnType<typeof vi.fn> }).createGameScore = vi.fn().mockResolvedValue(undefined);
+    const service = new EngagementService(repository);
+
+    await service.recordGameScore('member@test.local', 'Membro', {
+      gameId: 'caca-palavras',
+      runId: 'word-search-run-001',
+      score: 120,
+    });
+
+    expect((repository as unknown as { createGameScore: ReturnType<typeof vi.fn> }).createGameScore).toHaveBeenCalledWith(expect.objectContaining({
+      gameId: 'caca-palavras',
+      score: 120,
+    }));
+
+    await expect(service.recordGameScore('member@test.local', 'Membro', {
+      gameId: 'caca-palavras',
+      runId: 'word-search-run-002',
+      score: 121,
+    })).rejects.toThrow('Pontuação incompatível');
+  });
 });

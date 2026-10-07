@@ -311,7 +311,7 @@ Usar os tokens semânticos já definidos em `globals.css`:
 - usar `Promise.all` somente para chamadas independentes e com tratamento parcial;
 - aplicar debounce em busca e filtros que consultam API;
 - usar `next/image` ou `AppImage` para imagens de produtos, avatars e branding;
-- lazy-load jogos, gráficos, PDF/XLSX e módulos pesados fora do caminho inicial;
+- lazy-load jogos, gráficos, PDF e módulos pesados fora do caminho inicial;
 - não persistir sessão completa, dados sensíveis ou listas grandes no localStorage;
 - revisar hydration mismatch causado por tema, Zustand persistido e IndexedDB;
 - medir bundle e renderizações antes/depois com Lighthouse e React Profiler;

@@ -14,7 +14,7 @@ interface WebPageLayoutProps {
 /** Layout exclusivo das páginas do template web. */
 export function WebPageLayout({ title, description, actions, children, className }: WebPageLayoutProps) {
   return (
-    <WebPageContainer size="wide" className={cn('space-y-6', className)}>
+    <WebPageContainer size="wide" className={cn('min-w-0 space-y-6', className)}>
       {title ? <WebPageHeader title={title} description={description} actions={actions} /> : null}
       {children}
     </WebPageContainer>

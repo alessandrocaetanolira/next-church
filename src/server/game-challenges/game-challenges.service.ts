@@ -55,7 +55,12 @@ export class GameChallengesService {
         type: 'game-challenge-invitation',
         title: `Novo desafio de ${gameType === 'quiz-bomba' ? 'Quiz Bomba' : gameType === 'memory' ? 'Memória' : 'Quiz Bíblico'}`,
         message: `${challenge.challengerName} desafiou você para uma partida de ${gameType === 'quiz-bomba' ? 'Quiz Bomba' : gameType === 'memory' ? 'Memória' : 'Quiz Bíblico'}.`,
-        href: `/quiz?challenge=${encodeURIComponent(challenge.id)}&game=${encodeURIComponent(gameType)}`,
+        // Memória possui uma interface e protocolo de jogada próprios. Abrir
+        // esse convite no Quiz deixava a partida ativa sem perguntas e a tela
+        // aparentava ficar aguardando indefinidamente.
+        href: gameType === 'memory'
+          ? `/jogos-novos/memoria?challenge=${encodeURIComponent(challenge.id)}`
+          : `/quiz?challenge=${encodeURIComponent(challenge.id)}&game=${encodeURIComponent(gameType)}`,
         sourceType: 'gameChallenge',
         sourceId: challenge.id,
       },
@@ -182,7 +187,8 @@ export class GameChallengesService {
     const scores = JSON.parse(challenge.scores || '{}') as Record<string, number>;
     const left = scores[challenge.challengerUserEmail.toLowerCase()] ?? 0;
     const right = scores[challenge.opponentUserEmail.toLowerCase()] ?? 0;
-    const content = `Desafio de ${challenge.gameType === 'quiz-bomba' ? 'Quiz Bomba' : 'Quiz Bíblico'} concluído: ${challenge.challengerName} ${left} x ${right} ${challenge.opponentName}.`;
+    const gameLabel = challenge.gameType === 'quiz-bomba' ? 'Quiz Bomba' : challenge.gameType === 'memory' ? 'Memória' : 'Quiz Bíblico';
+    const content = `Desafio de ${gameLabel} concluído: ${challenge.challengerName} ${left} x ${right} ${challenge.opponentName}.`;
     return feedService.create(user, { type: 'quiz_score', title: 'Resultado de desafio', content, reference: id, share: true });
   }
 }
