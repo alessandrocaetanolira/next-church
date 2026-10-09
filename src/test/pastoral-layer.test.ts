@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PastoralPolicy } from '@/server/pastoral/pastoral.policy';
 import { PastoralService } from '@/server/pastoral/pastoral.service';
 import type { PastoralRepository } from '@/server/pastoral/pastoral.repository';
+import type { FeedService } from '@/server/feed/feed.service';
 
 const pastor = { role: 'PASTOR', permissions: ['pastoral:view', 'members:approve', 'members:delete'], planFeatures: ['pastoral', 'members'] };
 const member = { role: 'MEMBER', permissions: [], planFeatures: ['pastoral', 'members'] };
@@ -25,12 +26,14 @@ describe('camadas pastorais', () => {
     expect(() => PastoralPolicy.assertApprove(member)).toThrow('aprovar');
   });
 
-  it('aprova membro usando o hash existente e cria acesso no repository', async () => {
+  it('aprova membro usando o hash existente, cria acesso e publica a apresentação', async () => {
     const repository = repositoryMock();
-    const service = new PastoralService(repository);
+    const feedService = { publishMemberWelcome: vi.fn().mockResolvedValue(null) } as unknown as Pick<FeedService, 'publishMemberWelcome'>;
+    const service = new PastoralService(repository, feedService);
 
     await expect(service.approve('member-1')).resolves.toEqual({ success: true });
     expect(repository.approve).toHaveBeenCalledWith('member-1', { name: 'João', email: 'joao@test.local', passwordHash: 'hash' });
+    expect(feedService.publishMemberWelcome).toHaveBeenCalledWith({ id: 'member-1', name: 'João', email: 'joao@test.local' });
   });
 
   it('impede aprovação sem senha e rejeita membro existente', async () => {

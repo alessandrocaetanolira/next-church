@@ -16,7 +16,7 @@ import { Trophy, Star, Zap, CheckCircle2, XCircle, RotateCcw, Medal, Crown, Awar
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createQuizAttempt, listQuizAttempts, type QuizAttempt } from '@/services/quiz/quiz-api';
-import { acceptGameChallenge, createQuizChallengeInvite, declineGameChallenge, getGameChallenge, listQuizChallengeInvitees, openGameChallengeStream, playGameChallenge, shareGameChallengeResult, type GameChallenge, type QuizChallengeInvitee } from '@/services/game-challenges/game-challenges-api';
+import { acceptGameChallenge, cancelGameChallenge, createQuizChallengeInvite, declineGameChallenge, getGameChallenge, listQuizChallengeInvitees, openGameChallengeStream, playGameChallenge, shareGameChallengeResult, type GameChallenge, type QuizChallengeInvitee } from '@/services/game-challenges/game-challenges-api';
 import { WebPageLayout } from '@/components/shared/web';
 import { useWinnerSound } from '@/features/new-games/hooks/use-winner-sound';
 
@@ -45,6 +45,7 @@ export default function QuizPage() {
   const [challengeAvailabilityKnown, setChallengeAvailabilityKnown] = useState(false);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
   const [onlineChallenge, setOnlineChallenge] = useState<GameChallenge | null>(null);
+  const [onlineChallengeId, setOnlineChallengeId] = useState<string | null>(null);
   const [onlineAnswer, setOnlineAnswer] = useState<number | null>(null);
 
   useWinnerSound(Boolean(onlineChallenge?.status === 'completed' && onlineChallenge.winnerEmail));
@@ -56,18 +57,25 @@ export default function QuizPage() {
 
   useEffect(() => {
     const challengeId = new URLSearchParams(window.location.search).get('challenge');
-    if (!challengeId) return;
+    if (challengeId) setOnlineChallengeId(challengeId);
+  }, []);
+
+  useEffect(() => {
+    if (!onlineChallengeId) {
+      setOnlineChallenge(null);
+      return;
+    }
     let closeStream: (() => void) | undefined;
-    void getGameChallenge(challengeId).then((challenge) => {
+    void getGameChallenge(onlineChallengeId).then((challenge) => {
       // Compatibilidade para notificações antigas, emitidas quando desafios de
       // memória apontavam para /quiz. A partida deve sempre abrir na interface
       // que conhece o tabuleiro e as jogadas de memória.
       if (challenge.gameType === 'memory') {
-        router.replace(`/jogos-novos/memoria?challenge=${encodeURIComponent(challengeId)}`);
+        router.replace(`/jogos-novos/memoria?challenge=${encodeURIComponent(onlineChallengeId)}`);
         return;
       }
       setOnlineChallenge(challenge);
-      closeStream = openGameChallengeStream(challengeId, (event) => {
+      closeStream = openGameChallengeStream(onlineChallengeId, (event) => {
         try {
           const data = JSON.parse(event.data) as { snapshot?: GameChallenge; payload?: { snapshot?: GameChallenge } };
           const snapshot = data.payload?.snapshot ?? data.snapshot;
@@ -79,7 +87,7 @@ export default function QuizPage() {
       });
     }).catch(() => toast.error('Não foi possível carregar este desafio.'));
     return () => closeStream?.();
-  }, [router]);
+  }, [onlineChallengeId, router]);
 
   const acceptOnlineChallenge = async () => {
     if (!onlineChallenge) return;
@@ -200,9 +208,11 @@ export default function QuizPage() {
     if (!selectedChallengeInvitee) return;
     setChallengeSending(true);
     try {
-      await createQuizChallengeInvite(selectedChallengeInvitee.email);
+      const invite = await createQuizChallengeInvite(selectedChallengeInvitee.email);
       toast.success(`Convite enviado para ${selectedChallengeInvitee.name}.`);
       setChallengeDrawerOpen(false);
+      setOnlineChallengeId(invite.id);
+      router.replace(`/quiz?challenge=${encodeURIComponent(invite.id)}&game=quiz`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o convite.');
     } finally {
@@ -275,6 +285,7 @@ export default function QuizPage() {
 
   const currentQ = questions[currentIndex];
   const onlineTurnIsMine = onlineChallenge?.currentTurnEmail?.toLowerCase() === userEmail?.toLowerCase();
+  const onlineIsOpponent = onlineChallenge?.opponentUserEmail.toLowerCase() === userEmail?.toLowerCase();
   const onlineOpponentName = onlineChallenge
     ? (onlineChallenge.challengerUserEmail.toLowerCase() === userEmail?.toLowerCase()
       ? onlineChallenge.opponentName
@@ -293,7 +304,7 @@ export default function QuizPage() {
     <WebPageLayout>
       <>
         {onlineChallenge?.status === 'pending' ? (
-          <Card className="mb-4 border-primary/30 bg-primary/5"><CardContent className="flex items-center justify-between gap-3 p-4"><div><p className="font-semibold">{onlineChallenge.challengerName} desafiou você</p><p className="text-sm text-muted-foreground">Partida de {onlineChallenge.gameType === 'quiz-bomba' ? 'Quiz Bomba' : 'Quiz Bíblico'}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void acceptOnlineChallenge()}>Aceitar</Button><Button size="sm" variant="outline" onClick={() => void declineGameChallenge(onlineChallenge.id).then(() => setOnlineChallenge(null))}>Recusar</Button></div></CardContent></Card>
+          <Card className="mb-4 border-primary/30 bg-primary/5"><CardContent className="flex items-center justify-between gap-3 p-4"><div><p className="font-semibold">{onlineIsOpponent ? `${onlineChallenge.challengerName} desafiou você` : `Convite enviado para ${onlineChallenge.opponentName}`}</p><p className="text-sm text-muted-foreground">{onlineIsOpponent ? 'Aceite para iniciar a partida.' : 'Aguardando o aceite do participante.'}</p></div>{onlineIsOpponent ? <div className="flex gap-2"><Button size="sm" onClick={() => void acceptOnlineChallenge()}>Aceitar</Button><Button size="sm" variant="outline" onClick={() => void declineGameChallenge(onlineChallenge.id).then(() => setOnlineChallenge(null))}>Recusar</Button></div> : <Button size="sm" variant="outline" onClick={() => void cancelGameChallenge(onlineChallenge.id).then(() => setOnlineChallenge(null))}>Cancelar convite</Button>}</CardContent></Card>
         ) : null}
         {onlineChallenge?.status === 'active' ? (
           <Card className="mb-4 border-primary/30"><CardHeader><CardTitle>Desafio online</CardTitle><p className="text-sm text-muted-foreground">{onlineTurnIsMine ? 'Sua vez' : `Aguardando ${onlineOpponentName}`}</p><p className="text-xs text-muted-foreground">{onlineChallenge.challengerName} x {onlineChallenge.opponentName}</p></CardHeader><CardContent className="space-y-3">

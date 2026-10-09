@@ -56,6 +56,18 @@ executado ainda.
   `church_igreja-teste.db` e cópias históricas de tenant.
 - Nenhum banco foi removido, resetado ou migrado durante esta execução.
 
+### Registro complementar — 08/10/2026
+
+- Inventário somente-leitura confirmou quatro bancos ativos: `global.db`,
+  `church_igreja-teste.db`, `church_g3.db` e `bible.db`.
+- Backup SQLite consistente criado em `/tmp/church-p0-backup-20261008-1428`;
+  o `manifest.json` registra tamanho e SHA-256 de origem e cópia para cada banco.
+- `PRAGMA integrity_check` retornou `ok` para cada cópia.
+- A cópia de `bible.db` contém `AA`, `ACF` e `NVI`, 66 livros e 93.315 versículos.
+- Os hashes físicos de origem e cópia podem diferir porque `sqlite3 .backup`
+  regrava páginas do SQLite; a integridade e o conteúdo foram verificados
+  separadamente. Nenhum banco de origem foi modificado.
+
 ## Inventário inicial — 01/10/2026
 
 - `global.db`: schema atualizado conforme `prisma/global/migrations`.

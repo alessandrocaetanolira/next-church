@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Bell, Download, MoreVertical, PlusSquare, Share } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bell, Download, PlusSquare, Share } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
 import { Button } from '@/components/ui/button';
@@ -40,15 +40,15 @@ function writeFlag(key: string) {
 }
 
 export function PwaOnboarding() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const push = usePushSubscription();
   const [mounted, setMounted] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(true);
   const [notificationsPromptClosed, setNotificationsPromptClosed] = useState(false);
-  const [installResolved, setInstallResolved] = useState(false);
-  const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
+  const previousPushPermissionRef = useRef<NotificationPermission | null>(null);
+  const identity = isAuthenticated ? `${user?.isPlatformAdmin}:${user?.tenantId}:${user?.id}` : null;
 
   const ios = useMemo(() => isIosBrowser(), []);
   const android = useMemo(() => isAndroidBrowser(), []);
@@ -59,9 +59,6 @@ export function PwaOnboarding() {
     setInstalled(isStandalone());
     const dismissed = readFlag(INSTALL_DISMISSED_KEY);
     setInstallDismissed(dismissed);
-    // O app instalado ou já dispensado não deve bloquear o onboarding de
-    // notificações. A permissão Push é independente da instalação do PWA.
-    setInstallResolved(isStandalone() || dismissed);
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -72,7 +69,6 @@ export function PwaOnboarding() {
       setInstallPrompt(null);
       writeFlag(INSTALL_DISMISSED_KEY);
       setInstallDismissed(true);
-      setInstallResolved(true);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt as EventListener);
@@ -84,27 +80,41 @@ export function PwaOnboarding() {
   }, []);
 
   useEffect(() => {
-    if (!production || !mounted || !isAuthenticated || !('serviceWorker' in navigator)) return;
-    void navigator.serviceWorker.ready.then(() => setServiceWorkerReady(true)).catch(() => setServiceWorkerReady(false));
-  }, [isAuthenticated, mounted, production]);
+    setNotificationsPromptClosed(false);
+    previousPushPermissionRef.current = null;
+  }, [identity]);
+
+  useEffect(() => {
+    const previousPermission = previousPushPermissionRef.current;
+    // A pessoa pode conceder a permissão no diálogo do SO ou nos ajustes do
+    // navegador depois de dispensar o onboarding. Nesse caso, reabrimos apenas
+    // a etapa de sincronização; fechar a modal sem mudar a permissão continua
+    // respeitado até uma nova abertura do app.
+    if (previousPermission !== null
+      && previousPermission !== 'granted'
+      && push.permission === 'granted'
+      && !push.subscribed) {
+      setNotificationsPromptClosed(false);
+    }
+    previousPushPermissionRef.current = push.permission;
+  }, [push.permission, push.subscribed]);
 
   const canOfferInstall = production && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios || android);
-  // Notification.permission é a fonte de verdade do navegador. Só exibimos a
-  // modal quando ainda não houve decisão; permissões granted/denied não devem
-  // disparar um novo pedido de permissão.
+  // Instalação tem prioridade: apenas um diálogo pode capturar foco por vez.
+  // A sugestão não depende de worker ativo; a ativação trata espera e falhas.
   const canOfferNotifications = production
     && mounted
     && isAuthenticated
-    && serviceWorkerReady
+    && !canOfferInstall
+    && push.statusChecked
     && push.supported
     && !push.subscribed
     && !notificationsPromptClosed
-    && (push.permission === 'default' || push.permission === 'granted')
+    && (push.permission === 'default' || push.permission === 'granted' || push.permission === 'denied');
 
   const dismissInstall = () => {
     writeFlag(INSTALL_DISMISSED_KEY);
     setInstallDismissed(true);
-    setInstallResolved(true);
   };
 
   const openInApp = () => {
@@ -168,14 +178,22 @@ export function PwaOnboarding() {
       <Dialog open={canOfferNotifications} onOpenChange={(open) => { if (!open) dismissNotifications(); }}>
         <DialogContent className="max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'denied' ? 'Notificações bloqueadas' : push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
             <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.</p>
+          {push.permission === 'denied' ? (
+            <p className="text-sm text-muted-foreground">A permissão foi bloqueada nas configurações do navegador. Libere notificações para este site nas configurações do dispositivo e volte ao app; vamos detectar a mudança e permitir sincronizar.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.</p>
+          )}
           {push.error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{push.error}</p>}
           <DialogFooter className="gap-2 pt-2 sm:space-x-0">
-            <Button variant="ghost" className="w-full sm:w-auto" onClick={dismissNotifications}>Agora não</Button>
-            <Button className="w-full sm:w-auto" onClick={() => void enableNotifications()} disabled={push.loading}>{push.loading ? 'Sincronizando...' : push.permission === 'granted' ? 'Sincronizar agora' : 'Ativar notificações'}</Button>
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={dismissNotifications}>{push.permission === 'denied' ? 'Entendi' : 'Agora não'}</Button>
+            {push.permission !== 'denied' ? (
+              <Button className="w-full sm:w-auto" onClick={() => void enableNotifications()} disabled={push.loading}>
+                {push.loading ? 'Ativando...' : push.phase === 'error' ? 'Tentar novamente' : push.permission === 'granted' ? 'Concluir ativação' : 'Ativar notificações'}
+              </Button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>

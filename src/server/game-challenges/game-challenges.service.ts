@@ -4,6 +4,7 @@ import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tena
 import { GameChallengesRepository } from './game-challenges.repository';
 import { publishGameEvent } from '@/infra/sse/game-sse-broker';
 import type { FeedService } from '@/server/feed/feed.service';
+import { createMemoryChallengeBoard } from '@/lib/games/memory-card-catalog';
 
 const QUIZ_INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1_000;
 
@@ -102,9 +103,9 @@ export class GameChallengesService {
     if (new Date(current.expiresAt).getTime() <= Date.now()) throw new ConflictError('Este convite expirou.');
     const questions = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(`SELECT id FROM "QuizQuestion" WHERE deletedAt IS NULL ORDER BY RANDOM() LIMIT 10`);
     if (current.gameType !== 'memory' && questions.length < 1) throw new ValidationError('Não há perguntas disponíveis para iniciar o desafio.');
-    const memoryBoard = current.gameType === 'memory'
-      ? Array.from({ length: 16 }, (_, index) => ({ id: `memory-${index % 8}` })).sort(() => Math.random() - 0.5).map((card) => card.id)
-      : [];
+    // The shuffled card IDs are part of the match state and are persisted once
+    // at acceptance. Neither participant creates a local board.
+    const memoryBoard = current.gameType === 'memory' ? createMemoryChallengeBoard() : [];
     const accepted = await this.repository.accept(id, email(emailAddress), questions.map((question) => question.id), memoryBoard);
     if (!accepted) throw new ConflictError('O desafio foi atualizado por outro participante.');
     const snapshot = await this.publicSnapshot(id, emailAddress);

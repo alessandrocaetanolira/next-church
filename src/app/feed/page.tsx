@@ -99,12 +99,6 @@ export default function FeedPage() {
   }, [setPageTitle]);
 
   useEffect(() => {
-    const handleFeedUpdate = () => setNewPostsAvailable(true);
-    window.addEventListener('church:feed-post-created', handleFeedUpdate);
-    return () => window.removeEventListener('church:feed-post-created', handleFeedUpdate);
-  }, []);
-
-  useEffect(() => {
     let active = true;
 
     const loadOptions = async () => {
@@ -172,7 +166,11 @@ export default function FeedPage() {
         const payload = await listFeedPosts(1, PAGE_SIZE, filterType);
         const newestId = Array.isArray(payload.items) ? payload.items[0]?.id : undefined;
         if (newestId !== undefined && latestPostIdRef.current !== undefined && newestId !== latestPostIdRef.current) {
-          setNewPostsAvailable(true);
+          if (document.visibilityState === 'visible' && (document.scrollingElement?.scrollTop ?? window.scrollY) < 24) {
+            await loadPosts(1, false);
+          } else {
+            setNewPostsAvailable(true);
+          }
         }
       } catch {
         // A atualização silenciosa não deve interromper a leitura do Feed.
@@ -194,7 +192,12 @@ export default function FeedPage() {
       else startFallback();
     };
     const handleFeedEvent = () => {
-      setNewPostsAvailable(true);
+      if (document.visibilityState !== 'visible' || (document.scrollingElement?.scrollTop ?? window.scrollY) >= 24) {
+        setNewPostsAvailable(true);
+        return;
+      }
+
+      void loadPosts(1, false).catch(() => setNewPostsAvailable(true));
     };
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
@@ -214,7 +217,7 @@ export default function FeedPage() {
       window.removeEventListener('church:feed-post-created', handleFeedEvent);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [filterType, initialLoading, isOffline]);
+  }, [filterType, initialLoading, isOffline, loadPosts]);
 
   const handleRefreshNewPosts = async () => {
     try {

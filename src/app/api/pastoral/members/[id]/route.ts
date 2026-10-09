@@ -5,13 +5,16 @@ import { UnauthenticatedError, ValidationError } from '@/lib/http/errors';
 import { approveMember, rejectMember } from '@/server/pastoral/pastoral.controller';
 import { PastoralRepository } from '@/server/pastoral/pastoral.repository';
 import { PastoralService } from '@/server/pastoral/pastoral.service';
+import { FeedRepository } from '@/server/feed/feed.repository';
+import { FeedService } from '@/server/feed/feed.service';
 
 async function getContext() {
   const session = await auth();
   if (!session?.user?.tenantId) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   const repository = new PastoralRepository(prisma);
-  return { user: session.user, service: new PastoralService(repository) };
+  const feedService = new FeedService(new FeedRepository(prisma), prisma, session.user.tenantId);
+  return { user: session.user, service: new PastoralService(repository, feedService) };
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

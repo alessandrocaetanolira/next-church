@@ -5,11 +5,10 @@ import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useUIStore } from '@/features/ui/store';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { db } from '@/lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Share2, Bookmark, BookmarkCheck, Copy, X, NotebookPen, ScrollText, Minus, Plus, Sun } from 'lucide-react';
+import { Share2, Bookmark, BookmarkCheck, Copy, X, NotebookPen, ScrollText } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,6 +22,7 @@ import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 import { createFeedPost } from '@/services/feed/feed-api';
 import { BibleWebNavigation } from '@/features/bible/components/BibleWebNavigation';
 import { useBibleReadingStore } from '@/features/bible/store';
+import { BibleReadingSettings } from '@/features/bible/components/BibleReadingSettings';
 
 type ScreenWakeLockSentinel = {
   release: () => Promise<void>;
@@ -44,7 +44,7 @@ export default function BiblePage() {
   const requestedVerse = Number(searchParams.get('verse'));
   const canShareToFeed = hasActionPermission(user, 'feed', 'share');
   const setPageTitle = useUIStore((state) => state.setPageTitle);
-  const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, fontSize, keepScreenAwake, setTenant, setTranslation, setBook, setChapter: setSelectedChapter, setFontSize, setKeepScreenAwake } = useBibleReadingStore();
+  const { tenantId: storedTenantId, translation, bookAbbrev, chapter: selectedChapter, fontSize, keepScreenAwake, setTenant, setTranslation, setBook, setChapter: setSelectedChapter, setWakeLockSupported, setWakeLockActive } = useBibleReadingStore();
   const { openDrawer, closeDrawer } = useDrawer();
 
   const [books, setBooks] = useState<BibleBook[]>([]);
@@ -138,24 +138,45 @@ export default function BiblePage() {
   }, [selectedBook?.abbrev, selectedChapter, translation]);
 
   useEffect(() => {
+    setWakeLockSupported(Boolean((navigator as NavigatorWithWakeLock).wakeLock));
+  }, [setWakeLockSupported]);
+
+  useEffect(() => {
+    let disposed = false;
+
     const release = async () => {
       const sentinel = wakeLockRef.current;
       wakeLockRef.current = null;
+      setWakeLockActive(false);
       if (sentinel) await sentinel.release().catch(() => undefined);
     };
 
     const request = async () => {
-      if (!keepScreenAwake || document.visibilityState !== 'visible') return;
+      if (!keepScreenAwake || document.visibilityState !== 'visible' || disposed) return;
       const wakeLock = (navigator as NavigatorWithWakeLock).wakeLock;
-      if (!wakeLock || wakeLockRef.current) return;
+      if (!wakeLock || wakeLockRef.current) {
+        if (!wakeLock) setWakeLockActive(false);
+        return;
+      }
       try {
         const sentinel = await wakeLock.request('screen');
+        if (disposed) {
+          await sentinel.release().catch(() => undefined);
+          return;
+        }
         wakeLockRef.current = sentinel;
+        setWakeLockActive(true);
         sentinel.addEventListener('release', () => {
-          if (wakeLockRef.current === sentinel) wakeLockRef.current = null;
+          if (wakeLockRef.current === sentinel) {
+            wakeLockRef.current = null;
+            setWakeLockActive(false);
+            if (!disposed && keepScreenAwake && document.visibilityState === 'visible') {
+              window.setTimeout(() => void request(), 0);
+            }
+          }
         });
       } catch {
-        // Alguns navegadores ou modos de economia de energia não oferecem Wake Lock.
+        setWakeLockActive(false);
       }
     };
 
@@ -167,10 +188,11 @@ export default function BiblePage() {
     void request();
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
+      disposed = true;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       void release();
     };
-  }, [keepScreenAwake]);
+  }, [keepScreenAwake, setWakeLockActive]);
 
   const favorites = useLiveQuery(() =>
     userEmail && tenantId ? db.bibleFavorites.filter((item) => item.userId === userEmail && item.tenantId === tenantId).toArray() : [],
@@ -394,31 +416,9 @@ export default function BiblePage() {
 
   const openReadingSettings = useCallback(() => {
     openDrawer({
-      content: <>
-        <DrawerHeader className="border-b text-left"><DrawerTitle>Preferências de leitura</DrawerTitle></DrawerHeader>
-        <div className="space-y-6 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="space-y-3">
-            <div>
-              <p className="font-medium">Tamanho da fonte</p>
-              <p className="text-sm text-muted-foreground">Ajuste para uma leitura mais confortável.</p>
-            </div>
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3">
-              <Button type="button" variant="outline" size="icon" onClick={() => setFontSize(fontSize - 1)} disabled={fontSize <= 15} aria-label="Diminuir fonte"><Minus className="h-4 w-4" /></Button>
-              <span className="min-w-20 text-center text-lg font-semibold" style={{ fontSize: `${fontSize}px` }}>Aa</span>
-              <Button type="button" variant="outline" size="icon" onClick={() => setFontSize(fontSize + 1)} disabled={fontSize >= 26} aria-label="Aumentar fonte"><Plus className="h-4 w-4" /></Button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-4 rounded-xl bg-muted/60 p-3">
-            <div className="flex gap-3">
-              <Sun className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <div><p className="font-medium">Manter tela ligada</p><p className="text-sm text-muted-foreground">Evita que a tela apague durante a leitura.</p></div>
-            </div>
-            <Switch checked={keepScreenAwake} onCheckedChange={setKeepScreenAwake} aria-label="Manter tela ligada" />
-          </div>
-        </div>
-      </>,
+      content: <BibleReadingSettings />,
     });
-  }, [fontSize, keepScreenAwake, openDrawer, setFontSize, setKeepScreenAwake]);
+  }, [openDrawer]);
 
   const selectBook = (book: BibleBook) => {
     setSelectedBook(book);

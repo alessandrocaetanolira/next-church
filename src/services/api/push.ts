@@ -1,12 +1,14 @@
 import { apiRequest } from './client';
 
 export const pushApi = {
-  publicKey: () => apiRequest<{ publicKey: string }>('/api/push/vapid-public-key'),
-  register: (subscription: PushSubscriptionJSON) => apiRequest<{ ok: true }>('/api/push/subscriptions', {
+  publicKey: (signal?: AbortSignal) => apiRequest<{ publicKey: string }>('/api/push/vapid-public-key', { signal }),
+  register: (subscription: PushSubscriptionJSON, signal?: AbortSignal) => apiRequest<{ ok: true }>('/api/push/subscriptions', {
+    signal,
     method: 'POST',
     body: JSON.stringify(subscription),
   }),
-  remove: (endpoint: string) => apiRequest<{ ok: true }>('/api/push/subscriptions', {
+  remove: (endpoint: string, signal?: AbortSignal) => apiRequest<{ ok: true }>('/api/push/subscriptions', {
+    signal,
     method: 'DELETE',
     body: JSON.stringify({ endpoint }),
   }),

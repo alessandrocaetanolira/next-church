@@ -66,6 +66,33 @@ describe('convites de desafios', () => {
     }));
   });
 
+  it('persiste uma única ordem de perguntas quando o desafio de quiz é aceito', async () => {
+    const repository = repositoryMock();
+    const pending = {
+      id: 'challenge-1', gameType: 'quiz', status: 'pending', challengerUserEmail: challenger.email,
+      challengerName: challenger.name, opponentUserEmail: 'opponent@test.local', opponentName: 'Oponente',
+      expiresAt: new Date(Date.now() + 60_000), acceptedAt: null, completedAt: null, startedAt: null,
+      currentTurnEmail: null, stateVersion: 0, moveSequence: 0, currentQuestion: 0, questionOrder: '[]',
+      scores: '{}', winnerEmail: null, memoryBoard: '[]', memoryMatched: '[]', memoryFirstIndex: null, memorySecondIndex: null,
+    };
+    const active = { ...pending, status: 'active', acceptedAt: new Date(), startedAt: new Date(), currentTurnEmail: challenger.email, questionOrder: JSON.stringify(['question-1', 'question-2']) };
+    const gameRepository = repository as unknown as {
+      getForParticipant: ReturnType<typeof vi.fn>;
+      accept: ReturnType<typeof vi.fn>;
+      getQuestions: ReturnType<typeof vi.fn>;
+    };
+    gameRepository.getForParticipant = vi.fn().mockResolvedValueOnce(pending).mockResolvedValueOnce(active);
+    gameRepository.accept = vi.fn().mockResolvedValue(active);
+    gameRepository.getQuestions = vi.fn().mockResolvedValue([{ id: 'question-1', question: 'Pergunta', options: '["A","B"]', points: 10 }]);
+    const prisma = { $queryRawUnsafe: vi.fn().mockResolvedValue([{ id: 'question-1' }, { id: 'question-2' }]) };
+    const service = new GameChallengesService(repository, prisma as never, 'tenant-test');
+
+    const snapshot = await service.accept('challenge-1', 'opponent@test.local');
+
+    expect(gameRepository.accept).toHaveBeenCalledWith('challenge-1', 'opponent@test.local', ['question-1', 'question-2'], []);
+    expect(snapshot.currentQuestionData).toMatchObject({ question: 'Pergunta', options: ['A', 'B'] });
+  });
+
   it('impede desafio a si mesmo e convite duplicado pendente', async () => {
     const repository = repositoryMock();
     const service = new GameChallengesService(repository, {} as never, 'tenant-test');

@@ -53,6 +53,13 @@ Este documento cobre os dois fluxos atuais:
 
 - [ ] Seguir o plano independente em [game-challenges-todo.md](./game-challenges-todo.md).
 - [ ] Definir se cada jogo terá modo cooperativo, competitivo ou ambos.
+- [x] Memória online usa um tabuleiro único: a ordem de IDs das cartas é criada
+      no aceite e persistida no desafio; ambos os clientes resolvem os mesmos IDs
+      pelo catálogo visual compartilhado. O criador do convite também entra no
+      modo online imediatamente.
+- [x] Quiz online persiste uma única ordem de perguntas no aceite; criador e
+      convidado entram no mesmo desafio pelo ID, mantêm o stream SSE ativo e
+      recebem o snapshot da próxima pergunta após cada jogada.
 
 ## Testes e aceite
 

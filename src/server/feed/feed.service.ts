@@ -1,11 +1,12 @@
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
-import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, publishFeedPostCreated, sendNotification } from '@/lib/server/notification-service';
+import { notifyAnnouncementPublished, notifyFeedComment, notifyFeedLike, notifyGroupFeedPublished, notifyMemberWelcome, publishFeedPostCreated, sendNotification } from '@/lib/server/notification-service';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { FeedRepository } from './feed.repository';
 import { FeedPolicy } from './feed.policy';
 import type { FeedComment } from '@/lib/db';
 
 type FeedUser = { email?: string | null; name?: string | null; image?: string | null; role?: string | null; linkedMemberId?: string | null };
+type WelcomedMember = { id: string; name: string; email: string };
 
 export class FeedService {
   constructor(private readonly repository: FeedRepository, private readonly prisma: TenantPrismaClient, private readonly tenantId: string) {}
@@ -82,6 +83,9 @@ export class FeedService {
     if (postAsGroup && !groupId) throw new ValidationError('Grupo obrigatório para publicação em nome do grupo.');
     if (postAsGroup && !group) throw new ValidationError('Grupo não encontrado.');
     const effectiveVisibility = postAsGroup ? 'group' : (canTargetFeed ? visibility : 'public');
+    const targetUserIds = canTargetFeed && visibility === 'individual' && Array.isArray(body.targetUserIds)
+      ? body.targetUserIds.filter((item): item is string => typeof item === 'string')
+      : [];
     const id = FeedRepository.generateId();
     const currentAvatar = await this.avatarFor(user.email ?? '', user.image);
     const handles = Array.from(content.matchAll(/@([\p{L}\p{N}._-]+)/gu)).map((match) => match[1]).filter(Boolean);
@@ -97,7 +101,7 @@ export class FeedService {
       mediaType: body.mediaType === 'video' || body.mediaType === 'image' ? body.mediaType : null,
       visibility: effectiveVisibility, groupId: effectiveVisibility === 'group' ? groupId : null,
       pinnedUntil: pinDays > 0 ? new Date(Date.now() + pinDays * 86400000).toISOString() : null,
-      targetUserIds: canTargetFeed && visibility === 'individual' && Array.isArray(body.targetUserIds) ? body.targetUserIds.filter((item): item is string => typeof item === 'string') : [],
+      targetUserIds,
       mentions,
     });
     const mentionedEmails = Array.from(new Set(mentionTargets.map((target) => target.email.trim().toLowerCase()).filter((email) => email !== user.email?.trim().toLowerCase())));
@@ -112,9 +116,54 @@ export class FeedService {
       actorName: user.name || 'Usuário',
       title: typeof body.title === 'string' ? body.title : null,
       content,
+      visibility: effectiveVisibility,
+      groupId: effectiveVisibility === 'group' ? groupId : null,
+      targetUserIds: effectiveVisibility === 'individual' ? targetUserIds : [],
     });
     if (type === 'announcement') await notifyAnnouncementPublished(this.prisma, this.tenantId, { postId: id, actorEmail: user.email as string, actorName: user.name || 'Usuário', title: typeof body.title === 'string' ? body.title : null, content, visibility: effectiveVisibility, groupId, targetUserIds: [], notifyResponsibles: false });
     else if (postAsGroup && group) await notifyGroupFeedPublished(this.prisma, this.tenantId, { postId: id, actorEmail: user.email as string, groupId: group.id, groupName: group.name, title: typeof body.title === 'string' ? body.title : null, content });
+    return post ? FeedRepository.serialize(post) : null;
+  }
+
+  /**
+   * Cria a apresentação pública e idempotente de um membro recém-aprovado.
+   * Este é um comando de sistema: não passa pela política de publicação do
+   * usuário porque a aprovação pastoral já autorizou o ingresso dele.
+   */
+  async publishMemberWelcome(member: WelcomedMember) {
+    const id = `member-welcome-${member.id}`;
+    const existing = await this.repository.findById(id);
+    if (existing && !existing.deletedAt) return FeedRepository.serialize(existing);
+
+    const post = await this.repository.create({
+      id,
+      userId: member.email,
+      userName: member.name,
+      userAvatar: await this.avatarFor(member.email),
+      senderType: 'user',
+      senderGroupId: null,
+      type: 'testimony',
+      title: null,
+      content: 'Olá! Agora faço parte desta comunidade e estou muito feliz por caminhar com vocês.',
+      reference: null,
+      mediaUrl: null,
+      mediaType: null,
+      visibility: 'public',
+      groupId: null,
+      pinnedUntil: null,
+      targetUserIds: [],
+      mentions: [],
+    });
+
+    await publishFeedPostCreated(this.prisma, this.tenantId, {
+      postId: id,
+      actorEmail: member.email,
+      actorName: member.name,
+      content: 'Olá! Agora faço parte desta comunidade e estou muito feliz por caminhar com vocês.',
+      visibility: 'public',
+    });
+    await notifyMemberWelcome(this.prisma, this.tenantId, member);
+
     return post ? FeedRepository.serialize(post) : null;
   }
 

@@ -4,19 +4,11 @@ import ChallengeMode from "@/features/new-games/components/ChallengeMode";
 import { useUser } from "@/features/new-games/contexts/UserContext";
 import { AppImage } from "@/components/shared";
 import { useWinnerSound } from "@/features/new-games/hooks/use-winner-sound";
-
-const IMAGES = [
-  { id: 1, img: "/jogos-novos/memory/adam-eve.png" },
-  { id: 2, img: "/jogos-novos/memory/moses-sea.png" },
-  { id: 3, img: "/jogos-novos/memory/david-goliath.png" },
-  { id: 4, img: "/jogos-novos/memory/noah-ark.png" },
-  { id: 5, img: "/jogos-novos/memory/jonah-fish.png" },
-  { id: 6, img: "/jogos-novos/memory/daniel-lions.png" },
-];
+import { MEMORY_CARD_CATALOG } from "@/lib/games/memory-card-catalog";
 
 interface Card {
   id: string;
-  pairId: number;
+  pairId: string;
   img: string;
   flipped: boolean;
   matched: boolean;
@@ -33,9 +25,9 @@ function shuffle<T>(arr: T[]): T[] {
 
 function createCards(): Card[] {
   return shuffle(
-    IMAGES.flatMap(p => [
-      { id: `${p.id}a`, pairId: p.id, img: p.img, flipped: false, matched: false },
-      { id: `${p.id}b`, pairId: p.id, img: p.img, flipped: false, matched: false },
+    MEMORY_CARD_CATALOG.flatMap((card) => [
+      { id: `${card.id}-a`, pairId: card.id, img: card.image, flipped: false, matched: false },
+      { id: `${card.id}-b`, pairId: card.id, img: card.image, flipped: false, matched: false },
     ])
   );
 }

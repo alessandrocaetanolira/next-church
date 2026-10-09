@@ -1,302 +1,312 @@
 # TODO principal — Church App
 
-Este é o índice canônico de trabalho. Os documentos de domínio abaixo mantêm o
-detalhamento técnico; este arquivo contém apenas o estado e a ordem de execução.
+Atualizado em **09/10/2026** após auditoria de código, documentação, histórico
+recente e testes existentes. Este é o índice canônico de prioridade. Os documentos
+de domínio continuam contendo contratos e checklists detalhados, mas não substituem
+a ordem definida aqui.
 
-## Fonte de verdade e próximo foco
+Legenda: `[ ]` pendente; `[~]` parcial ou sem aceite operacional; `[x]` implementado
+e validado no nível indicado.
 
-Este arquivo é o índice canônico: define a ordem geral e aponta o estado resumido.
-O plano operacional vigente para os incidentes de produção está em
-[production-stability-todo.md](./production-stability-todo.md) e tem precedência sobre
-qualquer checklist antigo ou documento de domínio quando houver conflito.
+## Estado confirmado
 
-Antes de ampliar módulos, executar esse plano na ordem. As prioridades abaixo só
-podem avançar depois do aceite das Fases 0 a 6 (backup da Bíblia, banco consistente,
-provisionamento, autenticação, sessões revogáveis e dados íntegros). O `bible.db`
-continua fora de qualquer limpeza ou reconstrução.
+- [x] Next.js 16, Prisma separado em bancos global, tenant e Bíblia compartilhada.
+- [x] PWA com Serwist, `manifest.ts`, fallback `/offline`, shell precacheado e dados
+      bíblicos no Dexie, fora do Cache Storage.
+- [x] Cadeia Route → Controller → Service → Repository aplicada na maior parte dos
+      módulos novos e críticos.
+- [x] Autorização por perfil + permissões persistidas; alterações chegam por SSE com
+      fallback Push quando não há listener ativo.
+- [x] SSE, notificações persistidas e Web Push são infraestrutura compartilhada.
+- [x] Branding, manifesto e cores por tenant possuem fallback institucional.
+- [x] Cantina possui PDV, carrinho persistente por tenant/usuário, preparo, fiado,
+      pagamentos, extrato inicial e bloqueio visual de cantina fechada.
+- [x] Feed possui comentários, menções, publicação por escopo e atualização SSE sem
+      deslocar a leitura quando a pessoa está rolada.
+- [x] Bíblia possui três versões no banco compartilhado, download opcional no Dexie,
+      favoritos, anotações, ajuste de fonte e tentativa de Wake Lock.
+- [x] Desafios de Quiz e Memória possuem convite, aceite, estado persistido e stream
+      de jogo separado.
 
-### Estado resumido do plano de produção
+## Trabalho local ainda não consolidado
 
-- [ ] Fase 0 — preservar e validar o `bible.db`; congelar o release.
-- [ ] Fase 1 — escolher reconstrução limpa ou reparo incremental.
-- [ ] Fase 2 — corrigir migrations, schema e provisionamento de tenants.
-- [ ] Fase 3 — corrigir dados inválidos e concluir a integridade do banco.
-- [ ] Fase 4 — revogar usuários excluídos/desativados e corrigir login.
-- [ ] Fase 5 — revogar sessões quando tenant ou permissões mudarem.
-- [ ] Fase 6 — consolidar perfis e matriz de permissões.
-- [ ] Fases 7–10 — branding, observabilidade, testes de release e aceite final.
+Só considerar estes itens concluídos depois de commit, build e aceite manual:
 
-Próximo foco (adiado): validar a Fase 2 em ambiente limpo de produção, incluindo
-criação assíncrona, falha, retry manual e fallback Push do admin global. O tenant
-`g3` já foi criado pelo painel e teve provisionamento concluído sem erro; falta o
-aceite operacional completo. O canal SSE global permanece exclusivo do admin de
-plataforma e isolado dos tenants.
+- [~] Feed: evento SSE refaz a primeira página no topo e mostra aviso durante leitura;
+      backend limita a entrega aos destinatários de posts públicos, de grupo ou
+      individuais.
+- [~] Feed: menções renderizadas usam cor primária com contraste no claro/escuro.
+- [~] Aprovação pastoral: cria post de apresentação do novo membro e notificação
+      persistida para todos os usuários ativos do tenant, entregue por SSE e Push.
+- [~] Bíblia: fonte expandida de 13px a 40px e estado explícito para Wake Lock;
+      navegadores sem suporte, especialmente Safari/iOS, exibem a limitação.
+- [~] Jogos: Memória e Quiz online usam tabuleiro/ordem de questões persistidos no
+      servidor; ainda exigem aceite em dois dispositivos e reconexão real.
 
-Cada item deve ser marcado somente no documento detalhado, com seu critério de
-aceite registrado.
+---
 
-## Auditoria técnica — ação imediata
+## P0 — Bloqueadores de release e segurança operacional
 
-- [x] Separar o typecheck do build sem reduzir a cobertura: o Next usa
-      `tsconfig.build.json`, enquanto `npm run typecheck` continua cobrindo testes
-      e scripts. Detalhes em [build-optimization.md](./build-optimization.md).
-- [ ] Medir separadamente o tempo de typecheck, tracing Prisma e Serwist em um
-      ambiente onde o Turbopack possa criar seus processos auxiliares.
-- [x] P0: remover a rota pública `/api/seed`; os dados de demonstração permanecem
-      exclusivamente nos scripts explícitos de inicialização. Remover também as
-      exceções públicas redundantes dos webhooks locais de teste no proxy.
-- [x] P1: alinhar a integração Serwist ao bundler oficial Turbopack do Next 16 e
-      validar o build com Service Worker gerado e precache automático.
-- [x] P1: consolidar SSE/Web Push; o provider mantém uma única conexão SSE,
-      `use-sse` reutiliza o mesmo stream e os serviços de polling legado foram removidos.
-- [x] P1: tornar o polling do Feed fallback do SSE, ativado somente quando o stream
-      estiver indisponível.
-- [ ] Medir Lighthouse/Web Vitals e perfil de rede nas rotas Login, Dashboard, Feed,
-      Cantina e Configurações antes de refatorar componentes grandes.
-- [ ] Definir política de carregamento de mídia para `AppImage` (lazy, decoding,
-      dimensões reservadas e prioridade).
-- [ ] Revisar regras ESLint desabilitadas e elevar warnings de hooks relevantes após
-      limpar ocorrências existentes.
+Nenhuma evolução de produto deve preceder estes itens em produção. `bible.db` nunca
+entra em limpeza, reset ou migration de tenant.
 
-## Estado atual
+### 1. Banco, provisionamento e arquivos
 
-- [x] Next.js 16 + Webpack oficial + TypeScript; Turbopack permanece em avaliação.
-- [x] Prisma separado em global, tenant e Bíblia compartilhada.
-- [x] Arquitetura Route → Controller → Service → Repository aplicada aos principais módulos.
-- [x] Cantina com produtos, PDV, preparo, pedidos, fiado, pagamentos e notificações.
-- [x] Feed, grupos, membros, materiais, pastoral, infantil, estacionamento e Quiz com services próprios.
-- [x] PWA com Serwist, manifest, fallback `/offline` e precache gerado no build.
-- [x] Bíblia com Dexie, favoritos, anotações e download opcional.
-- [x] Notificações internas, SSE e Web Push.
-- [x] Atualização de perfil via SSE com fallback Push quando não há conexão ativa.
-- [x] Badge numérico do ícone PWA sincronizado com notificações não lidas.
-- [x] Beep moderno e vibração para eventos recebidos em primeiro plano, com vibração
-      nativa no Web Push quando suportada pelo dispositivo.
-- [x] Branding por tenant, cores, logos e configuração do PWA.
-- [x] Manifest, ícones e tela de entrada PWA dinâmicos por tenant.
-- [x] Perfil do próprio usuário com avatar WebP e atualização de dados pessoais.
-- [x] Perfil do próprio usuário com capa horizontal em WebP, enviada em Base64 e
-      servida somente para usuários autenticados do tenant.
-- [x] Perfil público com avatar centralizado sobre a capa, visualização de mídia em
-      tela cheia e métricas de engajamento.
-- [x] Avatar atual resolvido no servidor para publicações e comentários antigos do
-      Feed, com fallback por iniciais quando não houver arquivo válido.
-- [x] Permissões padrão para novos membros aprovados, incluindo Feed e Bíblia.
-- [x] Ranking geral da igreja agregando devocional, quiz e pontuações persistidas de jogos.
-- [x] Quiz: persistir tentativa antes de exibir o resultado, mantendo a tela de
-      resultado disponível mesmo se o envio falhar; criar convite persistido e
-      notificação para desafio entre membros elegíveis.
-- [x] Link do devocional para abrir diretamente livro, capítulo e verso na Bíblia.
-- [ ] E-mail transacional ainda não implementado.
+- [~] Inventário e backup local verificável concluídos em 08/10; manifesto e cópia
+      íntegra estão em `/tmp/church-p0-backup-20261008-1428`. Repetir no volume ou
+      cofre do ambiente de deploy antes de qualquer operação nele.
+- [ ] Registrar no deploy: commit, Node, Prisma, diretório absoluto dos bancos,
+      comando de start, quantidade de processos e volumes persistentes.
+- [ ] Confirmar que migrations global/tenant e arquivos de branding estão no artefato
+      de deploy e em volume persistente.
+- [ ] Validar criação assíncrona de tenant em processo de produção: `PROVISIONING` →
+      `ACTIVE`, falha intermediária, retry, reinício do processo durante job e logs
+      sanitizados.
+- [ ] Garantir que os canais global-admin e tenant não cruzem eventos, inclusive no
+      fallback Push.
+- [ ] Executar smoke test para tenant novo: login, branding padrão, permissões,
+      migrations, admin inicial e desativação/reativação.
 
-## Prioridade 1 — Estabilização
+Referência: [production-stability-todo.md](./production-stability-todo.md) e
+[tenant-separation-todo.md](./tenant-separation-todo.md).
 
-- [x] Executar a suíte completa fora do sandbox e corrigir falhas reais, separando-as de limitações de subprocesso.
-- [x] Corrigir migrations pendentes em ambientes existentes antes de consultar colunas novas.
-- [x] Revalidar `npm run build` após as últimas alterações de branding/layout.
-- [x] Reduzir warnings relevantes de lint, corrigindo imagens, hooks e configuração do Vitest.
-- [x] Atualizar o estado de validação no README após cada rodada.
+### 2. Sessões, revogação e acesso
 
-## Prioridade 2 — Template Web
+- [~] Validar em produção que membro arquivado/revogado perde acesso na requisição
+      seguinte; tenant desativado já possui aceite local, mas precisa repetir no
+      ambiente publicado.
+- [ ] Separar definitivamente as ações “arquivar membro” e “revogar acesso”, com
+      auditoria de ator, alvo, motivo e data.
+- [ ] Criar testes de transição MEMBER → ADMIN → MEMBER com SSE, Push fallback,
+      atualização de navegação e bloqueio real nas APIs.
+- [ ] Revisar rotas ainda fora da arquitetura em camadas ou com Prisma direto:
+      fundraising de grupos, líderes de equipes, escalas/equipes, perfil, cadastro
+      público, sync e páginas server-side pastorais.
+- [ ] Substituir `jsonError` genérico por logs estruturados com correlação, rota,
+      tenant, usuário normalizado, decisão de autorização e erro Prisma sanitizado.
 
-- [x] Separar o `WebTemplate` do componente de layout que também atende o Mobile.
-- [x] Extrair `WebHeader` com logo, título, tema, notificações e ações da conta.
-- [x] Separar `WebSidebar` da renderização dos itens de navegação.
-- [x] Criar configuração central de navegação Web por grupos e módulos.
-- [x] Manter as regras de acesso fora dos componentes visuais de navegação.
-- [x] Criar `WebPageContainer` com largura e espaçamento padrão para telas Web.
-- [x] Criar breadcrumbs e contexto de navegação para telas internas.
-- [x] Criar `WebUserMenu` com perfil, configurações e logout.
-- [x] Criar `WebPageHeader` compartilhado para cabeçalhos de telas Web.
-- [x] Criar entrada compartilhada para componentes Web reutilizáveis (`components/shared/web`).
-- [x] Iniciar a migração de Membros para o padrão Web com tabela desktop própria.
-- [x] Iniciar a migração de Materiais com tabela desktop própria.
-- [x] Migrar Grupos para tabela Web, mantendo cartões no Mobile.
-- [x] Iniciar a migração do Feed com lista de publicações Web própria.
-- [x] Migrar o Feed para tabela Web, mantendo cards no Mobile.
-- [x] Iniciar a migração da Bíblia com navegação Web própria.
-- [x] Iniciar a migração de Administração e Cantina para o padrão Web com container compartilhado.
-- [x] Migrar a listagem de Planos para tabela Web.
-- [x] Migrar a gestão de Produtos da Cantina para tabela Web.
-- [x] Migrar o histórico de vendas da Cantina para tabela Web.
-- [x] Migrar a listagem de Fiado da Cantina para tabela Web.
-- [x] Migrar a listagem de membros da Cantina para tabela Web.
-- [x] Migrar Notificações para tabela Web.
-- [x] Migrar Escalas para tabela Web.
-- [x] Concluir as principais listagens desktop de Administração e Cantina.
-- [x] Migrar Grupos, Feed e Bíblia com componentes Web próprios.
-- [x] Migrar Estacionamento para tabela Web.
-- [x] Migrar Infantil para tabela Web.
-- [x] Migrar Projetos Sociais para tabela Web.
-- [x] Migrar Pastoral para tabelas Web.
-- [x] Garantir que chamadas de API permaneçam em hooks/services de domínio.
-- [x] Manter o template Mobile inalterado durante esta fase, usando variantes Web apenas no desktop.
+### 3. PWA/offline-first: aceite real obrigatório
 
-## Prioridade 3 — Permissões e experiência de acesso
+- [ ] Remover uma única vez registros legados de `/sw.js`, preservando apenas o
+      registro Serwist `/serwist/sw.js` com scope `/`.
+- [~] Artefato verificado em 08/10: build diagnóstico compilou, expôs
+      `/serwist/sw.js` com scope `/` e 250 entradas de precache, incluindo
+      `/bible` e `/offline`. O `npm run build` oficial com Turbopack ainda precisa
+      ser repetido no host de deploy: neste ambiente isolado o PostCSS não pode abrir
+      seu processo auxiliar. Em cada release, executar `npm run build` e depois
+      `npm run start` no mesmo artefato; confirmar worker `activated` e página
+      controlada.
+- [ ] Testar abertura e refresh offline em Android, iOS e desktop após visita online,
+      incluindo rota inicial e `/bible` com conteúdo já baixado.
+- [ ] Confirmar que API/RSC autenticada não fica armazenada inseguramente no Cache
+      Storage e que textos bíblicos vêm exclusivamente do Dexie.
+- [ ] Validar permissões Push e recuperação de subscription em Android/iOS, com app
+      aberto e fechado; conferir badge do ícone PWA e clique da notificação.
+- [ ] Corrigir somente após reprodução documentada qualquer tela branca, modal travada
+      ou falha de registro de subscription em iOS.
 
-- [x] Completar escopo de líder em grupos, materiais e tarefas.
-- [x] Garantir que o administrador veja todos os módulos autorizados, incluindo Cantina.
-- [x] Persistir permissões e equipes no store após login e atualizar permissões via SSE.
-- [x] Cobrir permissões com testes de policy, service e resposta HTTP.
-- [x] Cobrir transições ADMIN/MEMBER e entrega `permissions.updated` via SSE.
+Referência: [offline-first-todo.md](./offline-first-todo.md).
 
-## Prioridade 4 — Offline-first real
+---
 
-- [x] Isolar o cache da sessão offline por tenant e usuário e limpar o contexto no logout.
-- [x] Isolar o cursor e a fila de sincronização por tenant e usuário.
-- [x] Bloquear claramente publicação, curtida e comentário do Feed sem conexão.
-- [x] Iniciar o isolamento dos registros Dexie sincronizados pelo tenant ativo.
-- [x] Criar limpeza explícita dos registros offline legados sem tenant.
-- [x] Criar teste automatizado de isolamento entre dois tenants.
-- [x] Isolar favoritos, anotações e tentativas de Quiz pelo tenant ativo.
-- [x] Versionar o schema Dexie para índices pessoais com tenant.
-- [ ] Validar abertura e refresh offline em dispositivo real (Android, iOS e desktop).
-- [ ] Garantir sessão offline sem redirecionamento indevido para login.
-- [x] Revalidar a sessão online e liberar overlays/drawers ao retornar de uma aba
-      suspensa, evitando a tela aparentemente sem cliques.
-- [x] Isolar cache Dexie por tenant e usuário.
-- [ ] Completar sincronização, retry, conflitos e quota do IndexedDB, documentando a estratégia de resolução.
-- [x] Detectar conflito de versão no `push` sem sobrescrever alteração mais recente do servidor.
-- [x] Expor resumo de sucesso parcial, conflitos e falhas no sincronismo.
-- [x] Permitir resolução manual de conflitos pelo indicador de sincronização.
-- [x] Tratar sessão expirada e retry manual de falha parcial no indicador de sincronização.
-- [ ] Validar Bíblia offline com as três versões e downloads interrompidos.
-- [ ] Validar branding e manifest sem mistura entre tenants.
-- [ ] Confirmar instalação PWA em Android real, incluindo ícone e manifest do tenant.
-- [x] Usar o ícone PWA do tenant no payload de notificação Push, mantendo fallback
-      para o ícone padrão.
-- [x] Revisar modal inicial de notificações para recuperar subscriptions concedidas
-      mas ainda não registradas.
+## P1 — Correções de experiência mobile e fluxos já entregues
 
-### Pendência crítica — recuperação do Service Worker em produção
+O mobile é a referência principal do produto.
 
-Diagnóstico registrado em 2026-10-06: o app é executado com `next start`, portanto
-o worker deve ser validado somente após `npm run build`. O worker atual é servido em
-`/serwist/sw.js`, enquanto versões anteriores usavam `/sw.js`; clientes que ainda
-possuem o registro antigo podem continuar sob controle dele mesmo após a remoção do
-arquivo legado. O build existente contém 111 entradas de precache, incluindo `/`,
-`/bible`, `/auth/login` e `/offline`, mas essa evidência precisa ser repetida após o
-build do release que será publicado.
+### 4. Layout estável e componentes compartilhados
 
-- [ ] Criar limpeza única e segura de registros antigos somente de `/sw.js`, sem
-      reintroduzir registro manual ou manter dois mecanismos de Service Worker.
-- [ ] Confirmar que o único registro ativo em produção é `/serwist/sw.js`, com scope `/`.
-- [ ] Executar `npm run build` e `npm run start` no mesmo artefato antes do aceite offline.
-- [ ] Confirmar no navegador que o Service Worker está `activated` e controlando a página.
-- [ ] Confirmar no Cache Storage o precache do shell, chunks e fallback `/offline`.
-- [ ] Testar abertura e refresh offline em Android, iOS e desktop após uma visita online.
-- [ ] Confirmar que a Bíblia previamente baixada no Dexie abre offline; APIs continuam
-      `NetworkOnly` e não devem ser duplicadas no Cache Storage.
-- [ ] Registrar teste de regressão para impedir que o shell offline dependa de um build
-      antigo ou de um Service Worker legado.
+- [ ] Auditar e corrigir os contêineres desktop aninhados: `WebTemplate` já aplica
+      `WebPageContainer`, enquanto páginas que usam `WebPageLayout` ou outro
+      `WebPageContainer` aplicam largura e padding novamente.
+- [ ] Consolidar o shell de tabelas web. Há 12 componentes `*WebTable` próprios;
+      somente membros e materiais usam o `WebDataTable` compartilhado. Preservar as
+      colunas e regras de cada domínio, compartilhando estrutura, paginação e estados.
+- [ ] Adotar `SharedFlatList`/`InfiniteScroll` nas listagens mobile elegíveis e
+      extrair padrões de card reutilizáveis; hoje a lista compartilhada não padroniza
+      o conteúdo visual dos itens, e grupos, infantil e estacionamento mantêm
+      composições próprias.
+- [ ] Definir um shell compartilhado para drawers/dialogs (cabeçalho, altura,
+      safe-area, scroll e ações), mantendo conteúdo e regras dentro de cada domínio.
+- [ ] Completar o mapeamento de chrome mobile para rotas de detalhe, incluindo
+      `/admin/tenants/[id]` se confirmado o padrão imersivo: voltar contextual e
+      NavBottom oculta.
+- [ ] Padronizar conteúdo de Dashboard e telas de detalhe para usar os padrões
+      comuns de página, cabeçalho e estados loading/empty/error.
+- [ ] Registrar layouts imersivos/públicos como exceções explícitas: Bíblia, jogos,
+      perfil social, autenticação, offline e início do PWA.
+- [ ] Reproduzir e corrigir o `NavBottom` que sobe com scroll/teclado em iPhone;
+      validar `position: fixed`, viewport dinâmico, safe-area e formulários.
+- [ ] Corrigir drawer/modal com área branca inferior ou altura desproporcional em
+      mudanças de estado, teclado, request lento e troca de perfil.
+- [ ] Consolidar modal mobile: backdrop em flex centralizado, largura segura,
+      bordas/rounded coerentes e sem colar nas laterais.
+- [ ] Revisar topbars: tela raiz usa título simples; create/edit/detail usam chevron,
+      título central e avatar somente quando necessário; subrotas não exibem NavBottom.
+- [ ] Revisar overflow horizontal e dimensões de cards/listas, começando por Membros,
+      Feed, Cantina e administração global.
+- [ ] Validar light/dark em cards, drawers, chips, badges, divisores e contraste das
+      cores do tenant.
 
-## Prioridade 5 — Cantina
+### 5. Feed, perfil social e comunicação
 
-- [ ] Executar o plano de integridade operacional da Cantina e dados reais do
-      Dashboard em [dashboard-canteen-todo.md](./dashboard-canteen-todo.md).
+- [~] Testar em dois usuários/dispositivos o post SSE no topo, aviso durante scroll,
+      filtros e fallback de stream desconectado.
+- [ ] Testar menção criada por seleção e por texto digitado: resolução de membro,
+      link visual, notificação persistida, SSE e Push para subscription real.
+- [~] Testar aprovação de membro: post idempotente de boas-vindas, notificação para
+      todos do tenant e ausência de entrega entre tenants.
+- [ ] Completar perfil social: capa/avatares em todas as superfícies, visualização
+      fullscreen compartilhada, dados públicos adequados e links Feed/Membros/Perfil.
+- [ ] Definir política de privacidade para campos exibidos no perfil social e posts
+      automáticos de entrada de membro.
 
-- [x] Enfileirar criação, atualização de status e arquivamento de pedidos no Dexie
-      quando a aplicação estiver offline, mantendo o registro local como `pending`.
-- [x] Processar a fila de vendas no endpoint de sincronização com autorização de
-      operação, detecção de conflito e idempotência para retries.
-- [x] Adicionar consumidor intencional `VISITOR` sem criar membro falso.
-- [x] Diferenciar no PDV: membro, visitante e não identificado.
-- [x] Impedir fiado para visitante/não identificado.
-- [x] Adicionar filtros e relatórios por tipo de consumidor.
-- [x] Revisar PDF de vendas e operação de remoção de pedidos prontos.
+### 6. Bíblia e leitura
 
-## Prioridade 6 — Branding e UI
+- [~] Testar ajustes de fonte no mobile e persistência entre abertura/fechamento.
+- [ ] Confirmar Wake Lock em navegadores suportados; Safari/iOS deve manter feedback
+      de indisponibilidade, sem promessa falsa de tela ligada.
+- [ ] Validar downloads interrompidos, quota do IndexedDB e as três traduções offline
+      em dispositivos reais.
+- [ ] Avaliar presets de leitura (pequena, padrão, grande, extra grande) se o ajuste
+      de 1px não for suficiente para acessibilidade.
 
-- [x] Preview de branding no painel administrativo com tela mobile de dashboard e variantes iOS/Android.
-- [x] Organizar a aba Aparência em layout Web lado a lado, com preview à esquerda e formulários à direita.
-- [x] Aplicar logos light/dark configuráveis no loading inicial e nos estados de carregamento compartilhados.
-- [ ] Restaurar branding padrão do app.
-- [x] Alternar logo claro/escuro conforme o tema no template Web.
-- [x] Configurar ícone mobile e quatro logos da sidebar: aberta/recolhida em claro/escuro.
-- [x] Configurar uso opcional da imagem e textos opcionais da sidebar.
-- [ ] Atualizar metadata/title e ícones dinamicamente por tenant.
-- [x] Consolidar `AppImage` e fallback de logo nos principais carregamentos.
-- [x] Validar fallback de logo após login e em light/dark.
-- [x] Criar `InfiniteScroll` compartilhado para listas mobile.
-- [x] Ajustar Feed mobile com cards, categorias, aviso de novas publicações e drawer inferior de comentários.
-- [x] Aplicar transparência e blur ao `NavBottom`, preservando contraste e safe-area.
-- [x] Substituir menu de usuário mobile por drawer bottom padrão, com confirmação de logout.
-- [x] Consolidar `ErrorState`, `OfflineState`, `ActionMenu` e `FilterBar` compartilhados.
-- [ ] Extrair hooks e seções das telas client-side maiores (Dashboard, Minha Conta,
-      Grupo, Cantina, Feed e Configurações), começando pelas rotas mais acessadas.
+### 7. Cantina, dashboard e carteira
 
-## Prioridade 7 — Notificações e e-mail
+- [ ] Validar em operação real PDF de vendas, arquivamento de pedido pronto e
+      atualização SSE da fila.
+- [ ] Revalidar produto, disponibilidade, preço e estoque ao restaurar carrinho;
+      definir expiração e limpeza de carrinho abandonado.
+- [ ] Definir e testar venda offline quando a Cantina fechar antes da sincronização;
+      ela não pode ser apresentada como concluída localmente.
+- [ ] Finalizar carteira: rollback/revalidação em pagamento com erro, atualização ao
+      voltar online e filtros de extrato por período/tipo.
+- [ ] Cobrir fiado, pagamento parcial, quitação, cancelamento, conflito e eventos em
+      tempo real com testes de integração.
 
-- [x] Broker SSE, persistência interna e Web Push.
-- [x] Eventos compartilhados para Cantina e demais módulos principais.
-- [x] Reproduzir beep e vibração em notificações SSE e Push recebidas com o app aberto.
-- [x] Adicionar testes para remetente, entrega e eventos de crédito.
-- [ ] Implementar e-mail transacional com provider, templates, fila, retry e idempotência.
+Referência: [dashboard-canteen-todo.md](./dashboard-canteen-todo.md).
 
-## Prioridade 7.1 — Presença online por tenant
+---
 
-- [ ] Implementar o plano completo de presença em
-      [presence-todo.md](./presence-todo.md).
-- [ ] Criar serviço exclusivo de presença com heartbeat, TTL e política de
-      acesso por tenant.
-- [ ] Reutilizar o SSE existente como transporte, mantendo uma única conexão
-      por janela; presença será um canal lógico tipado, sem misturar seus dados
-      com notificações persistidas.
-- [ ] Exibir presença na tela de Membros somente para administradores ou usuários
-      com `members:online:view`.
-- [ ] Cobrir isolamento, expiração, reconexão, logout e múltiplos tenants.
-- [ ] Planejar Redis/pub-sub antes de habilitar múltiplas instâncias.
+## Adiado — não iniciar nesta etapa
 
-## Prioridade 8 — Módulos de baixa prioridade
+Os itens abaixo não fazem parte da sequência ativa. A infraestrutura atual de SSE e
+Push permanece em uso de instância única; nenhuma entrega de produto deve depender
+de Redis, métricas novas, presença ou refatoração operacional adicional.
 
-- [ ] Refatorar Jogos conforme [games-todo.md](./games-todo.md).
-- [x] Criar persistência inicial de pontuação de jogos e integrar o ranking ao perfil de engajamento.
-- [x] Integrar Caça-Palavras ao ranking: 10 pontos por palavra, bônus de tempo
-      limitado a 40 pontos, envio idempotente somente ao concluir e desistência sem
-      pontuação.
-- [ ] Integrar todos os jogos solo ao endpoint de pontuação com `clientRunId`/idempotência.
-- [ ] Evoluir resultados dos jogos solo com fila offline por tenant/usuário, retry
-      visível e histórico de partidas; o Caça-Palavras já usa o contrato online e
-      será incluído nessa fila comum.
-- [x] Implementar marcação de pessoas no Feed, com seleção de membros, notificação e link para a publicação.
-- [x] Implementar o fluxo inicial de desafios entre membros: aceite/recusa, partida
-      em dupla, jogadas server-side, snapshot SSE e compartilhamento do resultado.
-- [ ] Completar desafios entre membros com expiração/cancelamento observável, eventos
-      SSE tipados por etapa, reconexão testada e feature flag por tenant.
-- [ ] Implementar o módulo isolado de desafios online conforme [game-challenges-todo.md](./game-challenges-todo.md), incluindo `ssegames`, reconexão, pontuação server-side e feature flag.
-- [ ] Completar melhorias de frontend conforme [frontend-todo.md](./frontend-todo.md).
-- [ ] Executar a separação progressiva Web/Mobile conforme [web-mobile-separation-todo.md](./web-mobile-separation-todo.md).
+### 8. Notificações, Push e SSE
 
-## Radar — integrações nativas futuras
+- [ ] Criar testes de integração para Push de menções, aprovação de membro, Cantina,
+      mudança de perfil e limpeza de endpoints 404/410.
+- [ ] Garantir idempotência/deduplicação de notificações persistidas por evento de
+      negócio, especialmente quando uma requisição é repetida após falha.
+- [ ] Adicionar métricas e logs estruturados: conexões SSE, listeners, entregas Push,
+      subscriptions expiradas, falhas e latência, sem segredos.
+- [ ] Formalizar o contrato de eventos por domínio e manter SSE como transporte, não
+      como fonte de autorização ou armazenamento durável.
+- [ ] Antes de múltiplas instâncias, substituir brokers em memória por Redis/pub-sub
+      ou infraestrutura compartilhada equivalente.
 
-- [ ] Consolidar compartilhamentos externos com a **Web Share API**: versículos,
-      publicações do Feed, perfis e resultados de jogos devem abrir a folha de
-      compartilhamento nativa, com fallback acessível quando indisponível.
-- [ ] Avaliar a **Web Share Target API** para receber texto, links e, depois de
-      definir limites/validação de upload, imagens de outros apps como rascunho
-      autenticado de publicação ou material. Exigir seleção explícita do tenant e
-      nunca aceitar conteúdo diretamente como publicado.
-- [ ] Avaliar **Media Session API** somente quando houver áudio contínuo (pregações,
-      devocionais narrados ou mídia do Feed). Não usar para efeitos curtos, como o
-      som de vitória dos jogos.
-- [ ] Melhorar a apresentação de instalação do PWA no Android: adicionar
-      `description` e `screenshots` ao `manifest.ts`, com capturas mobile e desktop
-      do branding padrão, dados fictícios e sem conteúdo de tenant. Validar a
-      interface avançada de instalação em Chrome Android, sem depender dela para o
-      fluxo de instalação nem alterar o comportamento do iOS.
+### 9. Presença online por tenant
 
-## Documentos detalhados
+- [~] Infraestrutura e UI existem; faltam aceite e cobertura completa.
+- [ ] Rejeitar imediatamente usuário/tenant inativo e interromper entrega quando a
+      permissão `members:online:view` for revogada.
+- [ ] Limpar estado em logout/troca de tenant e testar TTL, reconexão, suspensão de
+      aba, múltiplos tenants e ausência de conexão duplicada.
+- [ ] Adicionar logs/métricas e validar em produção de instância única antes de escalar.
 
-- [Roadmap](./roadmap.md)
-- [Arquitetura em camadas](./layered-architecture-todo.md)
+Referência: [presence-todo.md](./presence-todo.md).
+
+### Branding por tenant
+
+- [ ] Eliminar qualquer fallback específico de tenant de código/asset; usar somente a
+      marca padrão do Church App até o branding do tenant ser resolvido.
+- [ ] Testar troca de tenant, restart, upload ausente e cache browser/SW sem vazamento
+      de nome, logo, ícone ou cores.
+- [ ] Resolver metadata/title, Apple Web App metadata e cache versionado de manifest e
+      ícones conforme `brandingVersion`.
+- [ ] Validar instalação e atualização de branding de dois tenants no mesmo aparelho.
+
+---
+
+## Próximas evoluções — somente após concluir P0 e P1
+
+### 11. Jogos, ranking e desafios
+
+- [ ] Testar Memória e Quiz online em dois usuários: aceite, mesma sala/tabuleiro,
+      turnos, placar, recusa, cancelamento, expiração, reconexão e retorno à partida.
+- [ ] Notificar desafiante ao aceitar/recusar e participantes ao concluir, sem Push por
+      jogada e sem duplicidade.
+- [ ] Consolidar UI de convite/sala/placar e entrada por notificações pendentes.
+- [ ] Completar resultados solo: `runId`, idempotência, fila offline por tenant/usuário,
+      retry visível, histórico e ranking por tenant.
+- [ ] Definir feature flag por tenant e plano de rollout antes de liberar desafios em
+      produção para vários usuários.
+
+Referências: [games-todo.md](./games-todo.md) e
+[game-challenges-todo.md](./game-challenges-todo.md).
+
+### 12. Arquitetura de frontend e dados
+
+- [ ] Consolidar FormCreate/FormEdit/FormUI + RHF/Zod nos CRUDs restantes: membros,
+      materiais, grupos, equipes, infantil, estacionamento, planos e branding.
+- [ ] Extrair hooks/seções das páginas grandes: Dashboard, Minha Conta, Grupo,
+      Cantina, Feed e Configurações.
+- [ ] Definir política única de cache/invalidação para dados remotos; Zustand não deve
+      duplicar dados de servidor sem justificativa.
+- [ ] Completar separação Web/Mobile da Cantina, Membros, Feed, Grupos, Bíblia,
+      Dashboard e Minha Conta sem duplicar services, sync ou autorização.
+- [ ] Padronizar primitives UI, estados loading/empty/error, listas infinitas, filtros,
+      formulários acessíveis e estratégia de mídia com `AppImage`.
+
+Referências: [frontend-todo.md](./frontend-todo.md) e
+[web-mobile-separation-todo.md](./web-mobile-separation-todo.md).
+
+### 13. E-mail e integrações nativas
+
+- [ ] Implementar e-mail transacional por porta de infraestrutura, provider, outbox,
+      retry, idempotência, preferências e templates; começar por convite/cadastro,
+      recuperação de senha e avisos de Cantina.
+- [ ] Consolidar Web Share API para Bíblia, Feed, perfis e resultados de jogos.
+- [ ] Avaliar Web Share Target API e Media Session somente quando os fluxos de conteúdo
+      e privacidade estiverem definidos.
+- [ ] Adicionar `description` e `screenshots` no manifest para melhorar instalação no
+      Android, usando dados fictícios e aceitando que iOS mantém fluxo próprio.
+
+Referência: [email-todo.md](./email-todo.md).
+
+---
+
+## Qualidade, performance e rotina de aceite
+
+- [ ] Medir isoladamente typecheck, tracing Prisma, geração Serwist e páginas estáticas
+      no hardware/servidor de deploy; não otimizar por suposição.
+- [ ] Medir Lighthouse/Web Vitals e perfil de rede de Login, Dashboard, Feed, Cantina
+      e Configurações antes de quebrar componentes por performance.
+- [ ] Revisar warnings ESLint e regras de hooks ainda desabilitadas após reduzir as
+      ocorrências reais.
+- [ ] Para todo release: `npm run prisma:generate`, `npm run typecheck`, `npm run lint`,
+      `npm test`, `npm run build` e smoke test com `npm run start`.
+- [ ] Registrar aceite manual mobile (Android/iOS), PWA, Push, SSE, permissões, tenant
+      novo, tenant desativado, Feed e Cantina.
+
+## Próxima ação recomendada
+
+**Executar o aceite PWA/offline-first em artefato de produção.** Há relatos de tela
+branca, subscription travada no iOS e comportamento divergente do worker entre
+dispositivos. O teste deve ocorrer após build novo, via `next start`, verificando
+`/serwist/sw.js`, Cache Storage e refresh offline da rota inicial e da Bíblia baixada.
+
+## Documentos de detalhe
+
+- [Estabilização de produção](./production-stability-todo.md)
 - [Separação de tenants](./tenant-separation-todo.md)
 - [Offline-first](./offline-first-todo.md)
 - [Bíblia offline](./bible-offline-todo.md)
-- [Dashboard e Cantina — dados e operação](./dashboard-canteen-todo.md)
-- [E-mail transacional](./email-todo.md)
+- [Dashboard e Cantina](./dashboard-canteen-todo.md)
 - [Frontend](./frontend-todo.md)
 - [Separação Web/Mobile](./web-mobile-separation-todo.md)
+- [Presença online](./presence-todo.md)
 - [Jogos](./games-todo.md)
-- [Auditoria técnica](./technical-audit-2026-09.md)
-- [Estabilização de produção](./production-stability-todo.md)
-- [Presença online por tenant](./presence-todo.md)
+- [Desafios online](./game-challenges-todo.md)
+- [E-mail transacional](./email-todo.md)

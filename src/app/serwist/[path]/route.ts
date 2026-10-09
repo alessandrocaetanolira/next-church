@@ -1,14 +1,13 @@
 import { createSerwistRoute } from "@serwist/turbopack";
-import { spawnSync } from "node:child_process";
-
-const revision =
-  spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).stdout?.trim() || crypto.randomUUID();
 
 export const { dynamic, dynamicParams, revalidate, generateStaticParams, GET } = createSerwistRoute({
   swSrc: "src/app/sw.ts",
   useNativeEsbuild: true,
   additionalPrecacheEntries: [
-    { url: "/bible", revision },
-    { url: "/offline", revision },
+    // Sem `revision`, o Serwist busca estas rotas novamente a cada instalação
+    // do SW. Isso evita depender de subprocessos (como `git rev-parse`) no
+    // build do Turbopack e preserva o fallback de leitura offline.
+    { url: "/bible" },
+    { url: "/offline" },
   ],
 });

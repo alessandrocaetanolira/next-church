@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { GameRenderer } from '@/features/new-games/GameRenderer';
 import { MemoryOnline } from './MemoryOnline';
@@ -10,6 +11,7 @@ import { MemoryCpu } from './MemoryCpu';
 import { PendingGameChallengesNotice } from './GameChallengesDrawer';
 
 export function MemoryGameEntry({ initialChallengeId = null }: { initialChallengeId?: string | null }) {
+  const router = useRouter();
   const [challengeId, setChallengeId] = useState<string | null>(initialChallengeId);
   const [invitees, setInvitees] = useState<QuizChallengeInvitee[]>([]);
   const [selected, setSelected] = useState('');
@@ -20,16 +22,18 @@ export function MemoryGameEntry({ initialChallengeId = null }: { initialChalleng
   const sendInvite = async () => {
     if (!selected) return;
     try {
-      await createQuizChallengeInvite(selected, 'memory');
+      const invite = await createQuizChallengeInvite(selected, 'memory');
       toast.success('Convite enviado.');
       setSelected('');
+      setChallengeId(invite.id);
+      router.replace(`/jogos-novos/memoria?challenge=${encodeURIComponent(invite.id)}`);
       window.dispatchEvent(new CustomEvent('church:game-challenge-updated'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao enviar convite.');
     }
   };
 
-  if (challengeId) return <MemoryOnline />;
+  if (challengeId) return <MemoryOnline challengeId={challengeId} />;
   if (cpu) return <MemoryCpu />;
   return <div className="space-y-3">
     <PendingGameChallengesNotice gameType="memory" />

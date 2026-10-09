@@ -468,6 +468,32 @@ export async function notifyPendingMemberRegistration(
   });
 }
 
+/**
+ * Celebra a aprovação de um cadastro com todos os usuários ativos do tenant.
+ * O dispatcher persiste a notificação e a distribui por SSE e Push.
+ */
+export async function notifyMemberWelcome(
+  prisma: PrismaClient,
+  tenantId: string,
+  member: { id: string; name: string; email: string },
+) {
+  const recipients = await getActiveUserEmails(prisma);
+  if (!recipients.length) return;
+
+  await sendNotification(prisma, tenantId, {
+    recipients,
+    sender: { email: member.email, name: member.name },
+    content: {
+      type: 'member-welcome',
+      title: 'Novo membro na comunidade',
+      message: `${member.name} agora faz parte da comunidade. Dê as boas-vindas!`,
+      href: '/feed',
+      sourceType: 'member',
+      sourceId: member.id,
+    },
+  });
+}
+
 /** Avisa os operadores conectados para remover uma venda arquivada da fila local. */
 export async function publishCanteenOrderArchived(
   prisma: PrismaClient,
@@ -585,9 +611,24 @@ export async function notifyFeedLike(
 export async function publishFeedPostCreated(
   prisma: PrismaClient,
   tenantId: string,
-  payload: { postId: string; actorEmail: string; actorName: string; title?: string | null; content: string },
+  payload: {
+    postId: string;
+    actorEmail: string;
+    actorName: string;
+    title?: string | null;
+    content: string;
+    visibility: 'public' | 'group' | 'individual';
+    groupId?: string | null;
+    targetUserIds?: string[];
+  },
 ) {
-  const recipients = await getActiveUserEmails(prisma);
+  const activeRecipients = await getActiveUserEmails(prisma);
+  const activeRecipientSet = new Set(activeRecipients);
+  const recipients = payload.visibility === 'group'
+    ? (payload.groupId ? await getGroupMemberEmails(prisma, payload.groupId) : [])
+    : payload.visibility === 'individual'
+      ? Array.from(new Set((payload.targetUserIds ?? []).map(normalizeEmail).filter((email) => activeRecipientSet.has(email))))
+      : activeRecipients;
   const preview = payload.content.length > 90 ? `${payload.content.slice(0, 87)}...` : payload.content;
   const heading = payload.title?.trim() ? payload.title.trim() : 'Nova publicação no Feed';
   const createdAt = new Date().toISOString();

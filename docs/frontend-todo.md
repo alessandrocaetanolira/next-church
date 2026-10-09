@@ -55,12 +55,10 @@ epics de refatoração, não como um único PR.
 ### 2.2 Problemas observados
 
 - chamadas `fetch` espalhadas por páginas, componentes e utilitários;
-- ausência de um cliente HTTP/API global com parsing de resposta, erros, sessão,
-  cancelamento e tratamento de 401/403/422;
-- formulários implementados com `useState` manual em `MemberForm`, `ProductForm` e
-  várias páginas;
-- React Hook Form usado apenas em partes do projeto e sem schema Zod compartilhado;
-- Zod ainda não está presente como dependência principal;
+- existe cliente HTTP/API global, mas sua adoção e o tratamento tipado ainda não são
+  uniformes em todos os domínios;
+- React Hook Form e Zod já são usados em alguns CRUDs, mas a migração de schemas,
+  FormCreate/FormEdit/FormUI e mensagens consistentes ainda é incompleta;
 - dados de servidor, estado de tela, carrinho, sessão e preferências têm estratégias
   diferentes de armazenamento;
 - Zustand existe em auth, UI, sync e cantina, enquanto `AppSettingsProvider` mantém
@@ -78,6 +76,41 @@ epics de refatoração, não como um único PR.
 - páginas interativas tendem a ser client components maiores que o necessário;
 - jogos possuem necessidades específicas de performance e não devem impor o mesmo
   bundle inicial das telas administrativas.
+
+### 2.3 Auditoria de reutilização e layout — 09/10/2026
+
+Achados de leitura do código, sem alterações de implementação:
+
+- **Contêineres desktop possivelmente duplicados:** `WebTemplate` envolve o conteúdo
+  em `WebPageContainer`; páginas que usam `WebPageLayout` ou outro
+  `WebPageContainer` podem aninhar largura máxima e padding. Primeiro medir e
+  simplificar essa composição sem alterar a largura útil das telas.
+- **Tabelas:** foram encontrados 12 componentes `*WebTable` com markup próprio; o
+  `WebDataTable` é um alias de `DataTable`, mas só membros e materiais o consomem
+  como tabela genérica. Extrair um shell comum para borda, overflow, cabeçalho,
+  paginação e estados, mantendo células e ações específicas do domínio.
+- **Listas mobile:** `SharedFlatList` compartilha grid, vazio e infinite scroll, mas
+  não define o card. Membros e Feed já o utilizam em partes; grupos usa
+  `GroupsWebGrid`, enquanto Infantil e Estacionamento montam cards diretamente nas
+  páginas. Reaproveitar padrões de composição, sem tornar os cards visualmente
+  idênticos quando os dados e ações forem diferentes.
+- **Drawers/dialogs:** várias páginas usam diretamente primitives Radix e repetem
+  estrutura de cabeçalho, área rolável e footer. O `DrawerProvider` cobre alguns
+  fluxos, mas não é o padrão geral. Avaliar um shell compartilhado, não um drawer
+  global que passe a conter regra de domínio.
+- **Formulário de produto:** `features/canteen/forms/index.ts` ainda reexporta a
+  implementação em `src/components/forms`; o `ProductForm` ativo contém lógica RHF,
+  Dexie, API e fallback offline. A migração de localização/responsabilidades da
+  implementação ainda não está completa. Os arquivos antigos de membro são fachadas.
+- **Chrome mobile:** `getMobileBackTarget` já cobre vários forms e detalhes, mas não
+  `/admin/tenants/[id]`. Confirmar se essa tela deve seguir o padrão de detalhe com
+  retorno contextual e sem NavBottom e, se sim, incluí-la no mapeamento.
+- **Composição de páginas:** Dashboard e detalhes de membro/grupo ainda usam wrappers
+  e estados de carregamento/erro próprios. Comparar com `PageShell`, `PageHeader` e
+  estados comuns antes de refatorar.
+- **Exceções:** Bíblia, jogos/tela cheia, perfil social, login, cadastro, offline e
+  início do PWA são fluxos especiais; devem ter contrato de layout próprio, não ser
+  forçados ao shell de listagem/CRUD.
 
 ## 3. Arquitetura frontend alvo
 
