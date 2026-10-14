@@ -61,6 +61,95 @@ baixado previamente pelo usuário. As rotas `/api/*` permanecem `NetworkOnly`.
 
 ## Fase 1 — Shell PWA offline
 
+### Correção de fallback — 2026-10-14
+
+#### Retorno Safari: abertura validada pelo usuário após corrigir cache CDN
+
+Em 2026-10-14 foi comprovado por hash que a porta local entregava o worker novo,
+mas `/serwist/sw.js` no domínio HTTPS retornava worker antigo (`CF-Cache-Status:
+HIT`, Age acima de 24h). Uma URL com query nova retornava o worker correto.
+Após a limpeza/bypass no Cloudflare, o usuário confirmou que a abertura offline
+funcionou. Esse aceite é da abertura no iPhone, não de todos os módulos offline.
+
+- [x] Abertura fria offline no iPhone confirmada pelo usuário.
+- [x] URL de registro Serwist inclui BUILD_ID; headers `no-store` para browser/CDN.
+- [x] Ação “Atualizar app” usa registro existente, aguarda ativação e recarrega;
+      não remove Bíblia, Dexie, localStorage ou subscriptions.
+- [x] Logos light/dark preservados em Base64 no localStorage por contexto de
+      tenant, até 512 KiB por imagem e três fontes. URLs oficiais não são alteradas.
+- [x] Topbar, loading e modais usam cópias locais quando disponíveis.
+- [x] Onboarding de instalação/notificações não abre offline; reconciliação Push
+      não inicia request sem rede e volta a verificar na reconexão.
+- [ ] Validar logo salvo e ausência de modal na próxima abertura offline; testar
+      ação de atualização no iPhone e os headers reais após o próximo build.
+
+Operação Cloudflare: manter regra de bypass para o hostname do app e `/serwist/*`.
+Se existir cache antigo, fazer purge da URL exata; headers novos não removem
+retroativamente objetos já retidos na borda.
+
+Verificação antes do commit (14/10/2026): typecheck completo e lint dos arquivos
+alterados aprovados; 47 testes direcionados em 12 arquivos aprovados (sessão,
+retorno mobile, SSE versionado, fallback/worker, branding, onboarding e atualização).
+Build e aceite visual das últimas mudanças de logo/onboarding ficam com o usuário.
+
+Antes da correção do CDN, o teste do usuário (reinstalação, navegação online,
+fechamento e modo avião) **falhou**. O artefato então servido ainda continha
+`/bible` e `/offline` sem revisão.
+Serwist consulta a entrada existente antes de baixar durante install: documentos
+sem revisão podem sobreviver ao build anterior enquanto seus chunks são removidos.
+A afirmação anterior de que “sem revision busca a cada instalação” estava errada.
+
+- [x] Versionar `/pwa-start`, `/bible` e `/offline` por hash do manifesto de assets
+      do build, usando `manifestTransforms`, sem git/subprocesso nem lista de chunks.
+- [x] Cobrir em teste Serwist real instalação de documento novo sobre cache antigo
+      não versionado, além de abertura fria, ausência de cache e exclusão de API.
+- [x] Precacher a URL real do manifesto (`/pwa-start`) e não iniciar navegação RSC
+      para dashboard/login quando a entrada abre sem rede.
+- [ ] Verificar no worker servido que os três documentos possuem revisão e que
+      não há warning de entradas adicionais sem revisão no próximo build.
+- [ ] Conferir no iPhone worker controlador activated e documentos/chunks atuais
+      antes de desligar a rede. Reinstalação por si só não comprova cache pronto.
+
+- [x] Retirar `navigationPreload` da abertura fria e desativar o estado persistido
+      do registro na ativação (`disableNavigationPreload` do Serwist).
+- [x] Documentos offline recebem HTML do precache diretamente, sem redirect.
+      Flight mantém tratamento separado (não devolver HTML como payload RSC).
+- [x] Normalizar `/offline` no cliente com History API, sem nova chamada de rede,
+      para manter topbar/navbottom ao abrir pelo atalho ou subrota.
+- [x] Não bloquear a mensagem de `/offline` aguardando autenticação inicial.
+- [x] Fallback independente de chunks quando o Cache Storage foi removido.
+- [x] Abertura pelo atalho no Safari/iOS, app fechado e rede desligada: usuário
+      confirmou após eliminar o worker antigo retido no CDN.
+- [ ] Validar também refresh e leitura da Bíblia já baixada no dispositivo.
+
+O Serwist instalado consulta `preloadResponse` antes do precache. A correção
+anterior ainda habilitava esse caminho e redirecionava documentos offline.
+Esses riscos foram removidos; depois foi identificada a divergência do worker
+servido pelo CDN e o usuário confirmou abertura offline após sua correção.
+Teste do worker usa Serwist real, interceptação de fetch, rede indisponível e
+Cache Storage simulado, separado dos testes React do layout.
+
+- [x] Adicionar estratégia documental de rede com fallback para `/offline` quando
+      uma rota não precacheada falhar, inclusive refresh/acesso direto.
+- [x] Tratar falha de Flight (Link/router.push) com redirect para documento
+      precacheado: preservar Bíblia; demais rotas indisponíveis vão para `/offline`.
+- [x] Não cachear HTML privado adicional, RSC, APIs ou dados do Dexie.
+- [x] Usar navegação documental no botão “Abrir Bíblia offline”.
+- [x] Manter Header/NavBottom do AppLayout com a última sessão salva offline;
+      aviso restrito ao conteúdo, sem main duplicado ou altura 100dvh interna.
+- [x] Normalizar também o fallback documental para `/offline` no cliente, evitando herdar
+      regras de subrotas que escondem a NavBottom. Sem sessão salva, não inventar
+      usuário ou permissões para exibir navegação autenticada.
+- [ ] Validar em build novo com worker activated: clique em rota não visitada,
+      refresh dessa rota, abertura pelo atalho e retorno à Bíblia sem rede;
+      confirmar Header/NavBottom visíveis com sessão salva em Android/iOS.
+
+O fallback anteriormente configurado não era acionado para documentos porque
+nenhuma estratégia runtime os atendia. O Next também degrada falhas Flight para
+navegação documental; essa navegação agora tem tratamento no worker. O aceite
+completo Android/iOS continua pendente; a abertura no iPhone já foi confirmada.
+Não confundir esse aceite parcial e testes unitários com aceite de todos os módulos.
+
 - [x] Gerar o Service Worker durante `next build`.
 - [x] Registrar o worker somente através do `SerwistProvider`.
 - [x] Remover o registro manual antigo.

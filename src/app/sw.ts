@@ -2,8 +2,10 @@
 /// <reference lib="webworker" />
 
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
+import { isOfflineNavigation, offlineDocumentResponse, offlineNavigationRedirect } from "../lib/offline-navigation";
 import {
   CacheFirst,
+  disableNavigationPreload,
   ExpirationPlugin,
   NetworkOnly,
   Serwist,
@@ -18,17 +20,43 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-const serwist = new Serwist({
+const serwist: Serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: true,
+  // A estratégia de precache aguarda preload antes do cache. Na abertura fria
+  // offline não podemos depender dessa consulta paralela do navegador.
+  navigationPreload: false,
   // Dados de API pertencem ao servidor e ao Dexie. Não devem ser duplicados no
   // Cache Storage, especialmente respostas bíblicas ou dados autenticados.
   runtimeCaching: [
     {
       matcher: ({ sameOrigin, url: { pathname } }) => sameOrigin && pathname.startsWith("/api/"),
       handler: new NetworkOnly(),
+    },
+    {
+      // Link/router.push usam Flight; HTML de fallback não é um payload RSC.
+      matcher: ({ sameOrigin, request }) => sameOrigin && request.headers.get("RSC") === "1",
+      handler: new NetworkOnly({
+        plugins: [{
+          handlerDidError: async ({ request }): Promise<Response> => offlineNavigationRedirect(
+            request,
+            (url) => Boolean(serwist.getPrecacheKeyForUrl(url)),
+          ),
+        }],
+      }),
+    },
+    {
+      // Sem uma estratégia para documentos, Serwist não aciona o fallback:
+      // refresh e rotas não visitadas terminavam na página de erro do navegador.
+      matcher: ({ sameOrigin, request }) => sameOrigin && isOfflineNavigation(request),
+      handler: async ({ request }) => {
+        try {
+          return await fetch(request);
+        } catch {
+          return offlineDocumentResponse(request, (url) => serwist.matchPrecache(url));
+        }
+      },
     },
     {
       matcher: /\/_next\/static.+\.js$/i,
@@ -57,11 +85,23 @@ const serwist = new Serwist({
       {
         url: "/offline",
         matcher({ request }) {
-          return request.destination === "document";
+          return isOfflineNavigation(request);
         },
       },
     ],
   },
+});
+
+// O estado pertence ao registro: apenas mudar a opção não desativa um preload
+// habilitado pelo worker anterior. Usar a API do Serwist na ativação do novo.
+disableNavigationPreload();
+
+// Também cobre uma entrada do precache que tenha sido removida pelo navegador.
+serwist.setCatchHandler(async ({ request }) => {
+  if (isOfflineNavigation(request)) {
+    return offlineDocumentResponse(request, (url) => serwist.matchPrecache(url));
+  }
+  return Response.error();
 });
 
 type PushPayload = {

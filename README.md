@@ -322,7 +322,10 @@ o app com o administrador padrão.
 npm run dev
 ```
 
-Abra `http://localhost:3000/auth/login` para usuários da igreja. O administrador
+Os comandos `npm run dev` e `npm run start` usam a porta **3001**. Ao usar túnel
+SSH ou proxy reverso, configure o destino para `localhost:3001`.
+
+Abra `http://localhost:3001/auth/login` para usuários da igreja. O administrador
 global usa a mesma tela deixando o campo de slug vazio.
 
 ## Organizacao

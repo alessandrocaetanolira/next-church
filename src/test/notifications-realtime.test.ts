@@ -123,13 +123,16 @@ describe('SseBroker', () => {
     expect(new TextDecoder().decode(connected.value)).toContain('connected');
 
     publishPermissionsUpdated('tenant-a', 'other@test.local', 'ADMIN', ['members:view']);
-    publishPermissionsUpdated('tenant-a', 'member@test.local', 'CANTEEN', ['canteen:view', 'canteen:order']);
+    publishPermissionsUpdated('tenant-a', 'member@test.local', 'CANTEEN', ['canteen:view', 'canteen:order'], 7, 'member-id');
 
     const update = await reader.read();
     const payload = new TextDecoder().decode(update.value);
     expect(payload).toContain('permissions.updated');
     expect(payload).toContain('"role":"CANTEEN"');
     expect(payload).toContain('canteen:order');
+    expect(payload).toContain('"version":7');
+    expect(payload).toContain('"userId":"member-id"');
+    expect(payload).toContain('"tenantId":"tenant-a"');
     expect(payload).not.toContain('other@test.local');
 
     abort.abort();

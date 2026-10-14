@@ -12,6 +12,7 @@ import { getGlobalClient } from "@/lib/prisma-factory";
 import { BrandingRepository } from "@/server/branding/branding.repository";
 import { BrandingService } from "@/server/branding/branding.service";
 import { getTenantPwaIconUrl } from "@/lib/branding/pwa-assets";
+import { getPwaWorkerUrl } from "@/lib/server/pwa-build";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="font-sans">
         {process.env.NODE_ENV === 'production' ? (
-          <SerwistProvider swUrl="/serwist/sw.js" options={{ scope: "/", updateViaCache: "none" }}>
+          <SerwistProvider swUrl={getPwaWorkerUrl()} options={{ scope: "/", updateViaCache: "none" }}>
             {appContent}
           </SerwistProvider>
         ) : appContent}

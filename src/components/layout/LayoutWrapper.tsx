@@ -23,27 +23,6 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timeout);
   }, [isLoading]);
 
-  useEffect(() => {
-    const recoverInteraction = () => {
-      if (document.visibilityState !== 'visible') return;
-      // Radix/Vaul registram o Escape no document para liberar foco e scroll.
-      // Em PWAs suspensas, o evento de fechamento pode ser perdido durante o
-      // congelamento da aba e deixar um overlay invisível bloqueando cliques.
-      document.dispatchEvent(new KeyboardEvent('keydown', {
-        key: 'Escape',
-        code: 'Escape',
-        bubbles: true,
-      }));
-    };
-
-    document.addEventListener('visibilitychange', recoverInteraction);
-    window.addEventListener('pageshow', recoverInteraction);
-    return () => {
-      document.removeEventListener('visibilitychange', recoverInteraction);
-      window.removeEventListener('pageshow', recoverInteraction);
-    };
-  }, []);
-
   const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/admin/login");
   const isFullscreenGameRoute = pathname === "/games/caca-palavras";
   // O perfil social já possui um cabeçalho próprio sobre a capa, incluindo o
@@ -51,7 +30,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const hideMobileHeader = pathname.startsWith('/bible') || pathname.startsWith('/games') || pathname.startsWith('/jogos-novos') || pathname.startsWith('/perfil/');
   const hideMobileBottomNav = Boolean(getMobileBackTarget(pathname));
 
-  if (isLoading && !authFallbackReady) {
+  if (isLoading && !authFallbackReady && pathname !== "/offline") {
     return <LoadingState label="Carregando aplicação..." className="min-h-screen bg-background" />;
   }
 

@@ -24,6 +24,8 @@ type NotificationEventPayload = {
 
 export function NotificationsProvider() {
   const { isAuthenticated, refreshSession, user } = useAuth();
+  const userId = user?.id;
+  const tenantId = user?.tenantId;
   const updateAccess = useAuthStore((state) => state.updateAccess);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export function NotificationsProvider() {
 
     const refresh = () => { void initializeNotificationCenter(true); };
     const heartbeat = () => {
-      if (!navigator.onLine || !user?.tenantId) return;
+      if (!navigator.onLine || !tenantId) return;
       void presenceApi.heartbeat().catch(() => undefined);
     };
     heartbeat();
@@ -52,20 +54,18 @@ export function NotificationsProvider() {
       try {
         const notification = data.notification as NotificationEventPayload | undefined;
         if (data.type === 'permissions.updated') {
-          const access: Parameters<typeof updateAccess>[0] = {};
-          if (data.role) access.role = data.role.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER';
-          if (Array.isArray(data.permissions)) access.permissions = data.permissions;
-          updateAccess(access);
-          void refreshSession().then((session) => {
-            const refreshedUser = session?.user as ({ role?: string; permissions?: string[]; planFeatures?: string[]; teamIds?: string[] } | undefined);
-            if (!refreshedUser) return;
-            updateAccess({
-              role: refreshedUser.role?.toUpperCase() as 'ADMIN' | 'PASTOR' | 'LEADER' | 'CANTEEN' | 'MEMBER' | undefined,
-              permissions: Array.isArray(refreshedUser.permissions) ? refreshedUser.permissions : undefined,
-              planFeatures: Array.isArray(refreshedUser.planFeatures) ? refreshedUser.planFeatures : undefined,
-              teamIds: Array.isArray(refreshedUser.teamIds) ? refreshedUser.teamIds : undefined,
-            });
-          });
+          if (!userId || !tenantId || (data.tenantId && data.tenantId !== tenantId)
+            || (data.userId && data.userId !== userId)) return;
+          const role = data.role?.toUpperCase();
+          if (typeof data.version === 'number' && Number.isInteger(data.version)
+            && role && ['ADMIN', 'PASTOR', 'LEADER', 'CANTEEN', 'MEMBER'].includes(role)
+            && Array.isArray(data.permissions) && data.permissions.every((item) => typeof item === 'string')) {
+            updateAccess({ role: role as Parameters<typeof updateAccess>[0]['role'],
+              permissions: data.permissions, version: data.version }, { id: userId, tenantId });
+          }
+          // Unversioned compatibility events request a server read. The bridge
+          // reconciles the returned version instead of reapplying a stale callback payload.
+          void refreshSession({ afterCurrent: true }).catch(() => undefined);
           return;
         }
         if (data.type === 'provisioning.updated') {
@@ -106,17 +106,18 @@ export function NotificationsProvider() {
       }));
     });
     window.addEventListener('online', refresh);
-    document.addEventListener('visibilitychange', refresh);
+    const refreshOnVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', refreshOnVisible);
 
     return () => {
       close();
       window.clearInterval(heartbeatTimer);
       navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
       window.removeEventListener('online', refresh);
-      document.removeEventListener('visibilitychange', refresh);
+      document.removeEventListener('visibilitychange', refreshOnVisible);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isAuthenticated, refreshSession, updateAccess, user?.tenantId]);
+  }, [isAuthenticated, refreshSession, updateAccess, tenantId, userId]);
 
   return null;
 }

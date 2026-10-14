@@ -19,6 +19,8 @@ export type ServerNotificationEvent = {
   createdAt: string;
   role?: string;
   permissions?: string[];
+  version?: number;
+  userId?: string;
 };
 
 export type ServerTenantEvent = ServerNotificationEvent;
@@ -113,9 +115,11 @@ export function publishPermissionsUpdated(
   userEmail: string,
   role: string,
   permissions: string[],
+  version?: number,
+  userId?: string,
 ) {
   return sseBroker.publish({
-    id: `permissions:${userEmail}:${Date.now()}`,
+    id: `permissions:${userEmail}:${version ?? Date.now()}`,
     tenantId,
     userEmail,
     type: 'permissions.updated',
@@ -123,6 +127,8 @@ export function publishPermissionsUpdated(
     message: '',
     role,
     permissions,
+    version,
+    userId,
     createdAt: new Date().toISOString(),
   });
 }

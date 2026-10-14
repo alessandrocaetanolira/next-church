@@ -13,7 +13,7 @@ export function updateMemberAccess(
 ) {
   MemberAccessPolicy.assertManage(user);
   return service.update(memberId, input).then(async (result) => {
-    const listeners = publishPermissionsUpdated(tenantId, result.email, result.role, result.permissions);
+    const listeners = publishPermissionsUpdated(tenantId, result.email, result.role, result.permissions, result.version, result.userId);
     if (listeners === 0 && notifier) await notifier.sendOfflineFallback(result.email);
     return result;
   });

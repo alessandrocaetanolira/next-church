@@ -6,7 +6,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 import { cn } from "@/lib/utils"
 
 const Drawer = ({
-  shouldScaleBackground = true,
+  shouldScaleBackground = false,
   dismissible = true,
   // O conteúdo do drawer contém formulários e áreas roláveis. O gesto de
   // arraste deve começar somente na alça, evitando que inputs e selects
@@ -52,12 +52,12 @@ const DrawerContent = React.forwardRef<
     <DrawerPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-[60] mt-24 flex h-auto flex-col rounded-t-[10px] border border-border/50 bg-background",
+        "fixed inset-x-0 bottom-0 z-[60] flex h-auto max-h-[85dvh] min-h-0 flex-col rounded-t-[10px] border border-border/50 bg-background",
         className
       )}
       {...props}
     >
-      <DrawerPrimitive.Handle className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+      <DrawerPrimitive.Handle className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>

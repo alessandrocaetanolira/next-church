@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { LoadingState } from '@/components/common';
+import OfflinePage from '@/app/offline/page';
 
 /**
  * Ponto de entrada estável do PWA.
@@ -16,8 +17,11 @@ export default function PwaStartPage() {
 
   useEffect(() => {
     if (status === 'loading') return;
+    // Uma abertura fria offline não deve iniciar outra navegação que exige RSC.
+    if (!navigator.onLine) return;
     router.replace(status === 'authenticated' ? '/' : '/auth/login');
   }, [router, status]);
 
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return <OfflinePage />;
   return <LoadingState label="Abrindo o Church App..." className="min-h-screen" />;
 }

@@ -19,11 +19,12 @@ import { useState, useEffect } from 'react';
 import { isOffline, onConnectivityChange } from '@/lib/pushNotifications';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AppImage } from '@/components/shared';
+import { AppLogo } from '@/components/shared/AppLogo';
 import { getAccessibleModules } from '@/lib/access-control';
 import { useDrawer } from '@/components/providers/DrawerProvider';
-import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
 import { getMobileBackTarget } from './mobile-route-chrome';
+import { MobileUserMenu } from './MobileUserMenu';
+import { PwaUpdateButton } from '@/components/pwa/PwaUpdateButton';
 
 const CHANGELOG = [
   {
@@ -98,20 +99,14 @@ export function Header() {
   const router = useRouter();
   const { settings, updateSettings } = useAppSettings();
   const { openDrawer, closeDrawer } = useDrawer();
-  const fallbackLogo = user?.isPlatformAdmin ? PLATFORM_ADMIN_LOGO : '/pwa-192x192.png';
   const [showAbout, setShowAbout] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [offline, setOffline] = useState(false);
-  const [logoFailed, setLogoFailed] = useState(false);
 
   useEffect(() => {
     setOffline(isOffline());
     return onConnectivityChange((online) => setOffline(!online));
   }, []);
-
-  useEffect(() => {
-    setLogoFailed(false);
-  }, [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
 
   const initials = user?.name
     ? user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -151,34 +146,12 @@ export function Header() {
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
                 </Button>
                 <div className="hidden md:flex md:h-9 md:w-40 md:items-center">
-                  <AppImage
-                    src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
-                    alt={settings.appName}
-                    className="h-full w-full object-contain object-left dark:hidden"
-                    onError={() => setLogoFailed(true)}
-                  />
-                  <AppImage
-                    src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
-                    alt={settings.appName}
-                    className="hidden h-full w-full object-contain object-left dark:block"
-                    onError={() => setLogoFailed(true)}
-                  />
+                  <AppLogo className="h-full w-full" />
                 </div>
               </>
             ) : (
               <div className="-ml-2 flex h-13 w-[12.5rem] max-w-[54vw] items-center justify-start sm:ml-0 sm:h-9 sm:w-40 sm:max-w-none">
-                <AppImage
-                  src={settings.logoLightUrl && !logoFailed ? settings.logoLightUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
-                  alt={settings.appName}
-                  className="h-full w-full object-contain object-left dark:hidden"
-                  onError={() => setLogoFailed(true)}
-                />
-                <AppImage
-                  src={settings.logoDarkUrl && !logoFailed ? settings.logoDarkUrl : settings.logoUrl && !logoFailed ? settings.logoUrl : fallbackLogo}
-                  alt={settings.appName}
-                  className="hidden h-full w-full object-contain object-left dark:block"
-                  onError={() => setLogoFailed(true)}
-                />
+                <AppLogo className="h-full w-full" />
               </div>
             )}
           </div>
@@ -227,24 +200,9 @@ export function Header() {
                   aria-label="Abrir menu do usuário"
                   onClick={() => openDrawer({
                     contentClassName: 'max-h-[70dvh]',
-                    content: (
-                      <div className="space-y-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
-                        <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 dark:bg-muted/30">
-                          <Avatar className="h-10 w-10">
-                            {user?.image ? <AvatarImage src={user.image} alt={user.name || 'Usuário'} /> : null}
-                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">{initials}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{user?.name}</p>
-                            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
-                          </div>
-                        </div>
-                        {canAccessWallet ? <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/carteira'); }}><Wallet className="h-4 w-4" />Carteira</Button> : null}
-                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); router.push('/minha-conta/perfil'); }}><UserRound className="h-4 w-4" />Meu perfil</Button>
-                        <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => { closeDrawer(); setShowAbout(true); }}><Info className="h-4 w-4" />Sobre</Button>
-                        <Button variant="ghost" className="w-full justify-start gap-3 text-destructive" onClick={() => { closeDrawer(); setShowLogoutConfirm(true); }}><LogOut className="h-4 w-4" />Sair</Button>
-                      </div>
-                    ),
+                    closeOnSuspend: true,
+                    repositionInputs: false,
+                    content: <MobileUserMenu onAbout={() => setShowAbout(true)} onLogout={() => setShowLogoutConfirm(true)} />,
                   })}
                 >
                   <Avatar className="h-9 w-9">
@@ -306,7 +264,7 @@ export function Header() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <AppImage src={settings.logoUrl && !logoFailed ? settings.logoUrl : '/branding/a-mesa-church/header.png'} alt={settings.appName} width={64} height={64} className="h-full w-full rounded-lg object-contain" onError={() => setLogoFailed(true)} />
+                <AppLogo className="h-full w-full rounded-lg" />
               </div>
               {settings.appName}
             </DialogTitle>
@@ -336,6 +294,7 @@ export function Header() {
               ))}
             </div>
 
+            <PwaUpdateButton />
             <p className="text-center text-xs text-muted-foreground pt-2">
               {settings.appName} v1.3.0 — Feito com ❤️
             </p>

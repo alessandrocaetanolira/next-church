@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useConnectivity } from '@/hooks/use-connectivity';
+import { preserveOfflineLogos, readOfflineLogos } from '@/lib/branding/offline-logos';
 import { getUserBranding } from '@/services/settings/settings-api';
 import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
 
@@ -39,6 +41,7 @@ interface AppSettingsContextType {
   setThemeMode: (mode: ThemeMode) => void;
   setViewMode: (mode: ViewMode) => void;
   toggleThemeMode: () => void;
+  resolveLogoSrc: (source: string) => string;
 }
 
 const defaultSettings: AppSettings = {
@@ -103,16 +106,19 @@ function settingsStorageKey(tenantKey?: string | null) {
 const AppSettingsContext = createContext<AppSettingsContextType | undefined>(undefined);
 
 export function AppSettingsProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession();
-  const isPlatformAdmin = Boolean((session?.user as { isPlatformAdmin?: boolean } | undefined)?.isPlatformAdmin);
-  const tenantKey = (session?.user as { tenantSlug?: string; tenantId?: string } | undefined)?.tenantSlug
-    || (session?.user as { tenantId?: string } | undefined)?.tenantId
-    || null;
+  const { user } = useAuth();
+  const online = useConnectivity();
+  const isPlatformAdmin = Boolean(user?.isPlatformAdmin);
+  const tenantKey = isPlatformAdmin ? 'platform-admin' : user?.tenantSlug || user?.tenantId || null;
+  const storageKey = settingsStorageKey(tenantKey);
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [mounted, setMounted] = useState(false);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [logos, setLogos] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setMounted(true);
+    setLogos(readOfflineLogos(storageKey));
     try {
       const stored = localStorage.getItem(settingsStorageKey(tenantKey));
       const base = isPlatformAdmin
@@ -134,15 +140,16 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
       }
       setSettings(storedSettings);
     } catch {
-      localStorage.removeItem(settingsStorageKey(tenantKey));
+      try { localStorage.removeItem(settingsStorageKey(tenantKey)); } catch { /* storage opcional */ }
       setSettings({ ...defaultSettings });
     }
-  }, [tenantKey, isPlatformAdmin]);
+    setLoadedKey(storageKey);
+  }, [tenantKey, isPlatformAdmin, storageKey]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || loadedKey !== storageKey) return;
     
-    localStorage.setItem(settingsStorageKey(tenantKey), JSON.stringify(settings));
+    try { localStorage.setItem(storageKey, JSON.stringify(settings)); } catch { /* não bloqueia offline */ }
 
     const root = document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -210,16 +217,28 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
     mediaQuery.addListener(handleChange);
     return () => mediaQuery.removeListener(handleChange);
-  }, [settings, mounted, tenantKey]);
+  }, [settings, mounted, loadedKey, storageKey]);
 
   useEffect(() => {
-    const tenantId = (session?.user as { tenantId?: string } | undefined)?.tenantId;
-    if (isPlatformAdmin || !tenantId || !tenantKey) return;
+    if (!online || !tenantKey || loadedKey !== storageKey) return;
+    const controller = new AbortController();
+    const sources = [settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl].filter((value): value is string => Boolean(value));
+    void preserveOfflineLogos(storageKey, sources, controller.signal).then((saved) => {
+      if (!controller.signal.aborted) setLogos(saved);
+    });
+    return () => controller.abort();
+  }, [online, tenantKey, loadedKey, storageKey, settings.logoUrl, settings.logoLightUrl, settings.logoDarkUrl]);
+
+  useEffect(() => {
+    const tenantId = user?.tenantId;
+    if (!online || isPlatformAdmin || !tenantId || !tenantKey) return;
+    let active = true;
     document.cookie = `church-tenant-slug=${encodeURIComponent(tenantKey)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 
     const loadBranding = async () => {
       try {
         const branding = await getUserBranding();
+        if (!active) return;
         setSettings((current) => ({
           ...current,
           appName: branding.pwaName || branding.name || current.appName,
@@ -245,7 +264,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     };
 
     void loadBranding();
-  }, [session?.user, tenantKey, isPlatformAdmin]);
+    return () => { active = false; };
+  }, [user?.id, user?.tenantId, online, tenantKey, isPlatformAdmin]);
 
   const updateSettings = (updates: Partial<AppSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -260,13 +280,14 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppSettingsContext.Provider value={{
-      settings,
+      settings: loadedKey === storageKey ? settings : defaultSettings,
       updateSettings,
       setAppName,
       setThemeVariant,
       setThemeMode,
       setViewMode,
       toggleThemeMode,
+      resolveLogoSrc: (source) => loadedKey === storageKey ? logos[source] ?? source : source,
     }}>
       {children}
     </AppSettingsContext.Provider>

@@ -23,6 +23,11 @@ Princípios:
 
 ## 2. Diagnóstico do frontend atual
 
+Prioridade mobile em **14/10/2026**: antes da padronização geral dos componentes,
+seguir [mobile-resume-todo.md](./mobile-resume-todo.md) para estabilizar shell,
+revalidação de sessão, menu reativo e geometria do drawer no retorno após suspensão.
+A implementação foi aplicada em 14/10; o aceite visual Android/iOS está pendente.
+
 ### 2.0 Atualizações recentes
 
 - `FullscreenMediaViewer` foi consolidado como componente compartilhado para capa e

@@ -21,9 +21,9 @@ const initial: Snapshot = { phase: 'idle', permission: 'default', error: null, s
 const PushSubscriptionContext = createContext<PushSubscriptionState | null>(null);
 
 function usePushSubscriptionState(): PushSubscriptionState {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const user = session?.user;
-  const identity = status === 'authenticated' && user?.id
+  const identity = user?.authValid !== false && user?.id
     ? JSON.stringify([Boolean(user.isPlatformAdmin), user.tenantId ?? '', user.id]) : null;
   const [snapshot, setSnapshot] = useState<Snapshot>(initial);
   const operation = useRef<Operation | null>(null);
@@ -35,6 +35,8 @@ function usePushSubscriptionState(): PushSubscriptionState {
    */
   const run = useCallback((kind: Operation['kind']): Promise<boolean> => {
     if (!identity) return Promise.resolve(false);
+    // Reconciliação/POST dependem da rede. Offline não deve abrir modal de erro.
+    if (!navigator.onLine) return Promise.resolve(false);
     const previous = operation.current;
     if (previous) {
       if (kind === 'refresh' || previous.kind !== 'refresh') return previous.promise;

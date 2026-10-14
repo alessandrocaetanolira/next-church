@@ -62,6 +62,7 @@ export class MemberAccessService {
     return {
       success: true,
       userId: user.id,
+      version: user.version,
       email: user.email,
       role: user.role,
       permissions: effectivePermissions,

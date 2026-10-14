@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, Download, PlusSquare, Share } from 'lucide-react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
+import { useConnectivity } from '@/hooks/use-connectivity';
+import { useAppSettings } from '@/components/providers/AppSettingsProvider';
+import { AppLogo } from '@/components/shared/AppLogo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -42,6 +45,8 @@ function writeFlag(key: string) {
 export function PwaOnboarding() {
   const { isAuthenticated, user } = useAuth();
   const push = usePushSubscription();
+  const online = useConnectivity();
+  const { settings } = useAppSettings();
   const [mounted, setMounted] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<DeferredInstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
@@ -99,10 +104,11 @@ export function PwaOnboarding() {
     previousPushPermissionRef.current = push.permission;
   }, [push.permission, push.subscribed]);
 
-  const canOfferInstall = production && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios || android);
+  const canOfferInstall = production && online && mounted && isAuthenticated && !installed && !installDismissed && Boolean(installPrompt || ios || android);
   // Instalação tem prioridade: apenas um diálogo pode capturar foco por vez.
   // A sugestão não depende de worker ativo; a ativação trata espera e falhas.
   const canOfferNotifications = production
+    && online
     && mounted
     && isAuthenticated
     && !canOfferInstall
@@ -150,8 +156,9 @@ export function PwaOnboarding() {
     <>
       <Dialog open={canOfferInstall} onOpenChange={(open) => { if (!open) dismissInstall(); }}>
         <DialogContent className="max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
+          <AppLogo className="mx-auto h-12 w-40" />
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Download className="h-5 w-5 text-primary" />Instalar o Church App</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Download className="h-5 w-5 text-primary" />Instalar {settings.appName}</DialogTitle>
             <DialogDescription>Tenha acesso rápido à igreja, notificações e recursos offline.</DialogDescription>
           </DialogHeader>
           {ios ? (
@@ -177,6 +184,7 @@ export function PwaOnboarding() {
 
       <Dialog open={canOfferNotifications} onOpenChange={(open) => { if (!open) dismissNotifications(); }}>
         <DialogContent className="max-w-md rounded-xl border-border/80 bg-card p-5 shadow-xl sm:p-6">
+          <AppLogo className="mx-auto h-12 w-40" />
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'denied' ? 'Notificações bloqueadas' : push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
             <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>

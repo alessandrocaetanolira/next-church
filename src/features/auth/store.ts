@@ -25,6 +25,7 @@ export interface User {
   planCode?: string;
   planFeatures?: string[];
   accessUpdatedAt?: number;
+  version?: number;
   accessibleModules: AppModule[];
 }
 
@@ -36,7 +37,7 @@ interface AuthState {
   
   // Actions
   setSession: (user: User | null, tenantId: string | null) => void;
-  updateAccess: (access: { permissions?: string[]; role?: User['role']; planFeatures?: string[]; teamIds?: string[] }) => void;
+  updateAccess: (access: { permissions?: string[]; role?: User['role']; planFeatures?: string[]; teamIds?: string[]; version?: number }, identity?: Pick<User, 'id' | 'tenantId'>) => void;
   logout: () => void;
   setLoading: (isLoading: boolean) => void;
 }
@@ -49,16 +50,19 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isLoading: true,
 
-      setSession: (user, tenantId) => set({ 
-        user, 
-        tenantId, 
-        isAuthenticated: !!user,
-        isLoading: false 
+      setSession: (user, tenantId) => set((state) => {
+        if (user && state.user && user.id === state.user.id && user.tenantId === state.user.tenantId
+          && (user.version ?? 0) < (state.user.version ?? 0)) return state;
+        return { user, tenantId, isAuthenticated: !!user, isLoading: false };
       }),
 
-      updateAccess: (access) => set((state) => {
+      updateAccess: (access, identity) => set((state) => {
         if (!state.user) return state;
-        const user = { ...state.user, ...access, accessUpdatedAt: Date.now() };
+        if (identity && (identity.id !== state.user.id || identity.tenantId !== state.user.tenantId)) return state;
+        // Unversioned events only trigger server reconciliation; they cannot overwrite access.
+        if (access.version === undefined || access.version <= (state.user.version ?? 0)) return state;
+        const definedAccess = Object.fromEntries(Object.entries(access).filter(([, value]) => value !== undefined));
+        const user = { ...state.user, ...definedAccess, accessUpdatedAt: Date.now() };
         return { user: { ...user, accessibleModules: [...getAccessibleModules(user)] } };
       }),
 
@@ -77,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => {
         const { accessUpdatedAt: _accessUpdatedAt, ...persistedUser } = state.user ?? {};
         return {
-          user: persistedUser,
+          user: state.user ? persistedUser : null,
           tenantId: state.tenantId,
           isAuthenticated: state.isAuthenticated,
         };

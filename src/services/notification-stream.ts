@@ -5,6 +5,7 @@ export type NotificationStreamPayload = {
   notification?: unknown;
   role?: string;
   permissions?: string[];
+  version?: number;
   runId?: string;
   tenantId?: string | null;
   status?: string;

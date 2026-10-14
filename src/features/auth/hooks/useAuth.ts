@@ -12,6 +12,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { useAuthStore } from '@/features/auth/store';
 import { clearCachedSession } from '@/lib/offline-session';
+import { useSessionRefresh } from '@/features/auth/session-refresh';
 
 /**
  * Interface que define a estrutura de um usuário autenticado.
@@ -38,6 +39,7 @@ export interface User {
   planCode?: string;
   planFeatures?: string[];
   accessUpdatedAt?: number;
+  version?: number;
 }
 
 /**
@@ -48,6 +50,7 @@ export interface User {
  */
 export function useAuth() {
   const { data: session, status, update } = useSession();
+  const coordinatedRefresh = useSessionRefresh();
   const storedUser = useAuthStore((state) => state.user);
   const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
@@ -67,28 +70,34 @@ export function useAuth() {
     planCode: (session.user as any).planCode,
     planFeatures: (session.user as any).planFeatures,
     accessUpdatedAt: undefined,
+    version: session.user.version ?? 0,
   } as User : null;
   const user = sessionUser
-    ? (storedUser && storedUser.email === sessionUser.email && storedUser.tenantId === sessionUser.tenantId
+    ? (storedUser && storedUser.id === sessionUser.id && storedUser.email === sessionUser.email
+      && storedUser.tenantId === sessionUser.tenantId && Boolean(storedUser.isPlatformAdmin) === Boolean(sessionUser.isPlatformAdmin)
       ? {
           ...sessionUser,
-          ...(storedUser.accessUpdatedAt ? {
+          ...((storedUser.version ?? 0) > (sessionUser.version ?? 0) ? {
             role: storedUser.role,
             permissions: storedUser.permissions,
             teamIds: storedUser.teamIds,
             planFeatures: storedUser.planFeatures,
+            version: storedUser.version,
           } : {}),
         }
       : sessionUser)
     : null;
 
+  const validUser = session?.user?.authValid === false ? null
+    : user ?? (isOffline ? storedUser : null);
   return {
-    user: user ?? (isOffline ? storedUser : null),
+    user: validUser,
     isOffline,
-    isLoading: status === "loading",
-    isAuthenticated: status === "authenticated",
+    isLoading: status === 'loading' && !validUser,
+    isRefreshing: status === 'loading' && Boolean(validUser),
+    isAuthenticated: Boolean(validUser?.id) && (status !== 'unauthenticated' || isOffline),
     /** Revalida a sessão e repassa permissões atualizadas para o Zustand. */
-    refreshSession: update,
+    refreshSession: coordinatedRefresh ?? update,
     /** Encerra a sessão e redireciona para a tela de login */
     logout: async () => {
       const tenantSlug = user?.isPlatformAdmin ? '' : user?.tenantSlug?.trim().toLowerCase();

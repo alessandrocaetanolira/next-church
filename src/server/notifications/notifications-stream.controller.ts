@@ -43,7 +43,8 @@ export async function openNotificationsStream(
       presenceUser = presenceUser ? { ...presenceUser, role: event.role, permissions: event.permissions } : presenceUser;
       if (presenceUser && PresencePolicy.canView(presenceUser)) attachPresence(presenceUser);
       else detachPresence();
-      sse.write({ type: event.type, role: event.role, permissions: event.permissions });
+      sse.write({ type: event.type, role: event.role, permissions: event.permissions,
+        version: event.version, userId: event.userId, tenantId });
       return;
     }
     lastSeen = event.createdAt;

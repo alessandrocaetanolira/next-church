@@ -1,12 +1,15 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 
 type DrawerOptions = {
   content: ReactNode;
   contentClassName?: string;
   contentWrapperClassName?: string;
+  /** Menus close on suspension; forms keep their state and use Vaul's keyboard handling. */
+  closeOnSuspend?: boolean;
+  repositionInputs?: boolean;
 };
 
 type DrawerContextValue = {
@@ -19,37 +22,28 @@ const DrawerContext = createContext<DrawerContextValue | null>(null);
 
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [drawer, setDrawer] = useState<DrawerOptions | null>(null);
-  const [keyboardInset, setKeyboardInset] = useState(0);
-  const closeDrawer = useCallback(() => {
-    // Evita que o deslocamento calculado enquanto o teclado estava aberto
-    // sobreviva à animação de fechamento e deixe um vão no rodapé.
-    setKeyboardInset(0);
-    setDrawer(null);
+  const [instance, setInstance] = useState(0);
+  const latest = useRef(drawer);
+  useLayoutEffect(() => { latest.current = drawer; }, [drawer]);
+  const closeDrawer = useCallback(() => setDrawer(null), []);
+  const openDrawer = useCallback((options: DrawerOptions) => {
+    // Each opening has its own Vaul keyboard/height references, including replacement content.
+    setInstance((value) => value + 1);
+    setDrawer(options);
   }, []);
-  const openDrawer = useCallback((options: DrawerOptions) => setDrawer(options), []);
 
   useEffect(() => {
-    if (!drawer || typeof window === 'undefined' || !window.visualViewport) {
-      setKeyboardInset(0);
-      return;
-    }
-
-    const viewport = window.visualViewport;
-    const updateKeyboardInset = () => {
-      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      // Barras do navegador podem alterar o visualViewport alguns pixels.
-      // Só reposicione o drawer quando houver evidência de teclado aberto.
-      setKeyboardInset(inset > 120 ? inset : 0);
+    const onSuspend = () => {
+      if (latest.current?.closeOnSuspend) closeDrawer();
     };
-
-    updateKeyboardInset();
-    viewport.addEventListener('resize', updateKeyboardInset);
-    viewport.addEventListener('scroll', updateKeyboardInset);
+    const onVisibility = () => { if (document.visibilityState === 'hidden') onSuspend(); };
+    window.addEventListener('pagehide', onSuspend);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      viewport.removeEventListener('resize', updateKeyboardInset);
-      viewport.removeEventListener('scroll', updateKeyboardInset);
+      window.removeEventListener('pagehide', onSuspend);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [drawer]);
+  }, [closeDrawer]);
 
   const value = useMemo(
     () => ({ openDrawer, closeDrawer, isOpen: drawer !== null }),
@@ -59,13 +53,10 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   return (
     <DrawerContext.Provider value={value}>
       {children}
-      <Drawer open={drawer !== null} onOpenChange={(open) => !open && closeDrawer()}>
+      <Drawer key={instance} open={drawer !== null} onOpenChange={(open) => !open && closeDrawer()}
+        repositionInputs={drawer?.repositionInputs ?? true} preventScrollRestoration>
         <DrawerContent
           className={drawer?.contentClassName}
-          style={{
-            bottom: keyboardInset ? `${keyboardInset}px` : undefined,
-            maxHeight: keyboardInset ? `calc(82dvh - ${keyboardInset}px)` : undefined,
-          }}
         >
           <div className={drawer?.contentWrapperClassName ?? "min-h-0 overflow-y-auto overscroll-contain pb-[max(0.5rem,env(safe-area-inset-bottom))]"}>
             {drawer?.content}

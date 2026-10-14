@@ -12,7 +12,7 @@ type LoadingStateProps = {
 };
 
 export function LoadingState({ label = 'Carregando...', className }: LoadingStateProps) {
-  const { settings } = useAppSettings();
+  const { settings, resolveLogoSrc } = useAppSettings();
   const [logoReady, setLogoReady] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
   const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
@@ -30,7 +30,7 @@ export function LoadingState({ label = 'Carregando...', className }: LoadingStat
       <div className="relative flex h-16 w-40 items-center justify-center">
         {logoSrc && !logoFailed ? (
           <AppImage
-            src={logoSrc}
+            src={resolveLogoSrc(logoSrc)}
             alt=""
             aria-hidden="true"
             width={192}

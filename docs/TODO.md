@@ -1,6 +1,6 @@
 # TODO principal — Church App
 
-Atualizado em **09/10/2026** após auditoria de código, documentação, histórico
+Atualizado em **14/10/2026** após auditoria de código, documentação, histórico
 recente e testes existentes. Este é o índice canônico de prioridade. Os documentos
 de domínio continuam contendo contratos e checklists detalhados, mas não substituem
 a ordem definida aqui.
@@ -115,6 +115,11 @@ O mobile é a referência principal do produto.
 
 ### 4. Layout estável e componentes compartilhados
 
+- [~] Prioridade desta etapa: corrigir retorno após suspensão (faixa branca, drawer
+      desproporcional e opções ausentes), seguindo as etapas e critérios de aceite de
+      [mobile-resume-todo.md](./mobile-resume-todo.md) antes da refatoração geral de UI.
+      Implementação aplicada e verificação local aprovada em 14/10; falta build novo
+      e aceite em dispositivos reais.
 - [ ] Auditar e corrigir os contêineres desktop aninhados: `WebTemplate` já aplica
       `WebPageContainer`, enquanto páginas que usam `WebPageLayout` ou outro
       `WebPageContainer` aplicam largura e padding novamente.
@@ -292,10 +297,22 @@ Referência: [email-todo.md](./email-todo.md).
 
 ## Próxima ação recomendada
 
-**Executar o aceite PWA/offline-first em artefato de produção.** Há relatos de tela
-branca, subscription travada no iOS e comportamento divergente do worker entre
-dispositivos. O teste deve ocorrer após build novo, via `next start`, verificando
-`/serwist/sw.js`, Cache Storage e refresh offline da rota inicial e da Bíblia baixada.
+**Abertura offline Safari/iPhone validada pelo usuário:** o bloqueio era agravado
+pelo worker antigo retido no Cloudflare, comprovado por comparação de hashes.
+Após corrigir o cache CDN, a abertura funcionou. Próximo aceite específico:
+logo Base64 por tenant, onboarding somente online e ação “Atualizar app” sem
+limpar dados. O aceite de todos os módulos offline ainda não está concluído. Detalhes em
+[offline-first-todo.md](./offline-first-todo.md).
+
+**Validar a correção de retorno após suspensão do PWA mobile em artefato novo:**
+gerar build, iniciar via `npm run start` e cumprir os cenários Android/iOS da Etapa 6
+de [mobile-resume-todo.md](./mobile-resume-todo.md). Shell estável, acesso versionado,
+menus reativos e controle único de teclado no drawer já foram implementados.
+
+O aceite geral PWA/offline-first foi adiado a pedido do usuário e permanece pendente.
+Ele exige build novo via `next start`, inspeção de `/serwist/sw.js`, Cache Storage e
+refresh offline da rota inicial/Bíblia baixada. O aceite específico do incidente de
+suspensão continua necessário para considerar sua correção concluída.
 
 ## Documentos de detalhe
 
@@ -305,6 +322,7 @@ dispositivos. O teste deve ocorrer após build novo, via `next start`, verifican
 - [Bíblia offline](./bible-offline-todo.md)
 - [Dashboard e Cantina](./dashboard-canteen-todo.md)
 - [Frontend](./frontend-todo.md)
+- [Retorno do PWA após suspensão](./mobile-resume-todo.md)
 - [Separação Web/Mobile](./web-mobile-separation-todo.md)
 - [Presença online](./presence-todo.md)
 - [Jogos](./games-todo.md)
