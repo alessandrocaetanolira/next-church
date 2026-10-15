@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Minus, Plus, ShoppingCart } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/features/auth/hooks/useAuth';
@@ -16,11 +16,15 @@ import { generateId } from '@/lib/id';
 import { formatCurrency } from '@/lib/utils';
 import { queueSaleCreate } from '@/features/canteen/lib/offline-sales';
 import { useCanteenCartOwner } from '@/features/canteen/hooks/use-canteen-cart-owner';
+import { ProductCard } from './ProductCard';
+import { ProductPurchaseActions } from './ProductPurchaseActions';
+import { ProductDetailsDrawer } from './ProductDetailsDrawer';
 
 export function MemberOrderView() {
   const { user } = useAuth();
+  const { openDrawer } = useDrawer();
   const products = useProducts();
-  const { items, addItem, incrementItem, decrementItem, clearCart, total } = useCartStore();
+  const { items, clearCart, total } = useCartStore();
   const cartReady = useCanteenCartOwner();
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,17 +55,16 @@ export function MemberOrderView() {
 
   const availableProducts = products.filter((product) => product.active !== false && product.availableToday !== false);
   return <div className="space-y-4">
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {availableProducts.map((product) => {
-        const item = items.find((entry) => entry.productId === product.id);
-        return <Card key={product.id}><CardContent className="space-y-3 p-4">
-          <div className="flex items-start justify-between gap-2"><h3 className="font-semibold">{product.name}</h3><Badge variant="outline">{product.category}</Badge></div>
-          <p className="text-sm text-muted-foreground">{product.description || 'Produto da cantina'}</p>
-          <div className="flex items-center justify-between"><span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-            {item ? <div className="flex items-center gap-2"><Button size="icon" variant="outline" disabled={!cartReady} onClick={() => decrementItem(product.id)}><Minus className="h-4 w-4" /></Button><span>{item.quantity}</span><Button size="icon" variant="outline" disabled={!cartReady || item.quantity >= product.stock} onClick={() => incrementItem(product.id)}><Plus className="h-4 w-4" /></Button></div> : <Button size="sm" disabled={!cartReady || product.stock <= 0} onClick={() => addItem({ productId: product.id, name: product.name, price: product.price, quantity: 1 })}><Plus className="mr-1 h-4 w-4" />Adicionar</Button>}
-          </div>
-        </CardContent></Card>;
-      })}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {availableProducts.map((product) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          quantity={items.find((item) => item.productId === product.id)?.quantity ?? 0}
+          onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} />, repositionInputs: false })}
+          actions={<ProductPurchaseActions product={product} cartReady={cartReady} />}
+        />
+      ))}
     </div>
     <Card><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" /><span>{items.reduce((sum, item) => sum + item.quantity, 0)} item(ns)</span><strong>{formatCurrency(total)}</strong></div><Button disabled={!cartReady || !items.length || submitting} onClick={() => void submitOrder()}>{submitting ? 'Enviando...' : 'Enviar pedido'}</Button></CardContent></Card>
   </div>;

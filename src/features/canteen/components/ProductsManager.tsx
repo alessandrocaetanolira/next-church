@@ -3,24 +3,23 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 import { useProducts } from '@/features/canteen/hooks/use-products';
 import { db } from '@/lib/db';
-import { Package, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Package, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn, formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { deleteCanteenProduct, updateCanteenProduct } from '@/services/canteen/products-api';
 import { ProductsWebTable } from '@/features/canteen/components/ProductsWebTable';
-import { AppImage } from '@/components/shared';
+import { ProductManagementCard } from './ProductManagementCard';
+import { ProductDetailsDrawer } from './ProductDetailsDrawer';
 
 export function ProductsManager() {
   const { user } = useAuth();
+  const { openDrawer } = useDrawer();
   const router = useRouter();
   const canManageProducts = hasActionPermission(user, 'canteen', 'manage_products');
   const canCreate = canManageProducts;
@@ -121,59 +120,17 @@ export function ProductsManager() {
         </div>
         <div className="space-y-3 md:hidden">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="bg-card rounded-xl p-4 border border-border">
-              <div className="flex items-start justify-between">
-                <div className="flex flex-1 gap-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/30">
-                    {product.imageUrl ? (
-                      <AppImage src={product.imageUrl} alt={product.name} width={160} height={160} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Sem imagem</div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="font-semibold">{product.name}</h3>
-                    {product.active === false ? <Badge variant="secondary">Inativo</Badge> : null}
-                    {(product.minStock ?? 0) > 0 && product.stock <= (product.minStock ?? 0) ? <Badge variant="destructive">Baixo</Badge> : null}
-                    {product.availableToday === false ? (
-                      <Badge variant="outline" className="text-muted-foreground">Indisponível hoje</Badge>
-                    ) : null}
-                  </div>
-                  <p className="mb-2 text-sm text-muted-foreground">{product.description || 'Sem descrição'}</p>
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-                    <span className="text-muted-foreground">Custo: {formatCurrency(product.cost ?? 0)}</span>
-                    <span className={cn('font-medium', (product.minStock ?? 0) > 0 && product.stock <= (product.minStock ?? 0) ? 'text-destructive' : 'text-foreground')}>
-                      Est: {product.stock}
-                    </span>
-                    <Badge variant="outline">{product.category}</Badge>
-                  </div>
-                  </div>
-                </div>
-                <div className="ml-2 flex items-center gap-1">
-                  <Label className="mr-1 text-[10px] text-muted-foreground">Hoje</Label>
-                  {canUpdate ? <Switch
-                    checked={product.availableToday !== false}
-                    onCheckedChange={(checked) => toggleAvailableToday(product.id, checked)}
-                    disabled={savingId === product.id}
-                  /> : null}
-                  {canUpdate ? <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      router.push(`/cantina/products/${product.id}/edit`);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button> : null}
-                  {canDelete ? <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setDeleteId(product.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button> : null}
-                </div>
-              </div>
-            </div>
+            <ProductManagementCard
+              key={product.id}
+              product={product}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
+              saving={savingId === product.id}
+              onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} allowPurchase={false} />, repositionInputs: false })}
+              onToggleAvailable={(value) => void toggleAvailableToday(product.id, value)}
+              onEdit={() => router.push(`/cantina/products/${product.id}/edit`)}
+              onDelete={() => setDeleteId(product.id)}
+            />
           ))}
 
           {filteredProducts.length === 0 ? (

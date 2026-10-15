@@ -7,6 +7,19 @@ export class CanteenProductsRepository {
     return this.prisma.product.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
   }
 
+  /** Histórico completo do período no banco do tenant, não a lista operacional limitada a 50 vendas.
+   * Arquivar um pedido pronto não desfaz a venda; por isso deletedAt não exclui seu histórico. */
+  listConfirmedSaleItems(from: Date, to: Date) {
+    return this.prisma.sale.findMany({
+      where: {
+        createdAt: { gte: from, lte: to },
+        paymentMethod: { notIn: ['pending', 'cancelled'] },
+        OR: [{ orderStatus: null }, { orderStatus: { not: 'cancelled' } }],
+      },
+      select: { items: true },
+    });
+  }
+
   findById(id: string) {
     return this.prisma.product.findFirst({ where: { id, deletedAt: null } });
   }

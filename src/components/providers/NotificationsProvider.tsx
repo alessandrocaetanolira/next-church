@@ -89,6 +89,9 @@ export function NotificationsProvider() {
         }
 
         const added = upsertNotification(notification);
+        if (notification.type === 'canteen-opened') {
+          window.dispatchEvent(new CustomEvent('church:canteen-status-updated'));
+        }
         if (notification.sourceType === 'gameChallenge') {
           window.dispatchEvent(new CustomEvent('church:game-challenge-updated', { detail: notification }));
         }

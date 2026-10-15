@@ -116,6 +116,33 @@ Aceite:
 - [ ] Solicitar confirmação antes de iniciar, informando espaço estimado e licença aplicável.
 - [x] Não manter conteúdo parcial como `ready`; registrar `downloading`, `paused` ou `error`.
 
+### UI de versões e download — 15/10/2026
+
+- [x] Separar a seleção da versão de leitura da ação de baixar, mostrando nome
+      completo, sigla, versão em uso, estado offline e capítulos baixados por versão.
+- [x] Reutilizar o mesmo card no drawer e nas configurações, com ações textuais para
+      baixar, pausar, continuar, atualizar e remover.
+- [x] Extrair `useBibleDownload` para ler o progresso diretamente do Dexie e executar
+      as ações existentes; seleção de leitura continua reativa pelo Zustand.
+- [x] Criar `components/shared/DownloadProgressButton`, inspirado no exemplo
+      **33 · Download + Progresso** de `motion-components-lab-4.html`: preenchimento
+      em gradiente, seta oscilando e check com entrada elástica ao concluir.
+- [x] Alimentar a animação pelos capítulos realmente baixados; timers cuidam somente
+      da troca visual do ícone. Chegar a 100% sem estado `ready` não declara conclusão.
+- [x] Respeitar `prefers-reduced-motion` e manter contraste do texto nos temas
+      claro/escuro; estilos ficam isolados em CSS Module, sem Framer Motion.
+- [x] Confirmar remoção dentro do próprio card, sem sobrepor outra modal ao drawer;
+      a ação remove apenas a cópia offline da tradução escolhida.
+- [x] Exibir erro/retry e conectividade; pausar não emite toast de conclusão.
+- [x] Cobrir interface de download, progresso reativo, pausa/retomada, seleção sem
+      reabrir, confirmação de remoção, dados pessoais preservados e transições do
+      botão em testes automatizados.
+- [ ] Validar aparência/animação, scroll e safe-area no novo build em Android/iPhone,
+      incluindo movimento reduzido, leitura offline e remoção de uma única versão.
+
+Não há novas dependências, migrations ou alteração no schema Dexie/Prisma. O motor
+de download e `bible.db` permanecem inalterados.
+
 Aceite:
 
 - [x] O usuário pode baixar uma versão e ler seus capítulos offline.

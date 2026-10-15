@@ -1,9 +1,9 @@
 # TODO principal — Church App
 
-Atualizado em **14/10/2026** após auditoria de código, documentação, histórico
-recente e testes existentes. Este é o índice canônico de prioridade. Os documentos
-de domínio continuam contendo contratos e checklists detalhados, mas não substituem
-a ordem definida aqui.
+Atualizado em **15/10/2026**, incluindo a análise do módulo de Escalas, após auditoria
+de código, documentação, histórico recente e testes existentes. Este é o índice
+canônico de prioridade. Os documentos de domínio continuam contendo contratos e
+checklists detalhados, mas não substituem a ordem definida aqui.
 
 Legenda: `[ ]` pendente; `[~]` parcial ou sem aceite operacional; `[x]` implementado
 e validado no nível indicado.
@@ -82,6 +82,10 @@ Referência: [production-stability-todo.md](./production-stability-todo.md) e
 - [ ] Revisar rotas ainda fora da arquitetura em camadas ou com Prisma direto:
       fundraising de grupos, líderes de equipes, escalas/equipes, perfil, cadastro
       público, sync e páginas server-side pastorais.
+- [ ] Corrigir os desvios de autorização de Escalas na sincronização: pull por
+      equipe/permissão, validação da equipe persistida no update/delete e fechamento
+      dos caminhos legados que contornam as policies. Seguir a Etapa 1 de
+      [schedules-todo.md](./schedules-todo.md) antes de ampliar o módulo.
 - [ ] Substituir `jsonError` genérico por logs estruturados com correlação, rota,
       tenant, usuário normalizado, decisão de autorização e erro Prisma sanitizado.
 
@@ -167,6 +171,10 @@ O mobile é a referência principal do produto.
 
 ### 6. Bíblia e leitura
 
+- [~] Drawer de versões/download reorganizado com cards por tradução e botão
+      compartilhado inspirado no exemplo 33 do laboratório de animações: progresso
+      real do Dexie, pausa, retomada, confirmação de remoção e seleção reativa.
+      Testes automatizados adicionados; falta aceite visual no mobile em build novo.
 - [~] Testar ajustes de fonte no mobile e persistência entre abertura/fechamento.
 - [ ] Confirmar Wake Lock em navegadores suportados; Safari/iOS deve manter feedback
       de indisponibilidade, sem promessa falsa de tela ligada.
@@ -177,6 +185,12 @@ O mobile é a referência principal do produto.
 
 ### 7. Cantina, dashboard e carteira
 
+- [x] Corrigir a divergência “aberta no cabeçalho / fechada no carrinho”: estado
+      operacional único em Zustand, respostas antigas descartadas, erro distinto
+      de fechamento e revalidação antes da venda; coberto por testes de estado/UI.
+- [~] Cards e detalhes de produto padronizados; badge “Recomendado” calculado no
+      backend por unidades vendidas em 30 dias, isolado por tenant e com cache no
+      Dexie. Falta build novo e aceite visual/operacional no mobile.
 - [ ] Validar em operação real PDF de vendas, arquivamento de pedido pronto e
       atualização SSE da fila.
 - [ ] Revalidar produto, disponibilidade, preço e estoque ao restaurar carrinho;
@@ -189,6 +203,35 @@ O mobile é a referência principal do produto.
       tempo real com testes de integração.
 
 Referência: [dashboard-canteen-todo.md](./dashboard-canteen-todo.md).
+
+### Escalas — autorização, sincronização e evolução funcional
+
+A implementação atual é uma agenda de tarefas por equipe, não uma escala completa
+de participantes. A análise foi concluída; as correções abaixo ainda não foram
+implementadas. Segurança é P0; consistência e UI são P1. Funcionalidades novas ficam
+para depois dessas correções, sem antecipar as evoluções já adiadas.
+
+- [x] Mapear páginas, hooks, Dexie, APIs, policies e sincronização; testes existentes
+      de tarefas/sync/contexto passaram (17 testes em três arquivos), mas não cobrem
+      todos os problemas encontrados.
+- [ ] **Primeiro, autorização:** impedir leitura de tarefas de outras equipes pelo
+      sync; validar o registro persistido antes de alterar/excluir; retirar bypasses
+      legados e aplicar Route → Controller → Service → Repository.
+- [ ] **Depois, consistência offline:** fila atômica por tenant/usuário, sem adotar
+      operações de outra sessão; exclusões que não reaparecem; proteção de edições
+      pendentes e feedback de sincronização/erro.
+- [ ] **Depois, CRUD e mobile:** alinhar modelos local/servidor, validar equipes,
+      adotar RHF/Zod e FormCreate/FormEdit/FormUI, lista compartilhada e estados
+      claros de loading/empty/error; confirmar exclusão e eliminar navegação após
+      falha de gravação.
+- [ ] **Evolução posterior, a definir:** participantes, aceite/recusa, substituições,
+      indisponibilidade, recorrência real, conflitos de horário e avisos via infra
+      compartilhada de notificações/SSE/Push.
+- [ ] Validar perfis, mudança de acesso, isolamento de equipes/tenants e cenários
+      online/offline antes de considerar o módulo concluído.
+
+Plano detalhado, arquivos envolvidos e critérios de aceite:
+[schedules-todo.md](./schedules-todo.md).
 
 ---
 
@@ -321,6 +364,7 @@ suspensão continua necessário para considerar sua correção concluída.
 - [Offline-first](./offline-first-todo.md)
 - [Bíblia offline](./bible-offline-todo.md)
 - [Dashboard e Cantina](./dashboard-canteen-todo.md)
+- [Escalas](./schedules-todo.md)
 - [Frontend](./frontend-todo.md)
 - [Retorno do PWA após suspensão](./mobile-resume-todo.md)
 - [Separação Web/Mobile](./web-mobile-separation-todo.md)

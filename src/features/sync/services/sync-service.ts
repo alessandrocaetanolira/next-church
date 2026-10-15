@@ -171,7 +171,19 @@ export async function pullChanges(context?: SyncContext) {
         );
         await db.sales.bulkPut(mergedSales);
       }
-      if (data.products) await db.products.bulkPut(data.products.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
+      if (data.products) {
+        const products = await Promise.all(data.products.map(async (item) => {
+          const existing = await db.products.get(item.id);
+          const tenantId = context?.tenantId ?? item.tenantId;
+          const keepRecommendation = Boolean(tenantId) && existing?.tenantId === tenantId && item.recommended === undefined;
+          return {
+            ...(keepRecommendation ? { recommended: existing?.recommended, recommendationCalculatedAt: existing?.recommendationCalculatedAt } : {}),
+            ...item,
+            ...(context ? { tenantId: context.tenantId, tenantSlug: context.tenantSlug } : {}),
+          };
+        }));
+        await db.products.bulkPut(products);
+      }
       if (data.members) await db.members.bulkPut(data.members.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
       if (data.tasks) await db.tasks.bulkPut(data.tasks.map((item) => context ? { ...item, tenantId: context.tenantId, tenantSlug: context.tenantSlug } : item));
     });

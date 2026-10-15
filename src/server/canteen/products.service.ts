@@ -2,6 +2,7 @@ import { generateId } from '@/lib/id';
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
 import { saveTenantDataUrl } from '@/lib/server/tenant-file-storage';
 import { CanteenProductsRepository } from './products.repository';
+import { PRODUCT_RECOMMENDATION_DAYS } from '@/lib/canteen/product-recommendation';
 
 type ProductInput = {
   name?: unknown; description?: unknown; imageUrl?: unknown; price?: unknown; cost?: unknown;
@@ -27,7 +28,30 @@ function quantity(value: unknown, label: string) {
 export class CanteenProductsService {
   constructor(private readonly repository: CanteenProductsRepository, private readonly tenantSlug: string) {}
 
-  list() { return this.repository.list(); }
+  /** Recomenda os líderes em unidades vendidas entre produtos disponíveis no catálogo.
+   * Retorna apenas o destaque, sem expor vendas, compradores ou faturamento ao membro. */
+  async list() {
+    const now = new Date();
+    const from = new Date(now.getTime() - PRODUCT_RECOMMENDATION_DAYS * 24 * 60 * 60 * 1000);
+    const [products, sales] = await Promise.all([
+      this.repository.list(),
+      this.repository.listConfirmedSaleItems(from, now),
+    ]);
+    const quantities = new Map<string, number>();
+    for (const sale of sales) {
+      let items: unknown;
+      try { items = JSON.parse(sale.items); } catch { continue; }
+      if (!Array.isArray(items)) continue;
+      for (const item of items) {
+        if (!item || typeof item.productId !== 'string' || !Number.isSafeInteger(item.quantity) || item.quantity <= 0) continue;
+        quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+      }
+    }
+    const available = products.filter((product) => product.active && product.availableToday && product.stock > 0);
+    const highest = available.reduce((max, product) => Math.max(max, quantities.get(product.id) ?? 0), 0);
+    const leaders = new Set(available.filter((product) => highest > 0 && quantities.get(product.id) === highest).map((product) => product.id));
+    return products.map((product) => ({ ...product, recommended: leaders.has(product.id), recommendationCalculatedAt: now.toISOString() }));
+  }
 
   async create(input: unknown) {
     const data = await this.normalize(input, true);

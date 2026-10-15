@@ -7,30 +7,25 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProducts } from '../hooks/use-products';
 import { useCartStore } from '../store/useCartStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ShoppingCart, Plus, Minus, Trash2, Search, Package, Coffee, Pizza, IceCream, Sandwich, Store } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Trash2, Search, Package } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
-import { AppImage } from '@/components/shared';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 import { toast } from 'sonner';
-import { cn, formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { HorizontalScroll } from '@/components/common';
 import { useCanteenStatus } from '../hooks/use-canteen-status';
 import { useCanteenCartOwner } from '../hooks/use-canteen-cart-owner';
-
-// Mapeamento de Ícones por Categoria
-const CATEGORY_ICONS: Record<string, any> = {
-    'Bebidas': Coffee,
-    'Salgados': Pizza,
-    'Doces': IceCream,
-    'Lanches': Sandwich,
-    'Outros': Package
-};
+import { ProductCard } from './ProductCard';
+import { ProductPurchaseActions } from './ProductPurchaseActions';
+import { ProductDetailsDrawer } from './ProductDetailsDrawer';
+import { CanteenStatusNotice } from './CanteenStatusNotice';
 
 interface CartContentProps {
     items: any[];
@@ -41,10 +36,10 @@ interface CartContentProps {
     getProductStock: (productId: string) => number;
     onCheckout: () => void;
     canCheckout: boolean;
-    checkoutMessage: string | null;
+    checkoutNotice: ReactNode;
 }
 
-const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, onCheckout, canCheckout, checkoutMessage }: CartContentProps) => (
+const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, onCheckout, canCheckout, checkoutNotice }: CartContentProps) => (
     <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto p-4 space-y-3">
             {items.length === 0 ? (
@@ -85,10 +80,7 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
             )}
         </div>
         <div className="p-4 border-t border-border bg-card">
-            {checkoutMessage ? <div className="mb-3 flex items-start gap-2 rounded-lg bg-warning/10 p-3 text-xs text-warning-foreground">
-                <Store className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                <span>{checkoutMessage}</span>
-            </div> : null}
+            {!canCheckout ? <div className="mb-3">{checkoutNotice}</div> : null}
             <div className="flex justify-between items-center mb-4">
                 <span className="text-muted-foreground">Total</span>
                 <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
@@ -102,13 +94,14 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
 
 export function PDV() {
   const router = useRouter();
+  const { openDrawer } = useDrawer();
   const products = useProducts();
-  const { items, addItem, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
+  const { items, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
   const cartReady = useCanteenCartOwner();
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [search, setSearch] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
-  const { status: canteenStatus, loading: loadingCanteenStatus } = useCanteenStatus();
+  const operation = useCanteenStatus();
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
@@ -122,25 +115,6 @@ export function PDV() {
 
   const getProductStock = (productId: string) =>
     products.find((product) => product.id === productId)?.stock ?? 0;
-
-  const handleAddToCart = (productId: string) => {
-    if (!cartReady) return;
-    const product = products.find((entry) => entry.id === productId);
-    if (!product) return;
-
-    const currentQuantity = items.find((item) => item.productId === productId)?.quantity ?? 0;
-    if (product.stock <= 0) {
-      toast.error('Sem estoque.');
-      return;
-    }
-
-    if (currentQuantity >= product.stock) {
-      toast.error('Estoque insuficiente.');
-      return;
-    }
-
-    addItem({ productId: product.id, name: product.name, price: product.price, quantity: 1 });
-  };
 
   const handleIncrementItem = (productId: string) => {
     if (!cartReady) return;
@@ -156,20 +130,23 @@ export function PDV() {
     incrementItem(productId);
   };
 
-  const openCheckout = () => {
+  const openCheckout = async () => {
     if (!cartReady) return;
     if (items.length === 0) return;
-    if (!canteenStatus.isOpen) {
-      toast.error(loadingCanteenStatus ? 'Confirmando o status da cantina…' : 'A cantina está fechada no momento.');
+    const currentStatus = await operation.refresh();
+    if (!currentStatus) {
+      toast.error('Não foi possível confirmar o status da cantina. Tente novamente.');
+      return;
+    }
+    if (!currentStatus.isOpen) {
+      toast.error('A cantina está fechada no momento.');
       return;
     }
     setCartOpen(false);
     router.push('/cantina/checkout');
   };
-  const canCheckout = canteenStatus.isOpen && !loadingCanteenStatus;
-  const checkoutMessage = loadingCanteenStatus
-    ? 'Confirmando se a cantina está aberta…'
-    : canteenStatus.isOpen ? null : 'A cantina está fechada. Abra a operação para finalizar vendas.';
+  const canCheckout = operation.canCheckout && cartReady;
+  const checkoutNotice = <CanteenStatusNotice operation={operation} />;
 
   return (
     <div className="space-y-4">
@@ -202,64 +179,18 @@ export function PDV() {
       </HorizontalScroll>
 
       <div className="flex flex-col gap-4 lg:flex-row">
-        <div className="flex-1">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {filteredProducts.map((product) => {
-                    const inCart = items.find(i => i.productId === product.id);
-                    return (
-                        <button
-                            key={product.id} 
-                            type="button"
-                            disabled={product.stock <= 0}
-                            onClick={() => handleAddToCart(product.id)}
-                            className={cn(
-                                "relative rounded-xl border bg-card p-3 text-left transition-all hover:shadow-sm",
-                                inCart ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30",
-                                product.stock <= 0 && "cursor-not-allowed opacity-40"
-                            )}
-                        >
-                            {inCart && (
-                                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                                    {inCart.quantity}
-                                </span>
-                            )}
-                            {product.imageUrl ? (
-                                <div className="mb-3 overflow-hidden rounded-lg border border-border bg-muted/20">
-                                  <div className="aspect-[4/3] w-full">
-                                    <AppImage
-                                      src={product.imageUrl}
-                                      alt={product.name}
-                                      width={640}
-                                      height={480}
-                                      className="h-full w-full object-cover"
-                                    />
-                                  </div>
-                                </div>
-                            ) : null}
-                            <h3 className="mb-1 line-clamp-2 text-sm font-medium">{product.name}</h3>
-                            <p className="mb-2 text-xs text-muted-foreground">{product.category}</p>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-primary">{formatCurrency(product.price)}</span>
-                              <span
-                                className={cn(
-                                  "text-xs",
-                                  (product.minStock ?? 0) > 0 && product.stock <= (product.minStock ?? 0)
-                                    ? "text-destructive"
-                                    : "text-muted-foreground"
-                                )}
-                              >
-                                {product.stock}
-                              </span>
-                            </div>
-                            {product.imageUrl ? (
-                              <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-                                {product.description || 'Sem descrição'}
-                              </p>
-                            ) : null}
-                        </button>
-                    )
-                })}
-            </div>
+        <div className="min-w-0 flex-1">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                quantity={items.find((item) => item.productId === product.id)?.quantity ?? 0}
+                onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} />, repositionInputs: false })}
+                actions={<ProductPurchaseActions product={product} cartReady={cartReady} />}
+              />
+            ))}
+          </div>
             {filteredProducts.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                     <Package className="w-12 h-12 mx-auto mb-2 opacity-40" />
@@ -292,7 +223,7 @@ export function PDV() {
             getProductStock={getProductStock}
             onCheckout={openCheckout}
             canCheckout={canCheckout}
-            checkoutMessage={checkoutMessage}
+            checkoutNotice={checkoutNotice}
           />
         </div>
       </div>
@@ -328,7 +259,7 @@ export function PDV() {
                           getProductStock={getProductStock}
                           onCheckout={openCheckout}
                           canCheckout={canCheckout}
-                          checkoutMessage={checkoutMessage}
+                          checkoutNotice={checkoutNotice}
                         />
                     </div>
                 </DrawerContent>

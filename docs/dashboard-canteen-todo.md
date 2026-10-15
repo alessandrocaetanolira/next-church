@@ -1,5 +1,8 @@
 # TODO — Dashboard e integridade operacional da Cantina
 
+Atualizado em **15/10/2026**. As validações automatizadas abaixo não substituem o
+aceite em artefato de produção no dispositivo.
+
 ## Objetivo
 
 Substituir os dados demonstrativos do Dashboard por agregados reais, isolados por
@@ -71,11 +74,21 @@ somente os cards autorizados desse tenant; nenhum card apresenta número fixo.
 
 ## Fase 2 — Estado operacional compartilhado da Cantina
 
-- [x] Criar hook/API de status compartilhado para PDV e Checkout.
+- [x] Usar uma única store Zustand operacional, sem persistência, para cabeçalho,
+      PDV/carrinho e Checkout; não confundir reutilização do hook com estado
+      compartilhado (o hook anterior mantinha um `useState` por consumidor).
+- [x] Isolar o estado por tenant/usuário, coalescer consultas e ignorar respostas
+      anteriores a uma alteração de abertura ou troca de sessão.
 - [x] Permitir `GET /api/canteen/status` para quem possui `canteen:sell` ou
       `canteen:order`, além das permissões atuais de visualização/operação.
 - [~] Atualizar o status ao entrar em PDV/Checkout e ao retornar ao app. Falta
-      integrar um evento em tempo real de abertura/fechamento.
+      integrar um evento em tempo real específico de fechamento. Montagem, foco,
+      retorno online, visibilidade, reconexão do stream e notificação SSE
+      `canteen-opened` já provocam revalidação.
+- [x] Distinguir status não confirmado/erro de consulta de fechamento confirmado;
+      apresentar retry sem exigir refresh da página.
+- [x] Reconsultar o status antes de navegar ao checkout e antes do POST da venda;
+      preservar o carrinho quando a consulta falha ou a operação está fechada.
 - [x] Exibir aviso persistente e acessível “Cantina fechada” no carrinho e checkout.
 - [x] Desabilitar “Finalizar venda” e “Confirmar venda” quando fechada, com motivo
       textual visível, não apenas tooltip.
@@ -161,6 +174,41 @@ carrinho correto.
 **Aceite:** o membro abre a Carteira e vê exclusivamente seu saldo e extrato; uma
 compra em fiado ou pagamento feito em outro dispositivo atualiza a tela e o cache
 local, sem conceder acesso administrativo ao módulo de membros.
+
+## Produtos — cards, detalhes e recomendação
+
+- [x] Compartilhar o card do catálogo entre PDV, pedidos do membro e catálogo
+      somente leitura; separar consulta de detalhes da ação de adicionar.
+- [x] Compactar o card de compra: categoria sobre a imagem, descrição com `gap-1`,
+      sem texto adicional de detalhes, preço à esquerda e estoque em “un.” à
+      direita na mesma linha, alinhados ao início, com centavos menores. O clique
+      continua abrindo a descrição completa.
+- [x] Abrir detalhes pelo `DrawerProvider` padrão, com descrição completa inclusive
+      sem foto; quantidade e produto acompanham o Zustand/Dexie sem reabrir o drawer.
+- [x] Separar identificação, venda/custo/estoque e ações no card mobile de gestão.
+- [x] Calcular `recommended` no backend pela soma de unidades em vendas confirmadas
+      nos últimos **30 dias corridos**, dentro do banco do tenant da sessão.
+- [x] Excluir pedidos pendentes, vendas canceladas e pedidos com status cancelado;
+      incluir fiado confirmado e pedidos prontos arquivados, pois arquivar não
+      desfaz a venda.
+- [x] Destacar somente líderes entre produtos ativos, disponíveis hoje e com
+      estoque; empates recebem o mesmo badge; histórico vazio não gera destaque.
+- [x] Mostrar “Recomendado” no card e explicar o período nos detalhes, sem expor
+      compradores, vendas individuais ou faturamento ao membro.
+- [x] Manter o último resultado no Dexie para consulta offline e preservar os
+      metadados no pull incremental do mesmo tenant. Não usar itens da sacola ou
+      somente as últimas 50 vendas como fonte do ranking.
+- [x] Ocultar metadados inválidos ou calculados há 30 dias ou mais; recalcular no
+      próximo carregamento online do catálogo.
+- [x] Testar consulta real em dois bancos temporários, exclusões por status/período,
+      fiado/arquivamento, empates e cache de recomendação.
+- [ ] Validar em produção mobile o fluxo: consultar descrição → adicionar → abrir
+      a operação → finalizar a venda, com e sem histórico para recomendação.
+
+**Banco:** não há migration nova, mudança de índices/tabelas ou incremento de
+versão Dexie. `recommended` e `recommendationCalculatedAt` são propriedades
+opcionais derivadas, não colunas do Prisma. `bible.db` não participa dessas mudanças
+nem dos testes, que usam bancos isolados em diretórios temporários.
 
 ## Ordem de execução e validação final
 

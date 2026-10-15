@@ -1,0 +1,64 @@
+/* Adaptação de “33 · Download + Progresso” do motion-components-lab-4.
+ * O preenchimento é controlado por dados reais; não há progresso por temporizador. */
+.root {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  height: 48px;
+  border-radius: 11px;
+  transition: background .4s, box-shadow .4s, transform .3s cubic-bezier(.2, 1.7, .4, 1);
+}
+.root:not(:disabled):active { transform: scale(.98); }
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--download-progress, 0%);
+  background: linear-gradient(90deg, #4869f7, #17c4dc, #19b783);
+  opacity: .22;
+  pointer-events: none;
+  transition: width .18s linear;
+}
+.icon, .label {
+  position: relative;
+  z-index: 1;
+  transition: transform .32s cubic-bezier(.2, 1.7, .4, 1), opacity .18s;
+}
+.icon { display: inline-flex; flex-shrink: 0; }
+.label { min-width: 0; }
+.root[data-state='downloading'], .root[data-state='paused'] {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  opacity: 1;
+}
+.root[data-state='downloading'][data-phase='idle'] .icon {
+  animation: downloadArrowMotion .68s cubic-bezier(.45, 0, .2, 1) infinite;
+}
+.root[data-state='preparing'] .icon { animation: downloadSpin .8s linear infinite; }
+.root[data-state='ready'] {
+  background: hsl(var(--success-light));
+  color: hsl(var(--foreground));
+  opacity: 1;
+}
+.root[data-state='ready'] .fill { width: 100%; background: hsl(var(--success)); opacity: .16; }
+.root[data-phase='out'] .icon { transform: translateY(-24px) rotate(-25deg) scale(.4); opacity: 0; }
+.root[data-phase='out'] .label { transform: translateX(26px); opacity: 0; }
+.root[data-phase='in'] .icon { animation: downloadIconSpring .65s cubic-bezier(.2, 1.5, .35, 1) both; }
+.root[data-phase='in'] .label { animation: downloadLabelSlide .45s ease-out both; }
+@keyframes downloadArrowMotion {
+  0%, 100% { transform: translateY(-3px); }
+  45% { transform: translateY(4px); }
+  70% { transform: translateY(1px); }
+}
+@keyframes downloadIconSpring {
+  0% { opacity: 0; transform: translateY(23px) scale(.4) rotate(-50deg); }
+  65% { opacity: 1; transform: translateY(-7px) scale(1.25) rotate(12deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes downloadLabelSlide { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: none; } }
+@keyframes downloadSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .root, .fill, .icon, .label { transition: none; animation: none !important; }
+  .root:not(:disabled):active { transform: none; }
+  .root[data-phase='out'] .icon, .root[data-phase='out'] .label { transform: none; opacity: 1; }
+}

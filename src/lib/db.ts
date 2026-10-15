@@ -69,6 +69,9 @@ export interface LocalProduct {
   availableToday?: boolean;
   imageUrl?: string | null;
   description?: string;
+  /** Destaque derivado das vendas, somente leitura; não é uma preferência do cadastro. */
+  recommended?: boolean;
+  recommendationCalculatedAt?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;

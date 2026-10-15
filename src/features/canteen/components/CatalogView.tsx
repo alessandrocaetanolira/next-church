@@ -1,11 +1,13 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useDrawer } from '@/components/providers/DrawerProvider';
 import { useProducts } from '@/features/canteen/hooks/use-products';
-import { formatCurrency } from '@/lib/utils';
+import { ProductCard } from './ProductCard';
+import { ProductDetailsDrawer } from './ProductDetailsDrawer';
 
 export function CatalogView() {
+  const { openDrawer } = useDrawer();
   const products = useProducts().filter((product) => product.active !== false && product.availableToday !== false);
 
   if (products.length === 0) {
@@ -13,21 +15,9 @@ export function CatalogView() {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {products.map((product) => (
-        <Card key={product.id}>
-          <CardContent className="space-y-2 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold">{product.name}</h3>
-              <Badge variant="outline">{product.category}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">{product.description || 'Produto da cantina'}</p>
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-primary">{formatCurrency(product.price)}</span>
-              <span className="text-xs text-muted-foreground">Disponível</span>
-            </div>
-          </CardContent>
-        </Card>
+        <ProductCard key={product.id} product={product} onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} allowPurchase={false} />, repositionInputs: false })} />
       ))}
     </div>
   );

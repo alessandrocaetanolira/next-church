@@ -21,11 +21,12 @@ import { ShoppingCart, ChefHat, Package, Receipt, BellPlus, Award } from 'lucide
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
-import { getCanteenStatus, setCanteenStatus as setCanteenStatusRequest } from '@/services/canteen/operations-api';
+import { useCanteenStatus } from '../hooks/use-canteen-status';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncCanteenSalesFromServer } from '@/features/canteen/lib/sync-sales';
 import { syncCanteenMembersFromServer } from '@/features/canteen/lib/sync-members';
@@ -63,8 +64,8 @@ export function CanteenContainer() {
     (tabFromUrl === 'loyalty' && canManageCanteen)
   ) ? tabFromUrl : firstAvailableTab) as CanteenTab;
   const [activeTab, setActiveTab] = useState<CanteenTab>(initialTab);
-  const [canteenStatus, setCanteenStatus] = useState<{ isOpen: boolean; openedAt: string | null }>({ isOpen: false, openedAt: null });
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const { status: canteenStatus, loading: loadingStatus, updating: updatingStatus, confirmed: statusConfirmed,
+    error: statusError, refresh: refreshStatus, setOpen } = useCanteenStatus(canViewSales || canOperate || canSell || canOrder);
   const tenantId = user?.tenantId ?? '';
   const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId && !sale.deletedAt).toArray() : [], [tenantId]) ?? [];
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
@@ -93,23 +94,13 @@ export function CanteenContainer() {
     setActiveTab((current) => (current === nextTab ? current : nextTab));
   }, [tabFromUrl, canSell, canOperate, canManageProducts, canViewSales, canManageCanteen, firstAvailableTab]);
 
-  useEffect(() => {
-    if (!canViewSales && !canOperate && !canSell && !canOrder) return;
-    void getCanteenStatus()
-      .then((status) => {
-        if (status) setCanteenStatus({ isOpen: Boolean(status.isOpen), openedAt: status.openedAt ?? null });
-      })
-      .catch(() => undefined);
-  }, [canViewSales, canOperate, canSell, canOrder]);
-
   const toggleCanteen = async () => {
-    if (!canOperate || updatingStatus) return;
-    setUpdatingStatus(true);
+    if (!canOperate || updatingStatus || loadingStatus || !statusConfirmed) return;
     try {
-      const status = await setCanteenStatusRequest(!canteenStatus.isOpen);
-      setCanteenStatus({ isOpen: Boolean(status.isOpen), openedAt: status.openedAt ?? null });
-    } finally {
-      setUpdatingStatus(false);
+      await setOpen(!canteenStatus.isOpen);
+    } catch {
+      await refreshStatus();
+      toast.error('Não foi possível confirmar a alteração da cantina. Verifique o status e tente novamente.');
     }
   };
 
@@ -178,14 +169,15 @@ export function CanteenContainer() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
-        <div>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="min-w-0 flex-1 basis-44">
           <p className="text-sm font-semibold">Status da cantina</p>
-          <p className="text-xs text-muted-foreground">{canteenStatus.isOpen ? 'Recebendo pedidos e vendas.' : 'No momento não está recebendo novos pedidos.'}</p>
+          <p className="text-xs text-muted-foreground" role={statusError ? 'status' : undefined}>{statusError ?? (loadingStatus || !statusConfirmed ? 'Confirmando o status da cantina…' : canteenStatus.isOpen ? 'Recebendo pedidos e vendas.' : 'No momento não está recebendo novos pedidos.')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={canteenStatus.isOpen ? 'success' : 'secondary'}>{canteenStatus.isOpen ? 'Aberta' : 'Fechada'}</Badge>
-          {canOperate ? <Button size="sm" variant={canteenStatus.isOpen ? 'outline' : 'default'} onClick={() => void toggleCanteen()} disabled={updatingStatus}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={statusConfirmed && canteenStatus.isOpen ? 'success' : 'secondary'}>{loadingStatus ? 'Verificando' : !statusConfirmed ? 'Indisponível' : canteenStatus.isOpen ? 'Aberta' : 'Fechada'}</Badge>
+          {statusError ? <Button size="sm" variant="outline" disabled={loadingStatus} onClick={() => void refreshStatus()}>Tentar novamente</Button> : null}
+          {canOperate ? <Button size="sm" variant={canteenStatus.isOpen ? 'outline' : 'default'} onClick={() => void toggleCanteen()} disabled={updatingStatus || loadingStatus || !statusConfirmed}>
             {updatingStatus ? 'Atualizando...' : canteenStatus.isOpen ? 'Fechar cantina' : 'Abrir cantina'}
           </Button> : null}
         </div>

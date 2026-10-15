@@ -17,7 +17,7 @@ import { useDrawer } from '@/components/providers/DrawerProvider';
 import { getBibleBooks, getBibleChapter, getBibleChapters, type BibleBook, type BibleContentSource, type BibleTranslation } from '@/features/bible/api/bible.api';
 import { BibleAnnotationForm } from '@/features/bible/components/BibleAnnotationForm';
 import { BibleSavedItemsDrawer } from '@/features/bible/components/BibleSavedItemsDrawer';
-import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
+import { BibleTranslationsDrawer } from '@/features/bible/components/BibleTranslationsDrawer';
 import type { BibleAnnotation, BibleFavorite } from '@/lib/db';
 import { createFeedPost } from '@/services/feed/feed-api';
 import { BibleWebNavigation } from '@/features/bible/components/BibleWebNavigation';
@@ -370,30 +370,16 @@ export default function BiblePage() {
 
   const openTranslationDrawer = useCallback(() => {
     openDrawer({
-      content: <>
-        <DrawerHeader className="border-b text-left"><DrawerTitle>Versão da Bíblia</DrawerTitle></DrawerHeader>
-          <div className="grid gap-3 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {[
-              ['NVI', 'Nova Versão Internacional'],
-              ['ACF', 'Almeida Corrigida Fiel'],
-              ['AA', 'Almeida Atualizada'],
-            ].map(([code, name]) => (
-              <div key={code} className="space-y-2">
-                <Button type="button" variant={translation === code ? 'default' : 'outline'} className="h-auto w-full justify-start py-3 text-left" onClick={() => {
-                  setTranslation(code as BibleTranslation);
-                  setChaptersByBook({});
-                  setSelectedVerses([]);
-                  closeDrawer();
-                }}>
-                  <span className="font-semibold">{code}</span><span className="ml-2 text-xs opacity-80">{name}</span>
-                </Button>
-                <BibleDownloadControl translation={code as BibleTranslation} />
-              </div>
-            ))}
-        </div>
-      </>,
+      contentClassName: 'max-h-[85dvh]',
+      repositionInputs: false,
+      content: <BibleTranslationsDrawer onSelect={(code) => {
+        setTranslation(code);
+        setChaptersByBook({});
+        setSelectedVerses([]);
+        closeDrawer();
+      }} />,
     });
-  }, [closeDrawer, openDrawer, setTranslation, translation]);
+  }, [closeDrawer, openDrawer, setTranslation]);
 
   const openChapterDrawer = useCallback(() => {
     const chapters = availableChapters.length > 0 ? Array.from(new Set(availableChapters)) : [1];
