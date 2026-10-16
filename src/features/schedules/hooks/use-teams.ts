@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, LocalTeam } from '@/lib/db';
 import { useCallback, useEffect } from 'react';
@@ -61,7 +62,7 @@ export function useTeams() {
 
     try {
       await db.teams.add(newTeam);
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'teams',
         action: 'create',
         data: newTeam,
@@ -79,7 +80,7 @@ export function useTeams() {
       await db.teams.update(id, { ...updates, updatedAt, _status: 'pending' });
       
       const updatedTeam = await db.teams.get(id);
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'teams',
         action: 'update',
         data: updatedTeam,
@@ -97,7 +98,7 @@ export function useTeams() {
       // Soft delete local
       await db.teams.update(id, { deletedAt: updatedAt, _status: 'pending' });
       
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'teams',
         action: 'delete',
         data: { id },

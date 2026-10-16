@@ -1,7 +1,7 @@
-import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+import type { TenantDatabase } from '@/infra/database/tenant-transaction';
 
 export class TasksRepository {
-  constructor(private readonly prisma: TenantPrismaClient) {}
+  constructor(private readonly prisma: TenantDatabase) {}
 
   list(teamIds?: string[]) {
     return this.prisma.task.findMany({

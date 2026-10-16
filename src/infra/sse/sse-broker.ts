@@ -92,6 +92,20 @@ export class SseBroker {
     }
     return listeners.size;
   }
+
+  /** Sinal efêmero nos canais já autenticados de um tenant; não persiste notificações. */
+  broadcastTenant(payload: Omit<ServerTenantEvent, 'userEmail'>) {
+    const prefix = `${payload.tenantId}:`;
+    let delivered = 0;
+    for (const [key, listeners] of this.listeners) {
+      if (!key.startsWith(prefix)) continue;
+      for (const listener of listeners) {
+        listener({ ...payload, userEmail: key.slice(prefix.length) });
+        delivered += 1;
+      }
+    }
+    return delivered;
+  }
 }
 
 const globalForSse = globalThis as unknown as { churchSseBroker?: SseBroker };
@@ -136,6 +150,12 @@ export function publishPermissionsUpdated(
 /** Publica uma notificação já persistida no canal SSE do destinatário. */
 export function publishTenantEvent(payload: ServerNotificationEvent) {
   sseBroker.publish(payload);
+}
+
+/** Invalidação leve de estado, limitada aos streams existentes do tenant. */
+export function publishTenantSignal(tenantId: string, type: string) {
+  return sseBroker.broadcastTenant({ id: crypto.randomUUID(), tenantId, type,
+    title: '', message: '', createdAt: new Date().toISOString() });
 }
 
 export function subscribeGlobalAdminEvents(adminId: string, listener: (payload: GlobalProvisioningEvent) => void) {

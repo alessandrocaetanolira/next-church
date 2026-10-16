@@ -9,8 +9,7 @@ export class CanteenProductsPolicy {
   }
 
   static assertManage(user: PolicyUser) {
-    const role = user?.role?.toUpperCase();
-    if (!hasActionPermission(user, 'canteen', 'manage_products') || !['ADMIN', 'PASTOR', 'CANTEEN'].includes(role ?? '')) {
+    if (!hasActionPermission(user, 'canteen', 'manage_products')) {
       throw new ForbiddenError('Você não tem permissão para gerenciar produtos da cantina.');
     }
   }

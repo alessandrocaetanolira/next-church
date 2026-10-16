@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,7 +51,7 @@ export function ProductForm({ onSuccess, product }: { onSuccess: () => void; pro
         return;
       }
       await db.products.put({ ...payload, tenantId, createdAt: product?.id ? (products.find((item) => item.id === product.id)?.createdAt ?? new Date().toISOString()) : new Date().toISOString(), updatedAt: new Date().toISOString(), deletedAt: null, _status: 'pending' });
-      await db.syncOutbox.add({ module: 'products', action: product ? 'update' : 'create', data: payload, timestamp: new Date().toISOString() });
+      await enqueueSyncChange({ module: 'products', action: product ? 'update' : 'create', data: payload, timestamp: new Date().toISOString() });
       toast.success(product ? 'Produto salvo localmente e pendente de sincronização.' : 'Produto criado localmente e pendente de sincronização.'); onSuccess();
     }
   };

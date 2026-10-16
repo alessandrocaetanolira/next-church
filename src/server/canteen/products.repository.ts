@@ -1,7 +1,7 @@
-import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+import type { TenantDatabase } from '@/infra/database/tenant-transaction';
 
 export class CanteenProductsRepository {
-  constructor(private readonly prisma: TenantPrismaClient) {}
+  constructor(private readonly prisma: TenantDatabase) {}
 
   list() {
     return this.prisma.product.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });

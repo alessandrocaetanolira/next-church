@@ -234,6 +234,11 @@ export interface OfflineBibleDownload {
 /** Fila de saída para sincronização com o servidor. */
 export interface SyncOutbox {
   id?: number;
+  tenantId?: string;
+  tenantSlug?: string;
+  userId?: string;
+  /** ID da outbox original; o ID da syncQueue é independente. */
+  legacyOutboxId?: number;
   module: 'sales' | 'tasks' | 'members' | 'memberCredits' | 'products' | 'feed' | 'quiz' | 'bookmarks' | 'teams';
   action: 'create' | 'update' | 'delete';
   data: unknown;
@@ -269,6 +274,7 @@ export interface SyncQueueItem extends SyncOutbox {
   retryCount?: number;
   lastError?: string;
   idempotencyKey?: string;
+  conflictReason?: 'version' | 'idempotency' | 'unverifiable';
 }
 
 // --- CLASSE PRINCIPAL DO BANCO ---

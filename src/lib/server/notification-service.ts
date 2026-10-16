@@ -6,6 +6,7 @@ import { generateId } from '@/lib/id';
 import { getGlobalClient } from '@/lib/prisma-factory';
 import { getTenantPwaIconUrl } from '@/lib/branding/pwa-assets';
 import { serverLogger } from '@/lib/server/logger';
+import { CANTEEN_PURCHASE_HREF } from '@/lib/canteen/navigation';
 
 /**
  * Mensagem normalizada produzida por qualquer módulo de negócio.
@@ -544,7 +545,7 @@ export async function notifyMemberOrderUpdate(
       type: payload.type,
       title: payload.title,
       message: payload.message,
-      href: payload.href ?? '/carteira?view=order',
+      href: payload.href ?? CANTEEN_PURCHASE_HREF,
       sourceType: 'sale',
       sourceId: payload.saleId,
     },

@@ -1,13 +1,15 @@
-import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { generateId } from '@/lib/id';
+import { inTenantTransaction, type TenantDatabase } from '@/infra/database/tenant-transaction';
+import { ConflictError } from '@/lib/http/errors';
 
 export class MemberCreditsRepository {
-  constructor(private readonly prisma: TenantPrismaClient) {}
+  constructor(private readonly prisma: TenantDatabase) {}
 
   async updateBalance(memberId: string, creditBalance: number | null, payment: { amount: number; memberName?: string | null; createdBy: string } | null) {
-    return this.prisma.$transaction(async (tx) => {
+    return inTenantTransaction(this.prisma, async (tx) => {
       const member = await tx.member.findFirst({ where: { id: memberId, deletedAt: null } });
       if (!member) return null;
+      if (payment && payment.amount > member.creditBalance) throw new ConflictError('O pagamento é maior que o saldo devedor.');
       const updated = payment
         ? await tx.member.update({ where: { id: memberId }, data: { creditBalance: { decrement: payment.amount } } })
         : await tx.member.update({ where: { id: memberId }, data: { creditBalance: creditBalance ?? 0 } });

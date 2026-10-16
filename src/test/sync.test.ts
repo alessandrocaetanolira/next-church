@@ -18,13 +18,13 @@ vi.mock('@/lib/prisma-factory', () => ({
   getTenantClient: vi.fn(),
 }));
 
-vi.mock('@/server/canteen/sales-detail.controller', () => ({
-  operateSale: operateSaleMock,
+vi.mock('@/server/canteen/sales-detail.service', () => ({
+  CanteenSalesDetailService: class { execute(...args: unknown[]) { return operateSaleMock(...args); } },
 }));
 
 describe('Sync API Routes', () => {
   const mockTenantId = 'test-church';
-  const mockSession = { user: { tenantId: mockTenantId } };
+  const mockSession = { user: { tenantId: mockTenantId, id: 'admin-a', email: 'admin@test.local', role: 'ADMIN', name: 'Operador Teste' } };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,7 +39,7 @@ describe('Sync API Routes', () => {
     });
 
     it('deve buscar tarefas e outros dados do tenant correto', async () => {
-      (auth as Mock).mockResolvedValue(mockSession);
+      (auth as Mock).mockResolvedValue({ user: { ...mockSession.user, id: 'admin-a', role: 'ADMIN' } });
       
       const mockPrisma = {
         $queryRawUnsafe: vi.fn().mockResolvedValue([]),
@@ -47,7 +47,7 @@ describe('Sync API Routes', () => {
         sale: { findMany: vi.fn().mockResolvedValue([]) },
         product: { findMany: vi.fn().mockResolvedValue([]) },
         member: { findMany: vi.fn().mockResolvedValue([]) },
-        task: { findMany: vi.fn().mockResolvedValue([{ id: '1', title: 'Task 1' }]) },
+        task: { findMany: vi.fn().mockResolvedValue([{ id: '1', title: 'Task 1', updatedAt: new Date() }]) },
       };
       (getTenantClient as Mock).mockReturnValue(mockPrisma);
 
@@ -64,154 +64,94 @@ describe('Sync API Routes', () => {
   });
 
   describe('POST /api/sync/push', () => {
-    it('retorna conflito quando o servidor tem uma versão mais recente', async () => {
-      (auth as Mock).mockResolvedValue(mockSession);
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockResolvedValue([{ updatedAt: '2026-09-25T12:00:00.000Z' }]),
-        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
-      };
-      (getTenantClient as Mock).mockReturnValue(mockPrisma);
-
-      const req = new NextRequest('http://localhost/api/sync/push', {
-        method: 'POST',
-        body: JSON.stringify({ changes: [{ id: 7, module: 'tasks', action: 'update', data: { id: 'task-1', updatedAt: '2026-09-25T11:00:00.000Z' } }] }),
-      });
-
-      const response = await pushPOST(req);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.results[0]).toMatchObject({ id: 7, status: 'conflict', serverUpdatedAt: '2026-09-25T12:00:00.000Z' });
-    });
-
-    it('deve processar upsert de tarefas', async () => {
-      (auth as Mock).mockResolvedValue(mockSession);
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
-        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
-        task: { upsert: vi.fn().mockResolvedValue({ id: 'task-1' }) },
-        sale: { create: vi.fn() },
-      };
-      (getTenantClient as Mock).mockReturnValue(mockPrisma);
-
-      const changes = [
-        { id: 1, module: 'tasks', action: 'create', data: { id: 'task-1', title: 'New Task' } }
-      ];
-
-      const req = new NextRequest('http://localhost/api/sync/push', {
-        method: 'POST',
-        body: JSON.stringify({ changes }),
-      });
-
-      const res = await pushPOST(req);
-      const { results } = await res.json();
-
-      expect(res.status).toBe(200);
-      expect(results[0].status).toBe('success');
-      expect(mockPrisma.task.upsert).toHaveBeenCalled();
-    });
-
-    it('deve processar delete de tarefas (soft delete)', async () => {
-      (auth as Mock).mockResolvedValue(mockSession);
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
-        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
-        task: { update: vi.fn().mockResolvedValue({ id: 'task-1' }) },
-      };
-      (getTenantClient as Mock).mockReturnValue(mockPrisma);
-
-      const changes = [
-        { id: 2, module: 'tasks', action: 'delete', data: { id: 'task-1' } }
-      ];
-
-      const req = new NextRequest('http://localhost/api/sync/push', {
-        method: 'POST',
-        body: JSON.stringify({ changes }),
-      });
-
-      const res = await pushPOST(req);
-      await res.json();
-
-      expect(res.status).toBe(200);
-      expect(mockPrisma.task.update).toHaveBeenCalledWith(expect.objectContaining({
-        data: expect.objectContaining({ deletedAt: expect.any(Date) })
-      }));
-    });
-
-    it('deve encaminhar atualização offline de pedido para a operação da cantina', async () => {
-      (auth as Mock).mockResolvedValue({
-        user: {
-          ...mockSession.user,
-          role: 'ADMIN',
-          permissions: ['canteen:operate'],
-          name: 'Operador Teste',
+    function database() {
+      const receipts = new Map<string, unknown>();
+      const db = {
+        $transaction: vi.fn(),
+        syncOperation: {
+          findUnique: vi.fn().mockImplementation(({ where }) => receipts.get(where.idempotencyKey) ?? null),
+          create: vi.fn().mockImplementation(({ data }) => { receipts.set(data.idempotencyKey, data); return data; }),
+          update: vi.fn().mockImplementation(({ where, data }) => { const row = { ...(receipts.get(where.idempotencyKey) as object), ...data }; receipts.set(where.idempotencyKey, row); return row; }),
         },
-      });
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockResolvedValue([]),
-        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+        task: { findUnique: vi.fn().mockResolvedValue({ teamId: 'team-1', updatedAt: new Date('2026-09-25T12:00:00Z') }),
+          create: vi.fn().mockResolvedValue({ id: 'task-1' }), upsert: vi.fn().mockResolvedValue({ id: 'task-1' }), update: vi.fn().mockResolvedValue({ id: 'task-1' }) },
+        sale: { findUnique: vi.fn().mockResolvedValue(null) },
       };
-      (getTenantClient as Mock).mockReturnValue(mockPrisma);
-      operateSaleMock.mockResolvedValue({ id: 'sale-offline-1' });
+      db.$transaction.mockImplementation((work) => work(db));
+      (getTenantClient as Mock).mockReturnValue(db);
+      (auth as Mock).mockResolvedValue(mockSession);
+      return db;
+    }
+    const request = (changes: unknown[]) => new NextRequest('http://localhost/api/sync/push', { method: 'POST', body: JSON.stringify({ changes }) });
+    const saleChange = { id: 10, idempotencyKey: 'sale-ready', module: 'sales', action: 'update', data: { id: 'sale-1', action: 'status', orderStatus: 'ready' } };
 
-      const req = new NextRequest('http://localhost/api/sync/push', {
-        method: 'POST',
-        body: JSON.stringify({
-          changes: [{
-            id: 10,
-            module: 'sales',
-            action: 'update',
-            data: {
-              id: 'sale-offline-1',
-              action: 'status',
-              orderStatus: 'ready',
-              updatedAt: '2026-09-29T12:05:00.000Z',
-            },
-          }],
-        }),
-      });
-
-      const response = await pushPOST(req);
-      const data = await response.json();
-
+    it('retorna conflito quando o servidor tem versão mais recente', async () => {
+      const db = database();
+      const response = await pushPOST(request([{ id: 7, idempotencyKey: 'task-update', module: 'tasks', action: 'update', data: { id: 'task-1', updatedAt: '2026-09-25T11:00:00Z' } }]));
       expect(response.status).toBe(200);
-      expect(data.results).toEqual([{ id: 10, status: 'success' }]);
-      expect(operateSaleMock).toHaveBeenCalledWith(
-        expect.objectContaining({ tenantId: mockTenantId }),
-        expect.anything(),
-        'sale-offline-1',
-        expect.objectContaining({ action: 'status', orderStatus: 'ready' }),
-        'Operador Teste',
-      );
+      expect((await response.json()).results[0]).toMatchObject({ id: 7, status: 'conflict', serverUpdatedAt: '2026-09-25T12:00:00.000Z' });
+      expect(db.task.upsert).not.toHaveBeenCalled();
     });
 
-    it('não reprocessa uma operação de venda já confirmada pela idempotência', async () => {
-      (auth as Mock).mockResolvedValue({ user: { ...mockSession.user, role: 'ADMIN', permissions: ['canteen:operate'] } });
-      const mockPrisma = {
-        $queryRawUnsafe: vi.fn().mockResolvedValue([{ status: 'success', responseJson: '{"status":"success"}' }]),
-        $executeRawUnsafe: vi.fn().mockResolvedValue(0),
-      };
-      (getTenantClient as Mock).mockReturnValue(mockPrisma);
-
-      const req = new NextRequest('http://localhost/api/sync/push', {
-        method: 'POST',
-        body: JSON.stringify({
-          changes: [{
-            id: 11,
-            idempotencyKey: 'sale-offline-1:status:ready',
-            module: 'sales',
-            action: 'update',
-            data: { id: 'sale-offline-1', action: 'status', orderStatus: 'ready', updatedAt: '2026-09-29T12:05:00.000Z' },
-          }],
-        }),
-      });
-
-      const response = await pushPOST(req);
-      const data = await response.json();
-
+    it('cria tarefa válida com autorização e recibo na transação', async () => {
+      const db = database(); db.task.findUnique.mockResolvedValue(null);
+      const response = await pushPOST(request([{ id: 1, idempotencyKey: 'task-create', module: 'tasks', action: 'create', data: { id: 'task-1', title: 'Nova tarefa', teamId: 'team-1', type: 'meeting', date: '2026-10-16' } }]));
       expect(response.status).toBe(200);
-      expect(data.results).toEqual([{ id: 11, status: 'success', replayed: true }]);
+      expect((await response.json()).results[0].status).toBe('success');
+      expect(db.task.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ id: 'task-1', title: 'Nova tarefa' }) }));
+      expect(db.syncOperation.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'success' }) }));
+    });
+
+    it('processa exclusão lógica autorizada de tarefa existente', async () => {
+      const db = database();
+      const response = await pushPOST(request([{ id: 2, idempotencyKey: 'task-delete', module: 'tasks', action: 'delete', data: { id: 'task-1' } }]));
+      expect((await response.json()).results[0].status).toBe('success');
+      expect(db.task.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }));
+    });
+
+    it('encaminha atualização de pedido ao serviço operacional do tenant', async () => {
+      database(); operateSaleMock.mockResolvedValue({ id: 'sale-1' });
+      const response = await pushPOST(request([saleChange]));
+      expect(response.status).toBe(200);
+      expect((await response.json()).results).toEqual([{ id: 10, status: 'success' }]);
+      expect(operateSaleMock).toHaveBeenCalledWith('sale-1', saleChange.data, 'Operador Teste');
+    });
+
+    it('replay usa ator/ação/conteúdo, não apenas a existência de uma chave', async () => {
+      database(); operateSaleMock.mockResolvedValue({ id: 'sale-1' });
+      expect((await (await pushPOST(request([saleChange]))).json()).results[0].status).toBe('success');
+      const response = await pushPOST(request([{ ...saleChange, id: 11 }]));
+      expect((await response.json()).results).toEqual([{ id: 11, status: 'success', replayed: true }]);
+      expect(operateSaleMock).toHaveBeenCalledTimes(1);
+      const altered = await pushPOST(request([{ ...saleChange, data: { ...saleChange.data, orderStatus: 'cancelled' } }]));
+      expect((await altered.json()).results[0].status).toBe('conflict');
+      expect(operateSaleMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('recibo legado sem vínculo verificável não vira sucesso automático', async () => {
+      const db = database();
+      db.syncOperation.findUnique.mockResolvedValue({ status: 'success', responseJson: '{"status":"success"}' });
+      const response = await pushPOST(request([saleChange]));
+      expect((await response.json()).results[0].status).toBe('conflict');
       expect(operateSaleMock).not.toHaveBeenCalled();
+    });
+
+    it('sessão sem autorização não escreve tarefas nem consulta recibos', async () => {
+      const db = database();
+      (auth as Mock).mockResolvedValue({ user: { tenantId: mockTenantId, id: 'old-user' } });
+      const response = await pushPOST(request([{ id: 1, idempotencyKey: 'old-task', module: 'tasks', action: 'delete', data: { id: 'task-1' } }]));
+      expect((await response.json()).results[0].status).toBe('forbidden');
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('rebaixamento impede replay antes de consultar o recibo', async () => {
+      const db = database(); operateSaleMock.mockResolvedValue({});
+      await pushPOST(request([saleChange]));
+      db.$transaction.mockClear();
+      (auth as Mock).mockResolvedValue({ user: { ...mockSession.user, role: 'MEMBER', permissions: [] } });
+      const response = await pushPOST(request([saleChange]));
+      expect((await response.json()).results[0].status).toBe('forbidden');
+      expect(db.$transaction).not.toHaveBeenCalled();
     });
   });
 

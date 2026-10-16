@@ -23,7 +23,9 @@ export function SyncIndicator() {
         <AlertTriangle className="h-3 w-3" />
         <span>{conflicts.length} conflito(s)</span>
         <button type="button" className="underline" onClick={() => void resolveConflict(first.id!, 'server')}>Servidor</button>
-        <button type="button" className="underline" onClick={() => void resolveConflict(first.id!, 'local')}>Local</button>
+        {first.conflictReason === 'idempotency' || first.conflictReason === 'unverifiable'
+          ? <span className="text-xs">Confira a operação no servidor antes de reenviar.</span>
+          : <button type="button" className="underline" onClick={() => void resolveConflict(first.id!, 'local')}>Local</button>}
       </div>
     );
   }

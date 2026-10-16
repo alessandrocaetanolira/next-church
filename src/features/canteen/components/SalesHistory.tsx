@@ -7,6 +7,7 @@
 
 "use client";
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useEffect, useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
@@ -193,7 +194,7 @@ export function SalesHistory() {
         _status: "pending",
       });
 
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: "memberCredits",
         action: "update",
         data: { id: selectedMember.id, amount, memberName: selectedMember.name },

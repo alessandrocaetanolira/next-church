@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -54,7 +55,7 @@ export function ProductsManager() {
         updatedAt: new Date().toISOString(),
         _status: 'pending',
       });
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'products',
         action: 'update',
         data: { id: productId, availableToday },
@@ -85,7 +86,7 @@ export function ProductsManager() {
         updatedAt: new Date().toISOString(),
         _status: 'pending',
       });
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'products',
         action: 'delete',
         data: { id: deleteId },

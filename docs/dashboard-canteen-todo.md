@@ -1,6 +1,6 @@
 # TODO — Dashboard e integridade operacional da Cantina
 
-Atualizado em **15/10/2026**. As validações automatizadas abaixo não substituem o
+Atualizado em **16/10/2026**. As validações automatizadas abaixo não substituem o
 aceite em artefato de produção no dispositivo.
 
 ## Objetivo
@@ -105,6 +105,7 @@ revalidação; tentar burlar a UI continua recebendo `409` do backend.
 - [x] Remover a duplicidade entre `features/canteen/store.ts` e
       `features/canteen/store/useCartStore.ts`.
 - [x] Manter um único Zustand com `persist` e versão de schema.
+
 - [x] Incluir identidade do dono do carrinho (`tenantId`, `userId`) no estado
       persistido e validar a identidade antes de hidratar itens.
 - [x] Limpar ou separar o carrinho ao logout, troca de tenant, troca de usuário e
@@ -113,8 +114,21 @@ revalidação; tentar burlar a UI continua recebendo `409` do backend.
       itens inválidos devem ser destacados/removidos com explicação ao usuário.
 - [ ] Definir política de expiração para carrinho abandonado e implementar limpeza
       previsível.
-- [ ] Garantir que pedido de membro e PDV de operador não compartilhem itens sem
-      contexto explícito.
+- [x] Garantir contexto explícito para enviar pedido próprio ou abrir checkout
+      de venda; apenas as ações autorizadas aparecem no carrinho compartilhado.
+
+Em 16/10 os consumidores antigos de Minha Conta/Dashboard foram removidos.
+`CanteenCartView` unifica catálogo/carrinho com banner no container e ações por
+permissão. Chaves existentes de comprador/operador continuam preservadas, sem
+mesclar rascunhos; pedido próprio é uma ação explícita, não outra aba.
+Recuperação de rascunhos antigos em chaves alternativas, expiração e revalidação
+completa ainda precisam seguir o checklist de compra unificada.
+
+O push financeiro agora confirma mutação e recibo na mesma transação, vinculado
+ao ator/tenant/conteúdo e reautorizado no replay. Comprar não concede alteração
+de créditos; pagamentos inválidos/acima do débito são rejeitados. Outbox nova tem
+dono na origem; legado sem vínculo verificável permanece para revisão. Isso não
+conclui retry do POST direto, checkout operacional nem saneamento de caches/DTOs.
 
 **Aceite:** sair e retornar ao mesmo usuário/tenant restaura o carrinho válido;
 trocar de conta ou igreja nunca mostra os itens anteriores; concluir a venda limpa o
@@ -205,10 +219,62 @@ local, sem conceder acesso administrativo ao módulo de membros.
 - [ ] Validar em produção mobile o fluxo: consultar descrição → adicionar → abrir
       a operação → finalizar a venda, com e sem histórico para recomendação.
 
-**Banco:** não há migration nova, mudança de índices/tabelas ou incremento de
+**Banco dos ajustes de produtos já implementados:** não houve migration nova,
+mudança de índices/tabelas ou incremento de
 versão Dexie. `recommended` e `recommendationCalculatedAt` são propriedades
 opcionais derivadas, não colunas do Prisma. `bible.db` não participa dessas mudanças
 nem dos testes, que usam bancos isolados em diretórios temporários.
+
+## Fase 5 — Compra unificada e remoção do pedido antigo da Carteira
+
+Checklist detalhado e ordem obrigatória em
+[canteen-purchase-unification-todo.md](./canteen-purchase-unification-todo.md).
+
+- [~] Garantir compra pessoal de MEMBER/LEADER/PASTOR e operadores autorizados,
+      sem exigir permissão de operação para comprar.
+- [x] Exibir menu horizontal operacional somente a usuários com as permissões das
+      respectivas ações; comprador vê catálogo e carrinho.
+- [x] Permitir montar carrinho com Cantina fechada, mas bloquear envio/checkout até
+      confirmar abertura; preservar itens e explicar indisponibilidade/erro.
+- [x] Validar no backend produto ativo, disponível, não removido, estoque e preço
+      oficial, inclusive na aprovação e replay de sincronização.
+- [~] Compartilhar cards/detalhes/carrinho e entrada de pedidos; separar intenção
+      pessoal do PDV por contexto, sem duplicar estado ou APIs.
+- [ ] Adicionar observação opcional do comprador no checkout e persistir no pedido,
+      rascunho, API e sync; exibir na aprovação e preparo. Criar migration tenant
+      aditiva para `Sale.customerNotes`, sem reset e sem tocar em `bible.db`.
+- [x] Remover somente o fluxo antigo de pedidos e seus resíduos do Dashboard,
+      preservando Carteira, histórico, extrato, saldo, pagamentos e alertas.
+      “Fazer pedido” usa `/cantina`, links antigos redirecionam e pedidos
+      próprios são consultados pelo drawer padrão, sem liberar fila operacional.
+- [x] Mostrar banner passivo no topo da compra/catálogo e atualizar abertura e
+      fechamento por sinal SSE do mesmo tenant. Manter consulta inicial,
+      revalidação na reconexão e proteção contra resposta antiga; sem depender
+      de botão de atualização. Banner também aparece na entrada da NavBottom.
+      Operadores usam uma única aba “Carrinho” e demais abas autorizadas, sem
+      “Comprar”/PDV duplicados. Aceite real mobile pendente.
+- [ ] Cumprir a matriz de testes de compra, autorização, concorrência, isolamento,
+      offline e aceite mobile antes de considerar a substituição concluída.
+
+## Fase 6 — Relatórios por período e extrato exportável
+
+Diagnóstico e checklist em [canteen-reports-todo.md](./canteen-reports-todo.md).
+Implementação pendente, na sequência da compra unificada.
+
+- [ ] Consolidar vendas pagas e fiado no mesmo relatório, com recortes opcionais;
+      distinguir vendido, recebido, fiado gerado, pagamentos e saldo devedor.
+- [ ] Filtrar por período de São Paulo, membro/consumidor, situação e pagamentos;
+      consultar o banco completo, sem limite de 50 vendas nem totais do cache.
+- [ ] Criar extrato por membro/usuário vinculado, incluindo saldo anterior/final,
+      compras e pagamentos, acessível também a quem quitou a dívida; membro vê
+      apenas o próprio extrato, operador precisa de autorização para terceiros.
+- [ ] Compor filtros no drawer padrão e resumo/detalhes em sub-rota com topbar de
+      voltar; listas mobile shared com infinite scroll, export independente da
+      página carregada.
+- [ ] PDF/CSV usam mesmo contrato/filtros/totais, com branding correto, período,
+      detalhamento de itens, quantidade, preços e movimentos financeiros.
+- [ ] Cobrir reconciliação, períodos, grandes volumes, cancelados/arquivados,
+      isolamento/permissões e abertura dos arquivos em PWA Android/iOS.
 
 ## Ordem de execução e validação final
 
@@ -216,6 +282,10 @@ nem dos testes, que usam bancos isolados em diretórios temporários.
 2. Fase 2: status da Cantina e bloqueio operacional, com testes de API/UI.
 3. Fase 3: migração do carrinho, testes de persistência e isolamento.
 4. Fase 4: segurança, atualização e extrato da Carteira.
-5. Rodar `npm test`, `npm run typecheck`, lint e build.
-6. Validar em dispositivo mobile: cantina aberta/fechada, troca de usuário,
+5. Fase 5: seguir contratos/permissões → backend → UI → remoção de duplicações →
+   testes/aceite do plano de compra unificada, sem aguardar evolução estética.
+6. Fase 6: contratos financeiros e backend por período → filtros/detalhes shared →
+   PDF/CSV/extrato → reconciliação e aceite de arquivo real no dispositivo.
+7. Rodar `npm test`, `npm run typecheck` e lint; build será executado pelo usuário.
+8. Validar em dispositivo mobile: cantina aberta/fechada, troca de usuário,
    reinicialização do PWA e venda offline/online.

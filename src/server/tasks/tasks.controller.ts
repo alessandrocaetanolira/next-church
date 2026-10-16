@@ -3,7 +3,7 @@ import type { TaskScope } from './tasks.policy';
 import { TasksService } from './tasks.service';
 import type { TasksRepository } from './tasks.repository';
 
-type ControllerContext = { user: Parameters<typeof TasksPolicy.assertView>[0]; service: TasksService; repository: TasksRepository; scope: TaskScope; legacyCompatible?: boolean };
+type ControllerContext = { user: Parameters<typeof TasksPolicy.assertView>[0]; service: TasksService; repository: TasksRepository; scope: TaskScope };
 
 function inputTeamId(input: unknown) {
   return input && typeof input === 'object' && typeof (input as { teamId?: unknown }).teamId === 'string'
@@ -23,14 +23,14 @@ export function createTask({ user, service, scope }: ControllerContext, input: u
   return service.create(input);
 }
 
-export async function syncTask({ user, service, repository, scope, legacyCompatible = false }: ControllerContext, action: 'create' | 'update' | 'delete', input: unknown) {
-  if (legacyCompatible) return service.syncLegacy(action, input);
+export async function syncTask({ user, service, repository, scope }: ControllerContext, action: 'create' | 'update' | 'delete', input: unknown) {
   if (action === 'create') TasksPolicy.assertCreate(user);
   if (action === 'update') TasksPolicy.assertUpdate(user);
   if (action === 'delete') TasksPolicy.assertDelete(user);
-  const teamId = inputTeamId(input) ?? (typeof input === 'object' && input && typeof (input as { id?: unknown }).id === 'string'
+  const currentTeamId = (typeof input === 'object' && input && typeof (input as { id?: unknown }).id === 'string'
     ? await repository.findTeamId((input as { id: string }).id)
     : null);
-  TasksPolicy.assertScope(scope, teamId);
+  if (currentTeamId) TasksPolicy.assertScope(scope, currentTeamId);
+  TasksPolicy.assertScope(scope, action === 'delete' ? currentTeamId : inputTeamId(input) ?? currentTeamId);
   return service.sync(action, input);
 }

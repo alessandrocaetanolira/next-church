@@ -7,6 +7,9 @@ import { CanteenOperationPolicy } from '@/server/canteen/operation.policy';
 import type { CanteenSalesRepository, SaleRecord } from '@/server/canteen/sales.repository';
 import type { CanteenLedgerRepository } from '@/server/canteen/ledger.repository';
 import type { CanteenOperationRepository } from '@/server/canteen/operation.repository';
+import { publishTenantSignal } from '@/infra/sse/sse-broker';
+
+vi.mock('@/infra/sse/sse-broker', () => ({ publishTenantSignal: vi.fn() }));
 
 const { getStatusMock, notifyOrderMock, notifyMemberMock, notifyOpenedMock, publishArchivedMock } = vi.hoisted(() => ({
   getStatusMock: vi.fn(),
@@ -34,6 +37,7 @@ const sale: SaleRecord = {
 
 function salesRepository(overrides: Partial<Record<keyof CanteenSalesRepository, unknown>> = {}) {
   return {
+    findPurchaser: vi.fn().mockResolvedValue({ id: 'member-1', name: 'João' }),
     list: vi.fn(), findById: vi.fn().mockResolvedValue(sale), create: vi.fn().mockResolvedValue({ ...sale, items: [{ productId: 'product-1', name: 'Água', quantity: 1, price: 12 }], createdAt: sale.createdAt.toISOString(), updatedAt: sale.updatedAt.toISOString(), deletedAt: null }),
     reject: vi.fn().mockResolvedValue({ ...sale, paymentMethod: 'cancelled', orderStatus: 'cancelled' }),
     updateStatus: vi.fn().mockResolvedValue({ ...sale, orderStatus: 'ready' }),
@@ -70,6 +74,35 @@ describe('regras transacionais da cantina', () => {
 
     expect(repository.create).toHaveBeenCalled();
     expect(notifyOrderMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', expect.objectContaining({ id: 'sale-1' }));
+  });
+
+  it('admin em compra pessoal usa o próprio vínculo, nunca o comprador do payload', async () => {
+    const repository = salesRepository();
+    const service = new CanteenSalesService(repository, {} as never, 'tenant-1');
+    await service.create({
+      intent: 'purchase', total: 12, paymentMethod: 'pending', orderStatus: 'pending',
+      items: [{ productId: 'product-1', name: 'Água', quantity: 1, price: 12 }],
+      memberId: 'outra-pessoa', memberName: 'Outra pessoa', createdBy: 'remetente-forjado',
+    }, { ...operator, linkedMemberId: 'member-1', email: 'admin@test.local' });
+    expect(repository.findPurchaser).toHaveBeenCalledWith('member-1');
+    expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({
+      memberId: 'member-1', memberName: 'João', consumerType: 'MEMBER', createdBy: 'admin@test.local',
+    }));
+  });
+
+  it('recusa vínculo revogado sem criar pedido ou notificação', async () => {
+    const repository = salesRepository({ findPurchaser: vi.fn().mockResolvedValue(null) });
+    const service = new CanteenSalesService(repository, {} as never, 'tenant-1');
+    await expect(service.create({ total: 12, paymentMethod: 'pending', orderStatus: 'pending', items: [{ name: 'Água', quantity: 1, price: 12 }] }, member)).rejects.toThrow('ativo ou aprovado');
+    expect(repository.create).not.toHaveBeenCalled();
+    expect(notifyOrderMock).not.toHaveBeenCalled();
+  });
+
+  it('compra pessoal não permite ao operador escolher pagamento sem aprovação', async () => {
+    const repository = salesRepository();
+    const service = new CanteenSalesService(repository, {} as never, 'tenant-1');
+    await expect(service.create({ intent: 'purchase', total: 12, paymentMethod: 'pix', items: [{ name: 'Água', quantity: 1, price: 12 }] }, { ...operator, linkedMemberId: 'member-1' })).rejects.toThrow('aprovação');
+    expect(repository.create).not.toHaveBeenCalled();
   });
 
   it('bloqueia venda não pendente quando o usuário só pode pedir', async () => {
@@ -177,5 +210,24 @@ describe('regras transacionais da cantina', () => {
 
     expect(notifyOpenedMock).toHaveBeenCalledTimes(1);
     expect(notifyOpenedMock).toHaveBeenCalledWith(expect.anything(), 'tenant-1', { email: 'admin@test.local' });
+    expect(publishTenantSignal).toHaveBeenCalledTimes(1);
+    expect(publishTenantSignal).toHaveBeenCalledWith('tenant-1', 'canteen.status.updated');
+  });
+
+  it('fechamento também invalida o status pelo SSE, sem push extra de abertura', async () => {
+    const repository = { getStatus: vi.fn().mockResolvedValue({ isOpen: true }),
+      setStatus: vi.fn().mockResolvedValue({ isOpen: false, openedAt: null }) } as unknown as CanteenOperationRepository;
+    const service = new CanteenOperationService(repository, {} as never, 'tenant-1');
+    await service.setStatus({ isOpen: false }, 'admin@test.local');
+    expect(publishTenantSignal).toHaveBeenCalledWith('tenant-1', 'canteen.status.updated');
+    expect(notifyOpenedMock).not.toHaveBeenCalled();
+  });
+
+  it('falha de persistência não publica uma mudança que não aconteceu', async () => {
+    const repository = { getStatus: vi.fn().mockResolvedValue({ isOpen: true }),
+      setStatus: vi.fn().mockRejectedValue(new Error('Falha no banco')) } as unknown as CanteenOperationRepository;
+    const service = new CanteenOperationService(repository, {} as never, 'tenant-1');
+    await expect(service.setStatus({ isOpen: false }, 'admin@test.local')).rejects.toThrow('Falha no banco');
+    expect(publishTenantSignal).not.toHaveBeenCalled();
   });
 });

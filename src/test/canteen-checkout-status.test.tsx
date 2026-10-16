@@ -5,9 +5,11 @@ import { useCanteenOperationStore } from '@/features/canteen/store/useCanteenOpe
 import { useCartStore } from '@/features/canteen/store/useCartStore';
 import { db } from '@/lib/db';
 
-const runtime = vi.hoisted(() => ({ status: vi.fn(), setStatus: vi.fn(), createSale: vi.fn(), replace: vi.fn(), push: vi.fn() }));
+const runtime = vi.hoisted(() => ({ status: vi.fn(), setStatus: vi.fn(), createSale: vi.fn(), replace: vi.fn(), push: vi.fn(),
+  user: { id: 'user-a', tenantId: 'tenant-a', email: 'operator@test.local', role: 'CANTEEN', permissions: ['canteen:sell'] },
+}));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: runtime.replace, push: runtime.push }) }));
-vi.mock('@/features/auth/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'user-a', tenantId: 'tenant-a', email: 'operator@test.local' } }) }));
+vi.mock('@/features/auth/hooks/useAuth', () => ({ useAuth: () => ({ user: runtime.user }) }));
 vi.mock('@/features/canteen/hooks/use-canteen-cart-owner', () => ({ useCanteenCartOwner: () => true }));
 vi.mock('@/features/canteen/api/operations.api', () => ({ canteenOperationsApi: { status: runtime.status, setStatus: runtime.setStatus } }));
 vi.mock('@/services/canteen/sales-api', () => ({ createCanteenSale: runtime.createSale }));
@@ -17,6 +19,8 @@ const closed = { isOpen: false, openedAt: null };
 
 beforeEach(async () => {
   vi.clearAllMocks();
+  runtime.user.role = 'CANTEEN';
+  runtime.user.permissions = ['canteen:sell'];
   runtime.status.mockResolvedValue(open);
   runtime.setStatus.mockImplementation(async (isOpen: boolean) => isOpen ? open : closed);
   runtime.createSale.mockResolvedValue({ id: 'sale-a' });
@@ -29,6 +33,16 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); useCanteenOperationStore.getState().reset(); });
 
 describe('checkout com status operacional compartilhado', () => {
+  it('comprador por URL direta não vê seleção de consumidor/pagamento nem finaliza venda', () => {
+    runtime.user.role = 'MEMBER'; runtime.user.permissions = ['canteen:order'];
+    render(<CanteenCheckout />);
+    expect(screen.getByText(/Você não tem permissão para registrar vendas/)).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Confirmar venda' })).toBeNull();
+    expect(runtime.createSale).not.toHaveBeenCalled();
+    expect(runtime.status).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para meu carrinho' }));
+    expect(runtime.replace).toHaveBeenCalledWith('/cantina');
+  });
   it('libera o checkout já aberto quando a operação muda para aberta', async () => {
     runtime.status.mockResolvedValue(closed);
     render(<CanteenCheckout />);

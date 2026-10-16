@@ -19,6 +19,7 @@ vi.mock('@/lib/notification-sound', () => ({ playNotificationBeep: vi.fn() }));
 import { NotificationsProvider } from '@/components/providers/NotificationsProvider';
 import { SessionRefreshProvider } from '@/features/auth/session-refresh';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { upsertNotification } from '@/lib/notification-center';
 
 function Probe() { const { user } = useAuth(); return <output>{user?.role}</output>; }
 function Content() { return <SessionRefreshProvider><NotificationsProvider /><Probe /></SessionRefreshProvider>; }
@@ -34,6 +35,20 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); useAuthStore.getState().logout(); });
 
 describe('SSE e acesso durante retomada', () => {
+  it('encaminha sinal da cantina apenas do tenant atual sem criar notificação no sininho', () => {
+    const listener = vi.fn();
+    window.addEventListener('church:canteen-status-updated', listener);
+    try {
+      render(<Content />);
+      act(() => runtime.listener!({ type: 'canteen.status.updated', tenantId: 'tenant-b' }));
+      expect(listener).not.toHaveBeenCalled();
+      act(() => runtime.listener!({ type: 'canteen.status.updated', tenantId: 'tenant-a' }));
+      expect(listener).toHaveBeenCalledOnce();
+      expect(upsertNotification).not.toHaveBeenCalled();
+      expect(runtime.open).toHaveBeenCalledTimes(1);
+    } finally { window.removeEventListener('church:canteen-status-updated', listener); }
+  });
+
   it('mantém o stream aberto durante loading e aplica somente versões novas na UI', async () => {
     const view = render(<Content />);
     runtime.status = 'loading'; view.rerender(<Content />);

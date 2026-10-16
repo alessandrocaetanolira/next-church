@@ -39,6 +39,10 @@ export async function openNotificationsStream(
   const deliver = (event: ServerTenantEvent) => {
     if (event.userEmail !== email || deliveredIds.has(event.id)) return;
     deliveredIds.add(event.id);
+    if (event.type === 'canteen.status.updated') {
+      sse.write({ type: event.type, tenantId });
+      return;
+    }
     if (event.type === 'permissions.updated' && event.role && event.permissions) {
       presenceUser = presenceUser ? { ...presenceUser, role: event.role, permissions: event.permissions } : presenceUser;
       if (presenceUser && PresencePolicy.canView(presenceUser)) attachPresence(presenceUser);

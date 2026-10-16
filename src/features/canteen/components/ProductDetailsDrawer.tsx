@@ -11,11 +11,12 @@ import { useProductDetails } from '../hooks/use-product-details';
 import { ProductPurchaseActions } from './ProductPurchaseActions';
 import { Badge } from '@/components/ui/badge';
 import { isRecommendedProduct, PRODUCT_RECOMMENDATION_DAYS } from '@/lib/canteen/product-recommendation';
+import type { CartMode } from '../store/useCartStore';
 
 /** Usa o drawer padrão e lê carrinho/produto reativamente, sem capturar estado antigo da lista. */
-export function ProductDetailsDrawer({ productId, allowPurchase = true }: { productId: string; allowPurchase?: boolean }) {
+export function ProductDetailsDrawer({ productId, allowPurchase = true, cartMode = 'sale' }: { productId: string; allowPurchase?: boolean; cartMode?: CartMode }) {
   const { product, loading } = useProductDetails(productId);
-  const cartReady = useCanteenCartOwner();
+  const cartReady = useCanteenCartOwner(cartMode, allowPurchase);
   const { closeDrawer } = useDrawer();
 
   if (!product) {

@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRouter } from 'next/navigation';
@@ -23,6 +24,8 @@ import { useCanteenStatus } from '../hooks/use-canteen-status';
 import { useCanteenCartOwner } from '../hooks/use-canteen-cart-owner';
 import { syncCanteenMembersFromServer } from '../lib/sync-members';
 import { CanteenStatusNotice } from './CanteenStatusNotice';
+import { getCanteenAccess } from '@/lib/canteen/access';
+import { CANTEEN_PURCHASE_HREF } from '@/lib/canteen/navigation';
 
 type PaymentMethod = 'cash' | 'pix' | 'credit' | 'fiado';
 type ConsumerType = 'MEMBER' | 'VISITOR' | 'UNIDENTIFIED';
@@ -37,20 +40,21 @@ const PAYMENT_OPTIONS: Array<{ value: PaymentMethod; label: string; icon: typeof
 export function CanteenCheckout() {
   const router = useRouter();
   const { user } = useAuth();
+  const { canSell } = getCanteenAccess(user);
   const { items, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
-  const cartReady = useCanteenCartOwner();
+  const cartReady = useCanteenCartOwner('sale', canSell);
   const tenantId = user?.tenantId ?? '';
-  const members = useLiveQuery(() => tenantId ? db.members.filter((member) => member.tenantId === tenantId && !member.deletedAt && member.status !== 'inactive').toArray() : [], [tenantId]) || [];
+  const members = useLiveQuery(() => canSell && tenantId ? db.members.filter((member) => member.tenantId === tenantId && !member.deletedAt && member.status !== 'inactive').toArray() : [], [tenantId, canSell]) || [];
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [selectedMember, setSelectedMember] = useState('');
   const [consumerType, setConsumerType] = useState<ConsumerType>('VISITOR');
   const [sendToPrep, setSendToPrep] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const operation = useCanteenStatus();
+  const operation = useCanteenStatus(canSell);
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = async () => {
-    if (!cartReady || !items.length || !user?.email || submitting) return;
+    if (!canSell || !cartReady || !items.length || !user?.email || submitting) return;
     if (paymentMethod === 'fiado' && (consumerType !== 'MEMBER' || !selectedMember)) {
       toast.error('Selecione um membro para fiado.');
       return;
@@ -93,7 +97,7 @@ export function CanteenCheckout() {
       } catch (error) {
         if (!isNetworkError(error)) throw error;
         await db.sales.put({ ...payload, orderStatus: sendToPrep ? 'preparing' : undefined, _status: 'pending' });
-        await db.syncOutbox.add({ module: 'sales', action: 'create', data: payload, timestamp: new Date().toISOString() });
+        await enqueueSyncChange({ module: 'sales', action: 'create', data: payload, timestamp: new Date().toISOString() });
       }
       clearCart();
       toast.success('Venda registrada!');
@@ -110,6 +114,10 @@ export function CanteenCheckout() {
       setSubmitting(false);
     }
   };
+
+  if (!canSell) {
+    return <WebPageContainer size="narrow" className="space-y-4"><p role="status">Você não tem permissão para registrar vendas. Para fazer seu pedido, abra o carrinho.</p><Button onClick={() => router.replace(CANTEEN_PURCHASE_HREF)}>Ir para meu carrinho</Button></WebPageContainer>;
+  }
 
   return (
     <WebPageContainer size="narrow" className="space-y-4">

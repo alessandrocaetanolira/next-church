@@ -7,7 +7,7 @@ export type CanteenStatus = {
   updatedBy: string | null;
 };
 
-export async function getCanteenStatus(prisma: PrismaClient): Promise<CanteenStatus> {
+export async function getCanteenStatus(prisma: Pick<PrismaClient, '$queryRawUnsafe'>): Promise<CanteenStatus> {
   const [settings] = await prisma.$queryRawUnsafe<Array<{
     isOpen: boolean | number;
     openedAt: Date | null;

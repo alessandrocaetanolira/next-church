@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCanteenStatus } from '@/features/canteen/hooks/use-canteen-status';
 import { useCanteenOperationStore } from '@/features/canteen/store/useCanteenOperationStore';
 import { CanteenStatusNotice } from '@/features/canteen/components/CanteenStatusNotice';
+import { CanteenStatusBanner } from '@/features/canteen/components/CanteenStatusBanner';
 
 const runtime = vi.hoisted(() => ({
   status: vi.fn(), setStatus: vi.fn(),
@@ -29,6 +30,11 @@ function Consumer({ name }: { name: string }) {
   </section>;
 }
 
+function Buyer() {
+  const operation = useCanteenStatus();
+  return <><CanteenStatusBanner operation={operation} /><button disabled={!operation.canCheckout}>Enviar pedido</button></>;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.user = { id: 'user-a', tenantId: 'tenant-a' };
@@ -40,6 +46,33 @@ beforeEach(() => {
 afterEach(() => { cleanup(); useCanteenOperationStore.getState().reset(); });
 
 describe('status compartilhado da Cantina', () => {
+  it('banner do comprador acompanha abertura e fechamento por sinal SSE sem botões de status', async () => {
+    render(<Buyer />);
+    await waitFor(() => expect(screen.getByText('Cantina fechada')).toBeDefined());
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect((screen.getByText('Enviar pedido') as HTMLButtonElement).disabled).toBe(true);
+    runtime.status.mockResolvedValue(open);
+    fireEvent(window, new Event('church:canteen-status-updated'));
+    await waitFor(() => expect(screen.getByText('Cantina aberta')).toBeDefined());
+    expect((screen.getByText('Enviar pedido') as HTMLButtonElement).disabled).toBe(false);
+    runtime.status.mockResolvedValue(closed);
+    fireEvent(window, new Event('church:canteen-status-updated'));
+    await waitFor(() => expect(screen.getByText('Cantina fechada')).toBeDefined());
+    expect((screen.getByText('Enviar pedido') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('SSE não reutiliza consulta anterior à mudança nem aceita sua resposta atrasada', async () => {
+    const delayed = deferred<typeof closed>();
+    runtime.status.mockReturnValueOnce(delayed.promise).mockResolvedValue(open);
+    render(<Buyer />);
+    await waitFor(() => expect(runtime.status).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('Cantina fechada')).toBeNull();
+    fireEvent(window, new Event('church:canteen-status-updated'));
+    await waitFor(() => expect(screen.getByText('Cantina aberta')).toBeDefined());
+    await act(async () => delayed.resolve(closed));
+    expect(screen.queryByText('Cantina fechada')).toBeNull();
+  });
+
   it('abrir pelo cabeçalho libera PDV/carrinho e checkout sem recarregar', async () => {
     render(<><Consumer name="Cabeçalho" /><Consumer name="Carrinho" /><Consumer name="Checkout" /></>);
     await waitFor(() => expect(screen.getAllByText('Fechada')).toHaveLength(3));

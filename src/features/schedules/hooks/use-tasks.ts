@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, LocalTask } from '@/lib/db';
 import { useCallback } from 'react';
@@ -35,7 +36,7 @@ export function useTasks() {
 
     try {
       await db.tasks.add(newTask);
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'tasks',
         action: 'create',
         data: newTask,
@@ -53,7 +54,7 @@ export function useTasks() {
       await db.tasks.update(id, { ...updates, updatedAt, _status: 'pending' });
       
       const updatedTask = await db.tasks.get(id);
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'tasks',
         action: 'update',
         data: updatedTask,
@@ -77,7 +78,7 @@ export function useTasks() {
       
       // Opção 2: Marcar como deletado (precisaria adicionar campo deletedAt em LocalTask)
       
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'tasks',
         action: 'delete',
         data: { id },

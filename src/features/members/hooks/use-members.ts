@@ -1,5 +1,6 @@
 'use client';
 
+import { enqueueSyncChange } from '@/features/sync/services/enqueue-sync-change';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, LocalMember } from '@/lib/db';
 import { useCallback } from 'react';
@@ -34,7 +35,7 @@ export function useMembers() {
 
     try {
       await db.members.add(newMember);
-      await db.syncOutbox.add({
+      await enqueueSyncChange({
         module: 'members',
         action: 'create',
         data: newMember,

@@ -16,6 +16,8 @@ describe('camadas de créditos de membros', () => {
   it('protege a sincronização por permissão', () => {
     expect(() => MemberCreditsPolicy.assertSync(operator)).not.toThrow();
     expect(() => MemberCreditsPolicy.assertSync(withoutAccess)).toThrow('créditos');
+    expect(() => MemberCreditsPolicy.assertSync({ ...withoutAccess, permissions: ['canteen:order'] })).toThrow('créditos');
+    expect(() => MemberCreditsPolicy.assertSync({ ...withoutAccess, permissions: ['members:update', 'members:manage_access'], planFeatures: ['members'] })).toThrow('créditos');
   });
 
   it('registra pagamento com valor e responsável', async () => {
@@ -42,5 +44,8 @@ describe('camadas de créditos de membros', () => {
 
     await expect(service.sync({ amount: 10 }, 'Sistema')).rejects.toThrow('Identificador');
     await expect(service.sync({ id: 'member-1', amount: -1 }, 'Sistema')).rejects.toThrow('Valor inválido');
+    for (const invalid of [{ id: 'member-1' }, { id: 'member-1', amount: '10' }, { id: 'member-1', creditBalance: -1 }, { id: 'member-1', amount: 1.999 }, { id: 'member-1', creditBalance: 10, amount: 5 }]) {
+      await expect(service.sync(invalid, 'Sistema')).rejects.toThrow('Valor inválido');
+    }
   });
 });

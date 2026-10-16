@@ -14,13 +14,16 @@ export interface CartItem {
   price: number;
 }
 
+export type CartMode = 'sale' | 'purchase';
+type CartOwner = { tenantId: string; userId: string; mode?: CartMode };
+
 interface CartStore {
   items: CartItem[];
-  /** Carrinhos separados por tenant e usuário, persistidos somente no navegador. */
+  /** Rascunhos por tenant/usuário e contexto de comprador ou operador, somente no navegador. */
   carts: Record<string, { items: CartItem[]; updatedAt: string }>;
   activeOwnerKey: string | null;
   isReady: boolean;
-  selectOwner: (owner: { tenantId: string; userId: string } | null) => void;
+  selectOwner: (owner: CartOwner | null) => void;
   addItem: (item: CartItem) => void;
   incrementItem: (productId: string) => void;
   decrementItem: (productId: string) => void;
@@ -33,8 +36,10 @@ function calculateTotal(items: CartItem[]) {
   return items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 }
 
-function ownerKey(owner: { tenantId: string; userId: string }) {
-  return `${owner.tenantId}:${owner.userId}`;
+/** Chaves compatíveis: comprador usa purchase; operador usa sale, sem misturar rascunhos ao mudar permissões. */
+export function getCartOwnerKey(owner: CartOwner) {
+  const key = `${owner.tenantId}:${owner.userId}`;
+  return owner.mode === 'purchase' ? `${key}:purchase` : key;
 }
 
 function setActiveItems(
@@ -64,7 +69,7 @@ export const useCartStore = create<CartStore>()(persist((set) => ({
     if (!owner?.tenantId || !owner.userId) {
       return { activeOwnerKey: null, items: [], total: 0, isReady: true };
     }
-    const nextOwnerKey = ownerKey(owner);
+    const nextOwnerKey = getCartOwnerKey(owner);
     if (state.activeOwnerKey === nextOwnerKey && state.isReady) return {};
     const cart = state.carts[nextOwnerKey];
     const items = cart?.items ?? [];

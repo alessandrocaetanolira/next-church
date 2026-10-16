@@ -8,6 +8,7 @@
 import { db, LocalMember, LocalProduct, LocalSale, LocalTask, SyncOutbox } from "@/lib/db";
 import { syncRequest } from '@/services/sync/sync-api';
 import { readSyncCursor, SyncContext, writeSyncCursor } from './sync-context';
+import { generateId } from '@/lib/id';
 
 function backoffDelay(retryCount: number) {
   return Math.min(30_000, 500 * (2 ** Math.min(retryCount, 6)));
@@ -35,54 +36,87 @@ export type ConflictResolution = 'server' | 'local';
 export async function resolveSyncConflict(itemId: number, resolution: ConflictResolution, context?: SyncContext) {
   const item = await db.syncQueue.get(itemId);
   if (!item || item.status !== 'conflict') return false;
-  if (context && (item.tenantSlug !== context.tenantSlug || item.userId !== context.userId)) return false;
+  if (!context || item.tenantSlug !== context.tenantSlug || item.userId !== context.userId) return false;
+  if (resolution === 'local' && (item.conflictReason === 'idempotency' || item.conflictReason === 'unverifiable')) return false;
+
+  const sources = await db.syncOutbox.filter((source) => source.userId === context.userId && source.tenantSlug === context.tenantSlug
+    && (!context.tenantId || source.tenantId === context.tenantId)
+    && (source.id === item.legacyOutboxId || `${source.id ?? 'new'}:${source.timestamp}` === item.idempotencyKey)).toArray();
 
   if (resolution === 'server') {
-    await db.syncQueue.delete(itemId);
+    await db.transaction('rw', db.syncQueue, db.syncOutbox, async () => {
+      await db.syncQueue.delete(itemId);
+      await db.syncOutbox.bulkDelete(sources.map((source) => source.id!));
+    });
     return true;
   }
 
   const data = item.data && typeof item.data === 'object'
     ? { ...(item.data as Record<string, unknown>), updatedAt: new Date().toISOString() }
     : item.data;
-  await db.syncQueue.put({
+  await db.transaction('rw', db.syncQueue, db.syncOutbox, async () => {
+    await db.syncQueue.put({
     ...item,
     data,
     status: 'pending',
     retryCount: 0,
     lastError: undefined,
+    idempotencyKey: generateId(),
+    conflictReason: undefined,
+    legacyOutboxId: undefined,
+    });
+    await db.syncOutbox.bulkDelete(sources.map((source) => source.id!));
   });
   return true;
 }
 
-export async function pushChanges(context?: SyncContext) {
+const activePushes = new Map<string, Promise<Awaited<ReturnType<typeof performPush>>>>();
+
+/** Duas rotinas da mesma janela compartilham o mesmo envio; o servidor protege concorrência entre janelas. */
+export function pushChanges(context?: SyncContext) {
+  const key = JSON.stringify(context ?? null);
+  const active = activePushes.get(key);
+  if (active) return active;
+  const request = performPush(context).finally(() => { if (activePushes.get(key) === request) activePushes.delete(key); });
+  activePushes.set(key, request);
+  return request;
+}
+
+async function performPush(context?: SyncContext) {
+  if (!context?.tenantId || !context.userId) return { ok: false, skipped: true, unauthorized: true };
   // Compatibilidade: mutações antigas ainda gravam em syncOutbox. Migre-as
   // para a fila explícita antes de enviar.
-  const legacy = await db.syncOutbox.toArray();
+  const allLegacy = await db.syncOutbox.toArray();
+  const legacy = allLegacy.filter((item) => item.tenantId === context.tenantId && item.userId === context.userId && item.tenantSlug === context.tenantSlug);
   if (legacy.length > 0) {
     const queued = await db.syncQueue.toArray();
-    const existingKeys = new Set(queued.map((item) => item.idempotencyKey).filter(Boolean));
+    const existingKeys = new Set(queued.filter((item) => item.userId === context.userId && item.tenantSlug === context.tenantSlug).map((item) => item.idempotencyKey).filter(Boolean));
     const missing = legacy.filter((item) => !existingKeys.has(`${item.id ?? 'new'}:${item.timestamp}`));
     if (missing.length > 0) {
-      await db.syncQueue.bulkAdd(missing.map((item) => ({
-        ...item,
+      await db.syncQueue.bulkAdd(missing.map(({ id, ...item }) => ({
+        ...item, legacyOutboxId: id,
         ...(context ? { tenantSlug: context.tenantSlug, userId: context.userId } : {}),
         status: 'pending' as const,
         retryCount: 0,
-        idempotencyKey: `${item.id ?? 'new'}:${item.timestamp}`,
+        idempotencyKey: `${id ?? 'new'}:${item.timestamp}`,
       })));
     }
   }
 
-  const pending = (await db.syncQueue.where('status').anyOf('pending', 'error').toArray())
-    .filter((item) => !context || (item.tenantSlug === context.tenantSlug && item.userId === context.userId));
-  if (pending.length === 0) return { ok: true, skipped: true };
+  const scoped = (await db.syncQueue.where('status').anyOf('pending', 'error', 'processing').toArray())
+    .filter((item) => item.tenantSlug === context.tenantSlug && item.userId === context.userId && (!item.tenantId || item.tenantId === context.tenantId))
+    .slice(0, 100);
+  const unverifiable = scoped.filter((item) => !item.idempotencyKey);
+  if (unverifiable.length) await db.syncQueue.bulkPut(unverifiable.map((item) => ({ ...item, status: 'conflict' as const, conflictReason: 'unverifiable' as const, lastError: 'Operação antiga sem chave verificável. Confira o resultado antes de reenviar.' })));
+  const pending = scoped.filter((item) => item.idempotencyKey);
+  const blockedLegacy = allLegacy.filter((item) => !item.tenantId || !item.userId || !item.tenantSlug).length + unverifiable.length;
+  if (pending.length === 0) return { ok: blockedLegacy === 0, skipped: blockedLegacy === 0, requiresReview: blockedLegacy };
 
   try {
     const retrying = pending.filter((item) => (item.retryCount ?? 0) > 0);
     if (retrying.length > 0) await wait(Math.max(...retrying.map((item) => backoffDelay(item.retryCount ?? 0))));
     await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'processing' as const })));
-    const response = await syncRequest<{ results?: Array<{ id: number; status: string }> }>('/api/sync/push', {
+    const response = await syncRequest<{ results?: Array<{ id: number; status: string; error?: string; reason?: string }> }>('/api/sync/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ changes: pending }),
@@ -97,7 +131,11 @@ export async function pushChanges(context?: SyncContext) {
       return { ok: false, skipped: false, status: response.status };
     }
 
-    const results = response.data?.results ?? [];
+    const received = response.data?.results ?? [];
+    const results = pending.map((item) => {
+      const matches = received.filter((result) => result.id === item.id);
+      return matches.length === 1 ? matches[0] : { id: item.id!, status: 'error' };
+    });
     
     // Remover itens processados com sucesso da fila
     const successIds = results
@@ -106,7 +144,11 @@ export async function pushChanges(context?: SyncContext) {
     
     if (successIds.length > 0) {
       await db.syncQueue.bulkDelete(successIds);
-      await db.syncOutbox.bulkDelete(successIds);
+      const sourceIds = pending.filter((item) => successIds.includes(item.id ?? -1)).flatMap((item) => {
+        const source = item.legacyOutboxId ?? legacy.find((source) => `${source.id ?? 'new'}:${source.timestamp}` === item.idempotencyKey)?.id;
+        return source === undefined ? [] : [source];
+      });
+      if (sourceIds.length) await db.syncOutbox.bulkDelete(sourceIds);
     }
 
     const conflicts = results.filter((result) => result.status === 'conflict').map((result) => result.id);
@@ -115,7 +157,8 @@ export async function pushChanges(context?: SyncContext) {
       await db.syncQueue.bulkPut(conflictItems.map((item) => ({
         ...item,
         status: 'conflict' as const,
-        lastError: 'O registro foi alterado no servidor antes da sincronização.',
+        conflictReason: received.find((result) => result.id === item.id)?.reason === 'idempotency' ? 'idempotency' as const : 'version' as const,
+        lastError: received.find((result) => result.id === item.id)?.error ?? 'O registro foi alterado no servidor antes da sincronização.',
       })));
     }
 
@@ -125,7 +168,7 @@ export async function pushChanges(context?: SyncContext) {
       await db.syncQueue.bulkPut(failedItems.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1 })));
     }
 
-    return { ...summarizeSyncResults(results), skipped: false };
+    return { ...summarizeSyncResults(results), ...(blockedLegacy ? { ok: false, requiresReview: blockedLegacy } : {}), skipped: false };
   } catch (error) {
     await db.syncQueue.bulkPut(pending.map((item) => ({ ...item, status: 'error' as const, retryCount: (item.retryCount ?? 0) + 1, lastError: error instanceof Error ? error.message : 'network error' })));
     return { ok: false, skipped: false, networkError: true };

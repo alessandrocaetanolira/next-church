@@ -5,7 +5,7 @@ type PolicyUser = Parameters<typeof hasAnyActionPermission>[0];
 
 export class MemberCreditsPolicy {
   static assertSync(user: PolicyUser) {
-    if (!hasAnyActionPermission(user, 'canteen', ['operate', 'sell', 'order']) && !hasAnyActionPermission(user, 'members', ['update', 'manage_access'])) {
+    if (!hasAnyActionPermission(user, 'canteen', ['operate', 'sell'])) {
       throw new ForbiddenError('Sem permissão para sincronizar créditos de membros.');
     }
   }

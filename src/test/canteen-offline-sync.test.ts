@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db, type LocalSale } from '@/lib/db';
 import { queueSaleCreate, queueSaleUpdate } from '@/features/canteen/lib/offline-sales';
+import { useAuthStore } from '@/features/auth/store';
 
 const sale: LocalSale = {
   id: 'sale-offline-1',
@@ -19,6 +20,7 @@ const sale: LocalSale = {
 
 describe('sincronização offline da cantina', () => {
   beforeEach(async () => {
+    useAuthStore.getState().setSession({ id: 'operator-a', tenantId: 'igreja-teste', tenantSlug: 'igreja-teste', churchId: 'igreja-teste', name: 'Operador', email: 'operator@test.local', role: 'CANTEEN', permissions: ['canteen:sell'], teamIds: [], accessibleModules: [] }, 'igreja-teste');
     await db.sales.clear();
     await db.syncOutbox.clear();
   });

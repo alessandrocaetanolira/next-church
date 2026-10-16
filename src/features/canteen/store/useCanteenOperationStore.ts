@@ -11,7 +11,7 @@ type OperationState = {
   error: string | null;
 };
 type OperationStore = OperationState & {
-  refresh: (scopeKey: string) => Promise<CanteenStatus | null>;
+  refresh: (scopeKey: string, force?: boolean) => Promise<CanteenStatus | null>;
   setOpen: (scopeKey: string, isOpen: boolean) => Promise<CanteenStatus>;
   reset: () => void;
 };
@@ -47,10 +47,10 @@ export const useCanteenOperationStore = create<OperationStore>((set, get) => {
       pendingWrite = null;
       set(initialState);
     },
-    refresh: (scopeKey) => {
+    refresh: (scopeKey, force = false) => {
       activate(scopeKey);
       if (pendingWrite?.scopeKey === scopeKey) return pendingWrite.promise.catch(() => null);
-      if (pendingRead?.scopeKey === scopeKey && pendingRead.revision === revision) return pendingRead.promise;
+      if (!force && pendingRead?.scopeKey === scopeKey && pendingRead.revision === revision) return pendingRead.promise;
       const requestRevision = ++revision;
       set({ loading: true, error: null });
       const request: PendingRequest = { scopeKey, revision: requestRevision, promise: Promise.resolve(null) };

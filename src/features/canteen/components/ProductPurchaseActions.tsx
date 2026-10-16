@@ -8,7 +8,8 @@ import { useCartStore } from '../store/useCartStore';
 
 /** Controles reativos ao mesmo carrinho, tanto na lista quanto no drawer de detalhes. */
 export function ProductPurchaseActions({ product, cartReady }: { product: LocalProduct; cartReady: boolean }) {
-  const quantity = useCartStore((state) => state.items.find((item) => item.productId === product.id)?.quantity ?? 0);
+  const storedQuantity = useCartStore((state) => state.items.find((item) => item.productId === product.id)?.quantity ?? 0);
+  const quantity = cartReady ? storedQuantity : 0;
   const decrementItem = useCartStore((state) => state.decrementItem);
   const unavailable = product.active === false || product.availableToday === false || product.stock <= 0;
 

@@ -2,6 +2,7 @@ import { notifyMemberCreditUpdate, notifyMemberOrderUpdate, publishCanteenOrderA
 import { NotFoundError, ValidationError } from '@/lib/http/errors';
 import { CanteenSalesRepository, parseSale } from './sales.repository';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+import type { AfterCommit } from '@/infra/database/tenant-transaction';
 
 const STATUS_NOTIFICATIONS = {
   preparing: ['canteen-order-preparing', 'Pedido em preparo', 'entrou em preparo.'],
@@ -10,7 +11,7 @@ const STATUS_NOTIFICATIONS = {
 } as const;
 
 export class CanteenSalesDetailService {
-  constructor(private readonly repository: CanteenSalesRepository, private readonly prisma: TenantPrismaClient, private readonly tenantId: string) {}
+  constructor(private readonly repository: CanteenSalesRepository, private readonly prisma: TenantPrismaClient, private readonly tenantId: string, private readonly afterCommit?: AfterCommit) {}
 
   async execute(id: string, input: unknown, actor: string) {
     const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
@@ -38,7 +39,7 @@ export class CanteenSalesDetailService {
       if (sale.orderStatus !== 'ready') throw new ValidationError('Somente pedidos prontos podem ser retirados da fila.');
       const result = await this.repository.archive(id);
       if (!result) throw new NotFoundError('Pedido não encontrado.');
-      await publishCanteenOrderArchived(this.prisma, this.tenantId, { id: result.id });
+      await this.deliver(() => publishCanteenOrderArchived(this.prisma, this.tenantId, { id: result.id }));
       return parseSale(result);
     }
 
@@ -52,14 +53,14 @@ export class CanteenSalesDetailService {
       if (!result) throw new NotFoundError('Pedido não encontrado.');
       await this.notify(result, 'approved', actor);
       if (paymentMethod === 'fiado' && result.memberId) {
-        await notifyMemberCreditUpdate(this.prisma, this.tenantId, {
-          memberId: result.memberId,
+        await this.deliver(() => notifyMemberCreditUpdate(this.prisma, this.tenantId, {
+          memberId: result.memberId!,
           type: 'canteen-credit-debit',
           title: 'Nova cobrança na cantina',
           message: `Foi lançada uma cobrança de R$ ${result.total.toFixed(2)} no seu saldo da cantina.`,
           sender: { name: actor },
           sourceId: result.id,
-        });
+        }));
       }
       return parseSale(result);
     }
@@ -72,10 +73,15 @@ export class CanteenSalesDetailService {
     const notification = status === 'approved'
       ? ['canteen-order-approved', 'Pedido aprovado', 'foi aprovado e está em preparo.'] as const
       : STATUS_NOTIFICATIONS[status];
-    await notifyMemberOrderUpdate(this.prisma, this.tenantId, {
+    await this.deliver(() => notifyMemberOrderUpdate(this.prisma, this.tenantId, {
       saleId: sale.id, memberId: sale.memberId, type: notification[0], title: notification[1],
       message: `Seu pedido #${sale.id.slice(-4)} ${notification[2]}`,
       sender: { name: actor },
-    });
+    }));
+  }
+
+  private async deliver(effect: () => Promise<unknown>) {
+    if (this.afterCommit) this.afterCommit(effect);
+    else await effect();
   }
 }

@@ -1,6 +1,7 @@
 # TODO principal — Church App
 
-Atualizado em **15/10/2026**, incluindo a análise do módulo de Escalas, após auditoria
+Atualizado em **16/10/2026**, incluindo o plano de compra unificada da Cantina e a
+análise do módulo de Escalas, após auditoria
 de código, documentação, histórico recente e testes existentes. Este é o índice
 canônico de prioridade. Os documentos de domínio continuam contendo contratos e
 checklists detalhados, mas não substituem a ordem definida aqui.
@@ -185,6 +186,39 @@ O mobile é a referência principal do produto.
 
 ### 7. Cantina, dashboard e carteira
 
+- [~] Unificar “Fazer pedido” da Carteira/Dashboard com a compra na Cantina;
+      remover a implementação antiga de pedidos, não a Carteira. Comprador vê
+      produtos/carrinho sem menu operacional; operação exige suas permissões.
+      Carrinho pode ser montado com Cantina fechada, mas envio/checkout somente
+      com abertura confirmada. Backend deve validar disponibilidade, estoque e
+      preço no envio, aprovação e sync. Seguir a ordem e a matriz de testes de
+      [canteen-purchase-unification-todo.md](./canteen-purchase-unification-todo.md).
+      Base aplicada em 16/10: menu operacional por capacidade, compra pessoal
+      explícita, carrinhos por intenção, vínculo validado no servidor, checagens
+      transacionais de produtos/preço/estoque e bloqueio de envio fechado.
+      Atalhos da Carteira/Dashboard agora abrem `/cantina`; UIs antigas
+      removidas, links legados redirecionados e “Meus pedidos” no drawer padrão.
+      Banner no topo da compra acompanha abertura/fechamento pelo SSE existente,
+      sem botões de status para comprador; uma única aba “Carrinho”, sem “Comprar”
+      ou PDV separado. Pedido próprio e checkout operacional são ações autorizadas
+      no mesmo catálogo/carrinho; aliases antigos convergem para essa entrada.
+      `sync/pull` em camadas, com escopo por módulo/equipe/vínculo e projeção sem
+      credenciais, custos ou saldos não autorizados. `sync/push` também em camadas:
+      autorização inclusive no replay, recibo vinculado ao ator/conteúdo e mutação
+      transacional; outbox nova captura dono/tenant na origem. Filas/recibos antigos
+      sem vínculo verificável ficam para revisão, sem reenvio automático.
+      Restam retry idempotente do POST direto, checkout operacional, DTOs fora do
+      sync, caches antigos/reconciliação de acesso e módulos legados sem executor.
+      Observação e aceite mobile pendentes; avisos pós-commit ainda sem retry durável.
+- [ ] Incluir observação opcional do comprador no checkout, persistida no pedido e
+      rascunho e visível à aprovação/cozinha (“Sem mostarda”, “Com pimenta”).
+      Prever migration tenant aditiva, contratos/sync e testes ponta a ponta no
+      plano de compra unificada; não confundir com observações financeiras.
+- [ ] Revisar resumos/detalhamentos de export: consolidar vendas pagas e fiado,
+      permitir período/filtros e extrato individual por membro/usuário, com
+      recebimentos e saldos reconciliados sem dupla contagem. Filtros no drawer
+      padrão e resultados em tela de detalhes; backend completo, sem depender das
+      50 vendas/cache local. Seguir [canteen-reports-todo.md](./canteen-reports-todo.md).
 - [x] Corrigir a divergência “aberta no cabeçalho / fechada no carrinho”: estado
       operacional único em Zustand, respostas antigas descartadas, erro distinto
       de fechamento e revalidação antes da venda; coberto por testes de estado/UI.
@@ -202,7 +236,10 @@ O mobile é a referência principal do produto.
 - [ ] Cobrir fiado, pagamento parcial, quitação, cancelamento, conflito e eventos em
       tempo real com testes de integração.
 
-Referência: [dashboard-canteen-todo.md](./dashboard-canteen-todo.md).
+Referências: [dashboard-canteen-todo.md](./dashboard-canteen-todo.md) e
+[canteen-purchase-unification-todo.md](./canteen-purchase-unification-todo.md).
+
+Relatórios e extrato exportável: [canteen-reports-todo.md](./canteen-reports-todo.md).
 
 ### Escalas — autorização, sincronização e evolução funcional
 
@@ -340,6 +377,17 @@ Referência: [email-todo.md](./email-todo.md).
 
 ## Próxima ação recomendada
 
+**Frente solicitada em 16/10 — compra unificada da Cantina:** base de acesso,
+vínculo, validação transacional e migração das entradas aplicada. Pull/push
+agregados autorizados e separados em camadas; replay do push é transacional.
+Concluir retry idempotente do POST direto, checkout e saneamento de DTOs/caches;
+implementar observação e validar a
+compra unificada no mobile antes de seguir aos relatórios por período. Seguir
+[canteen-purchase-unification-todo.md](./canteen-purchase-unification-todo.md).
+Comprador monta carrinho mesmo fechado; envio/checkout exige Cantina aberta. Os
+aceites de produção/mobile abaixo continuam pendentes, não foram substituídos por
+este planejamento.
+
 **Abertura offline Safari/iPhone validada pelo usuário:** o bloqueio era agravado
 pelo worker antigo retido no Cloudflare, comprovado por comparação de hashes.
 Após corrigir o cache CDN, a abertura funcionou. Próximo aceite específico:
@@ -364,6 +412,8 @@ suspensão continua necessário para considerar sua correção concluída.
 - [Offline-first](./offline-first-todo.md)
 - [Bíblia offline](./bible-offline-todo.md)
 - [Dashboard e Cantina](./dashboard-canteen-todo.md)
+- [Compra unificada da Cantina](./canteen-purchase-unification-todo.md)
+- [Relatórios e extrato exportável da Cantina](./canteen-reports-todo.md)
 - [Escalas](./schedules-todo.md)
 - [Frontend](./frontend-todo.md)
 - [Retorno do PWA após suspensão](./mobile-resume-todo.md)

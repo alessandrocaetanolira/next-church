@@ -28,9 +28,13 @@ export function useCanteenStatus(enabled = true) {
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') void refresh();
     };
+    // A consulta iniciada antes do sinal pode conter o estado antigo da operação.
+    const refreshOnSignal = () => {
+      if (document.visibilityState === 'visible') void refreshStatus(scopeKey, true);
+    };
     window.addEventListener('online', refresh);
     window.addEventListener('focus', refreshWhenVisible);
-    window.addEventListener('church:canteen-status-updated', refreshWhenVisible);
+    window.addEventListener('church:canteen-status-updated', refreshOnSignal);
     const refreshOnReconnect = (event: Event) => {
       if ((event as CustomEvent<{ connected?: boolean }>).detail?.connected) refreshWhenVisible();
     };
@@ -39,11 +43,11 @@ export function useCanteenStatus(enabled = true) {
     return () => {
       window.removeEventListener('online', refresh);
       window.removeEventListener('focus', refreshWhenVisible);
-      window.removeEventListener('church:canteen-status-updated', refreshWhenVisible);
+      window.removeEventListener('church:canteen-status-updated', refreshOnSignal);
       window.removeEventListener('church:notification-stream-status', refreshOnReconnect);
       document.removeEventListener('visibilitychange', refreshWhenVisible);
     };
-  }, [enabled, refresh, scopeKey, reset]);
+  }, [enabled, refresh, scopeKey, reset, refreshStatus]);
 
   const matchesScope = scopeKey !== null && state.scopeKey === scopeKey;
   const status = matchesScope ? state.status ?? UNKNOWN_STATUS : UNKNOWN_STATUS;

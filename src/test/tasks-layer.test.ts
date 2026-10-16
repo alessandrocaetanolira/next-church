@@ -12,6 +12,7 @@ function repositoryMock() {
     create: vi.fn().mockResolvedValue({ id: 'task-1' }),
     upsert: vi.fn().mockResolvedValue({ id: 'task-1' }),
     softDelete: vi.fn().mockResolvedValue({ id: 'task-1', deletedAt: new Date() }),
+    findTeamId: vi.fn().mockResolvedValue('team-1'),
   } as unknown as TasksRepository;
 }
 
@@ -61,7 +62,7 @@ describe('camadas de tarefas', () => {
   it('rejeita sincronização sem identificador ou payload válido', async () => {
     const service = new TasksService(repositoryMock());
 
-    expect(() => service.sync('delete', {})).toThrow('Identificador');
-    expect(() => service.sync('update', { id: 'task-1' })).toThrow('Título, equipe, tipo e data');
+    await expect(service.sync('delete', {})).rejects.toThrow('Identificador');
+    await expect(service.sync('update', { id: 'task-1' })).rejects.toThrow('Título, equipe, tipo e data');
   });
 });

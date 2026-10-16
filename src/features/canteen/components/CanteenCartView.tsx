@@ -1,13 +1,13 @@
 /**
- * features/canteen/components/PDV.tsx
+ * features/canteen/components/CanteenCartView.tsx
  * 
- * Interface do Ponto de Venda (Fidelidade ao Mesa App).
- * Implementa Grid de Produtos, Carrinho Lateral (Desktop) e Drawer (Mobile).
+ * Catálogo/carrinho único. Permissões definem ações de pedido próprio ou venda.
  */
 
 "use client";
 
 import { useState, type ReactNode } from 'react';
+import type { CartItem } from '../store/useCartStore';
 import { useRouter } from 'next/navigation';
 import { useProducts } from '../hooks/use-products';
 import { useCartStore } from '../store/useCartStore';
@@ -25,21 +25,23 @@ import { useCanteenCartOwner } from '../hooks/use-canteen-cart-owner';
 import { ProductCard } from './ProductCard';
 import { ProductPurchaseActions } from './ProductPurchaseActions';
 import { ProductDetailsDrawer } from './ProductDetailsDrawer';
-import { CanteenStatusNotice } from './CanteenStatusNotice';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { getCanteenAccess } from '@/lib/canteen/access';
+import { useSubmitPersonalOrder } from '../hooks/use-submit-personal-order';
+import { MyOrdersDrawer } from './MyOrdersDrawer';
 
 interface CartContentProps {
-    items: any[];
+    items: CartItem[];
     decrementItem: (productId: string) => void;
     incrementItem: (productId: string) => void;
     removeItem: (id: string) => void;
     total: number;
     getProductStock: (productId: string) => number;
-    onCheckout: () => void;
-    canCheckout: boolean;
+    actions: ReactNode;
     checkoutNotice: ReactNode;
 }
 
-const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, onCheckout, canCheckout, checkoutNotice }: CartContentProps) => (
+const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, getProductStock, actions, checkoutNotice }: CartContentProps) => (
     <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto p-4 space-y-3">
             {items.length === 0 ? (
@@ -80,28 +82,32 @@ const CartContent = ({ items, decrementItem, incrementItem, removeItem, total, g
             )}
         </div>
         <div className="p-4 border-t border-border bg-card">
-            {!canCheckout ? <div className="mb-3">{checkoutNotice}</div> : null}
+            {checkoutNotice ? <div className="mb-3">{checkoutNotice}</div> : null}
             <div className="flex justify-between items-center mb-4">
                 <span className="text-muted-foreground">Total</span>
                 <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
             </div>
-            <Button className="w-full h-12 text-lg" disabled={items.length === 0 || !canCheckout} onClick={onCheckout}>
-                Finalizar Venda
-            </Button>
+            <div className="grid gap-2">{actions}</div>
         </div>
     </div>
 );
 
-export function PDV() {
+export function CanteenCartView() {
+  const { user } = useAuth();
+  const { canOrder, canSell, canUseCart } = getCanteenAccess(user);
   const router = useRouter();
   const { openDrawer } = useDrawer();
-  const products = useProducts();
-  const { items, incrementItem, decrementItem, removeItem, clearCart, total } = useCartStore();
-  const cartReady = useCanteenCartOwner();
+  const products = useProducts(canUseCart);
+  const { items: storedItems, incrementItem, decrementItem, removeItem, clearCart, total: storedTotal } = useCartStore();
+  const cartMode = canSell ? 'sale' : 'purchase';
+  const cartReady = useCanteenCartOwner(cartMode, canUseCart);
+  const items = cartReady ? storedItems : [];
+  const total = cartReady ? storedTotal : 0;
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [search, setSearch] = useState('');
   const [cartOpen, setCartOpen] = useState(false);
-  const operation = useCanteenStatus();
+  const operation = useCanteenStatus(canUseCart);
+  const { submitOrder, submitting } = useSubmitPersonalOrder(operation, cartReady);
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
@@ -117,7 +123,7 @@ export function PDV() {
     products.find((product) => product.id === productId)?.stock ?? 0;
 
   const handleIncrementItem = (productId: string) => {
-    if (!cartReady) return;
+    if (!cartReady || submitting) return;
     const product = products.find((entry) => entry.id === productId);
     const item = items.find((entry) => entry.productId === productId);
     if (!product || !item) return;
@@ -131,7 +137,7 @@ export function PDV() {
   };
 
   const openCheckout = async () => {
-    if (!cartReady) return;
+    if (!canSell || !cartReady || submitting) return;
     if (items.length === 0) return;
     const currentStatus = await operation.refresh();
     if (!currentStatus) {
@@ -146,10 +152,18 @@ export function PDV() {
     router.push('/cantina/checkout');
   };
   const canCheckout = operation.canCheckout && cartReady;
-  const checkoutNotice = <CanteenStatusNotice operation={operation} />;
+  const checkoutNotice = !operation.canCheckout ? <p role="status" className="text-sm text-muted-foreground">{operation.loading || operation.updating ? 'Confirmando abertura…' : operation.error ? 'Aguardando confirmação da abertura da cantina.' : operation.confirmed ? 'A cantina está fechada. O carrinho será mantido até ela abrir.' : 'A abertura ainda não foi confirmada.'}</p> : null;
+  const actions = <>
+    {canOrder ? <Button className="h-12 w-full" variant={canSell ? 'outline' : 'default'} disabled={!items.length || !user?.linkedMemberId || !canCheckout || submitting} onClick={() => void submitOrder().then((sent) => { if (sent) setCartOpen(false); })}>{submitting ? 'Enviando...' : canSell ? 'Enviar pedido para mim' : 'Enviar pedido'}</Button> : null}
+    {canOrder && !user?.linkedMemberId ? <p role="status" className="text-sm text-muted-foreground">Sua conta precisa estar vinculada a um membro aprovado para enviar pedidos. Solicite a regularização à administração.</p> : null}
+    {canSell ? <Button className="h-12 w-full" disabled={!items.length || !canCheckout || submitting} onClick={() => void openCheckout()}>Finalizar venda</Button> : null}
+  </>;
+
+  if (!canUseCart) return null;
 
   return (
     <div className="space-y-4">
+      {canOrder ? <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Produtos</h2><Button variant="outline" size="sm" onClick={() => openDrawer({ content: <MyOrdersDrawer />, repositionInputs: false })}>Meus pedidos</Button></div> : null}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -186,8 +200,8 @@ export function PDV() {
                 key={product.id}
                 product={product}
                 quantity={items.find((item) => item.productId === product.id)?.quantity ?? 0}
-                onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} />, repositionInputs: false })}
-                actions={<ProductPurchaseActions product={product} cartReady={cartReady} />}
+                onViewDetails={() => openDrawer({ content: <ProductDetailsDrawer productId={product.id} cartMode={cartMode} />, repositionInputs: false })}
+                actions={<ProductPurchaseActions product={product} cartReady={cartReady && !submitting} />}
               />
             ))}
           </div>
@@ -208,7 +222,7 @@ export function PDV() {
                       {cartCount > 0 ? <Badge variant="secondary" className="text-xs">{cartCount}</Badge> : null}
                   </div>
                   {items.length > 0 ? (
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={clearCart}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" disabled={submitting} onClick={clearCart}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   ) : null}
@@ -221,8 +235,7 @@ export function PDV() {
             removeItem={removeItem}
             total={total}
             getProductStock={getProductStock}
-            onCheckout={openCheckout}
-            canCheckout={canCheckout}
+            actions={actions}
             checkoutNotice={checkoutNotice}
           />
         </div>
@@ -232,7 +245,7 @@ export function PDV() {
         {items.length > 0 && (
             <Drawer open={cartOpen} onOpenChange={setCartOpen}>
                 <DrawerTrigger asChild>
-                    <button className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-4 right-4 z-[55] flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground shadow-lg transition-transform active:scale-[0.98]">
+                    <button aria-label="Abrir carrinho" className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-4 right-4 z-[55] flex items-center justify-between rounded-xl bg-primary p-4 text-primary-foreground shadow-lg transition-transform active:scale-[0.98]">
                         <div className="flex items-center gap-3">
                             <ShoppingCart className="w-5 h-5" />
                             <span className="font-semibold">{cartCount} item(s)</span>
@@ -244,7 +257,7 @@ export function PDV() {
                     <DrawerHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <DrawerTitle>Carrinho</DrawerTitle>
-                          <Button variant="ghost" size="sm" onClick={clearCart}>
+                          <Button variant="ghost" size="sm" disabled={submitting} onClick={clearCart}>
                             <Trash2 className="w-4 h-4 mr-1" /> Limpar
                           </Button>
                         </div>
@@ -257,8 +270,7 @@ export function PDV() {
                           removeItem={removeItem}
                           total={total}
                           getProductStock={getProductStock}
-                          onCheckout={openCheckout}
-                          canCheckout={canCheckout}
+                          actions={actions}
                           checkoutNotice={checkoutNotice}
                         />
                     </div>

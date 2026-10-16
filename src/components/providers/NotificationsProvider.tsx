@@ -53,6 +53,11 @@ export function NotificationsProvider() {
     const close = openNotificationStream((data) => {
       try {
         const notification = data.notification as NotificationEventPayload | undefined;
+        if (data.type === 'canteen.status.updated') {
+          if (data.tenantId !== tenantId) return;
+          window.dispatchEvent(new CustomEvent('church:canteen-status-updated'));
+          return;
+        }
         if (data.type === 'permissions.updated') {
           if (!userId || !tenantId || (data.tenantId && data.tenantId !== tenantId)
             || (data.userId && data.userId !== userId)) return;

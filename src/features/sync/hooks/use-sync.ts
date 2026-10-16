@@ -44,7 +44,7 @@ export function useSync() {
         setSyncIssue('unauthorized');
         return;
       }
-      if (pullResult.ok) setSyncIssue(null);
+      if (pullResult.ok && pushResult.ok) setSyncIssue(null);
     } finally {
       setIsSyncing(false);
     }

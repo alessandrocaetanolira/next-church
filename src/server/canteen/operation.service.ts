@@ -2,6 +2,7 @@ import { ValidationError } from '@/lib/http/errors';
 import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
 import { notifyCanteenOpened } from '@/lib/server/notification-service';
 import { CanteenOperationRepository } from './operation.repository';
+import { publishTenantSignal } from '@/infra/sse/sse-broker';
 
 export class CanteenOperationService {
   constructor(
@@ -17,6 +18,10 @@ export class CanteenOperationService {
     if (typeof body.isOpen !== 'boolean') throw new ValidationError('Informe isOpen como booleano.');
     const current = await this.repository.getStatus();
     const status = await this.repository.setStatus(body.isOpen, updatedBy);
+
+    if (current.isOpen !== status.isOpen) {
+      publishTenantSignal(this.tenantId, 'canteen.status.updated');
+    }
 
     if (!current.isOpen && status.isOpen) {
       await notifyCanteenOpened(this.prisma, this.tenantId, { email: updatedBy });

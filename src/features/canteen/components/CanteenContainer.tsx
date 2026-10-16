@@ -7,65 +7,43 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { PDV } from './PDV';
+import { CanteenCartView } from './CanteenCartView';
 import { PreparoView } from './PreparoView';
 import { SalesHistory } from './SalesHistory';
 import { ProductsManager } from './ProductsManager';
 import { MemberOrdersView } from './MemberOrdersView';
-import { MemberOrderView } from './MemberOrderView';
+import { CatalogView } from './CatalogView';
 import { LoyaltySettings } from '@/features/settings/components/LoyaltySettings';
 import { ShoppingCart, ChefHat, Package, Receipt, BellPlus, Award } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/hooks/useAuth';
-import { hasActionPermission } from '@/lib/access-control';
+import { getCanteenAccess, resolveCanteenView } from '@/lib/canteen/access';
 import { useCanteenStatus } from '../hooks/use-canteen-status';
 import { useNotificationCenter } from '@/hooks/use-notification-center';
 import { syncCanteenSalesFromServer } from '@/features/canteen/lib/sync-sales';
 import { syncCanteenMembersFromServer } from '@/features/canteen/lib/sync-members';
-
-const VALID_TABS = ['pdv', 'orders', 'prep', 'products', 'sales', 'loyalty'] as const;
-type CanteenTab = (typeof VALID_TABS)[number];
+import { CanteenStatusBanner } from './CanteenStatusBanner';
 
 export function CanteenContainer() {
   const { user } = useAuth();
-  const canSell = hasActionPermission(user, 'canteen', 'sell');
-  const canOrder = hasActionPermission(user, 'canteen', 'order');
-  const canOperate = hasActionPermission(user, 'canteen', 'operate');
-  const canManageProducts = hasActionPermission(user, 'canteen', 'manage_products');
-  const canManageCanteen = hasActionPermission(user, 'canteen', 'manage');
-  const canViewSales = hasActionPermission(user, 'canteen', 'view');
-  const firstAvailableTab: CanteenTab = canSell
-    ? 'pdv'
-    : canOperate
-      ? 'orders'
-      : canManageProducts
-        ? 'products'
-        : canManageCanteen
-          ? 'loyalty'
-          : 'sales';
+  const { canBrowse, canSell, canUseCart, canOperate, canManageProducts,
+    canManage: canManageCanteen, canViewSales, operationalTabs } = getCanteenAccess(user);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { notifications } = useNotificationCenter();
   const tabFromUrl = searchParams.get('tab');
-  const initialTab = (VALID_TABS.includes((tabFromUrl ?? '') as CanteenTab) && (
-    (tabFromUrl === 'pdv' && canSell) ||
-    ((tabFromUrl === 'orders' || tabFromUrl === 'prep') && canOperate) ||
-        (tabFromUrl === 'products' && canManageProducts) ||
-    (tabFromUrl === 'sales' && canViewSales) ||
-    (tabFromUrl === 'loyalty' && canManageCanteen)
-  ) ? tabFromUrl : firstAvailableTab) as CanteenTab;
-  const [activeTab, setActiveTab] = useState<CanteenTab>(initialTab);
+  const activeTab = resolveCanteenView(user, tabFromUrl);
+  const operation = useCanteenStatus(canBrowse || canOperate || canSell);
   const { status: canteenStatus, loading: loadingStatus, updating: updatingStatus, confirmed: statusConfirmed,
-    error: statusError, refresh: refreshStatus, setOpen } = useCanteenStatus(canViewSales || canOperate || canSell || canOrder);
+    error: statusError, refresh: refreshStatus, setOpen } = operation;
   const tenantId = user?.tenantId ?? '';
   const sales = useLiveQuery(() => tenantId ? db.sales.filter((sale) => sale.tenantId === tenantId && !sale.deletedAt).toArray() : [], [tenantId]) ?? [];
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
@@ -79,21 +57,6 @@ export function CanteenContainer() {
   ).length;
   const queryString = useMemo(() => searchParams.toString(), [searchParams]);
 
-  useEffect(() => {
-    const requestedTab = tabFromUrl as CanteenTab;
-    const canAccessRequestedTab =
-      (requestedTab === 'pdv' && canSell) ||
-      ((requestedTab === 'orders' || requestedTab === 'prep') && canOperate) ||
-      (requestedTab === 'products' && canManageProducts) ||
-      (requestedTab === 'sales' && canViewSales) ||
-      (requestedTab === 'loyalty' && canManageCanteen);
-    const nextTab = VALID_TABS.includes(requestedTab) && canAccessRequestedTab
-      ? requestedTab
-      : firstAvailableTab;
-
-    setActiveTab((current) => (current === nextTab ? current : nextTab));
-  }, [tabFromUrl, canSell, canOperate, canManageProducts, canViewSales, canManageCanteen, firstAvailableTab]);
-
   const toggleCanteen = async () => {
     if (!canOperate || updatingStatus || loadingStatus || !statusConfirmed) return;
     try {
@@ -105,6 +68,7 @@ export function CanteenContainer() {
   };
 
   const refreshSales = useCallback(async () => {
+    if (!canViewSales && !canOperate) return;
     if (syncingRef.current) return;
     syncingRef.current = true;
     try {
@@ -121,7 +85,7 @@ export function CanteenContainer() {
     } finally {
       syncingRef.current = false;
     }
-  }, [tenantId]);
+  }, [tenantId, canViewSales, canOperate]);
 
   useEffect(() => {
     const nextIds = new Set(seenNotificationIdsRef.current);
@@ -151,13 +115,12 @@ export function CanteenContainer() {
   }, [refreshSales]);
 
   const handleTabChange = (value: string) => {
-    if (!VALID_TABS.includes(value as CanteenTab)) return;
+    if (!operationalTabs.some((tab) => tab === value) && !(value === 'cart' && canUseCart)) return;
 
-    const nextTab = value as CanteenTab;
-    setActiveTab(nextTab);
+    const nextTab = value;
 
     const params = new URLSearchParams(queryString);
-    if (nextTab === 'pdv') {
+    if (nextTab === 'cart') {
       params.delete('tab');
     } else {
       params.set('tab', nextTab);
@@ -169,24 +132,20 @@ export function CanteenContainer() {
 
   return (
     <div className="space-y-4">
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
-        <div className="min-w-0 flex-1 basis-44">
-          <p className="text-sm font-semibold">Status da cantina</p>
-          <p className="text-xs text-muted-foreground" role={statusError ? 'status' : undefined}>{statusError ?? (loadingStatus || !statusConfirmed ? 'Confirmando o status da cantina…' : canteenStatus.isOpen ? 'Recebendo pedidos e vendas.' : 'No momento não está recebendo novos pedidos.')}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={statusConfirmed && canteenStatus.isOpen ? 'success' : 'secondary'}>{loadingStatus ? 'Verificando' : !statusConfirmed ? 'Indisponível' : canteenStatus.isOpen ? 'Aberta' : 'Fechada'}</Badge>
+      {activeTab !== 'none' ? <CanteenStatusBanner operation={operation} /> : null}
+      {canOperate ? <div className="flex flex-wrap justify-end gap-2">
           {statusError ? <Button size="sm" variant="outline" disabled={loadingStatus} onClick={() => void refreshStatus()}>Tentar novamente</Button> : null}
-          {canOperate ? <Button size="sm" variant={canteenStatus.isOpen ? 'outline' : 'default'} onClick={() => void toggleCanteen()} disabled={updatingStatus || loadingStatus || !statusConfirmed}>
+          <Button size="sm" variant={canteenStatus.isOpen ? 'outline' : 'default'} onClick={() => void toggleCanteen()} disabled={updatingStatus || loadingStatus || !statusConfirmed}>
             {updatingStatus ? 'Atualizando...' : canteenStatus.isOpen ? 'Fechar cantina' : 'Abrir cantina'}
-          </Button> : null}
-        </div>
-      </div>
-    {canOrder && !canSell ? <MemberOrderView /> : <Tabs defaultValue={firstAvailableTab} value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-      <TabsList className="grid h-auto w-full grid-flow-col auto-cols-max gap-1 overflow-x-auto p-1 md:grid-cols-6 md:auto-cols-fr md:overflow-visible">
-        {canSell ? <TabsTrigger value="pdv" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
+          </Button>
+      </div> : null}
+    {activeTab === 'none' ? <p role="status" className="py-8 text-center text-sm text-muted-foreground">Você não tem acesso à Cantina.</p>
+      : operationalTabs.length === 0 ? activeTab === 'cart' ? <CanteenCartView /> : <CatalogView />
+      : <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+      <TabsList className="grid h-auto w-full grid-flow-col auto-cols-max gap-1 overflow-x-auto p-1 md:auto-cols-fr md:overflow-visible">
+        {canUseCart ? <TabsTrigger value="cart" className="min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
           <ShoppingCart className="w-4 h-4" />
-          <span className="hidden sm:inline">PDV</span>
+          <span>Carrinho</span>
         </TabsTrigger> : null}
         {canOperate ? <TabsTrigger value="orders" className="relative min-w-[84px] shrink-0 gap-1.5 px-3 py-2 text-xs md:min-w-0 md:text-sm">
           <BellPlus className={cn('w-4 h-4', pendingOrders > 0 && 'text-primary')} />
@@ -220,7 +179,7 @@ export function CanteenContainer() {
         </TabsTrigger> : null}
       </TabsList>
 
-      {canSell ? <TabsContent value="pdv" className="mt-0"><PDV /></TabsContent> : null}
+      {canUseCart ? <TabsContent value="cart" className="mt-0"><CanteenCartView /></TabsContent> : null}
       {canOperate ? <TabsContent value="orders" className="mt-0"><MemberOrdersView /></TabsContent> : null}
       {canOperate ? <TabsContent value="prep" className="mt-0"><PreparoView /></TabsContent> : null}
       {canViewSales ? <TabsContent value="sales" className="mt-0"><SalesHistory /></TabsContent> : null}

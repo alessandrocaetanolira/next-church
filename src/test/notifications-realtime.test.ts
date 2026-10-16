@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { publishPermissionsUpdated, SseBroker, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
+import { publishPermissionsUpdated, publishTenantSignal, SseBroker, type ServerNotificationEvent } from '@/infra/sse/sse-broker';
 import { createSseStream } from '@/infra/sse/sse-stream';
 
 const tenantClient = {
@@ -46,6 +46,33 @@ describe('SseBroker', () => {
     broker.publish(event('tenant-a', 'user@test.local'));
 
     expect(received).toHaveLength(1);
+  });
+
+  it('envia sinais somente às conexões do tenant, incluindo múltiplos compradores', () => {
+    const broker = new SseBroker();
+    const first = vi.fn(); const second = vi.fn(); const otherTenant = vi.fn(); const global = vi.fn();
+    broker.subscribe('tenant-a', 'first@test.local', first);
+    broker.subscribe('tenant-a', 'second@test.local', second);
+    broker.subscribe('tenant-b', 'first@test.local', otherTenant);
+    broker.subscribeGlobalAdmin('global-admin', global);
+    expect(broker.broadcastTenant({ ...event('tenant-a', ''), type: 'canteen.status.updated' })).toBe(2);
+    expect(first).toHaveBeenCalledWith(expect.objectContaining({ userEmail: 'first@test.local', type: 'canteen.status.updated' }));
+    expect(second).toHaveBeenCalledOnce();
+    expect(otherTenant).not.toHaveBeenCalled(); expect(global).not.toHaveBeenCalled();
+  });
+
+  it('entrega invalidação operacional como controle SSE e não como notificação', async () => {
+    tenantClient.$queryRawUnsafe.mockResolvedValueOnce([]);
+    const abort = new AbortController();
+    const response = await openNotificationsStream(new Request('http://localhost/api/events', { signal: abort.signal }), 'tenant-a', 'buyer@test.local');
+    const reader = response.body!.getReader();
+    await reader.read();
+    publishTenantSignal('tenant-a', 'canteen.status.updated');
+    const update = new TextDecoder().decode((await reader.read()).value);
+    expect(update).toContain('"type":"canteen.status.updated"');
+    expect(update).toContain('"tenantId":"tenant-a"');
+    expect(update).not.toContain('"notification"');
+    abort.abort(); await reader.cancel();
   });
 
   it('remove o listener quando a conexão é cancelada', () => {

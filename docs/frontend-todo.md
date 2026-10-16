@@ -395,6 +395,42 @@ Usar os tokens semânticos já definidos em `globals.css`:
       consumidores e concluir os fluxos offline de pedidos e histórico.
 - [ ] Refatorar feed e comentários com cache/invalidação e publicação por escopo.
 - [ ] Refatorar `minha-conta`, carteira e notificações.
+      Pendência confirmada após a unificação da compra: não restou JSX órfão do
+      cardápio antigo, mas `minha-conta/page.tsx` ainda concentra UI e lógica da
+      Carteira. Executar a separação abaixo sem recriar outro fluxo de pedidos:
+      - [ ] Extrair componentes de saldo/resumo, preferências de alertas,
+            fidelidade, histórico de compras e extrato financeiro.
+      - [ ] Extrair hooks para carregamento/sincronização financeira, atualização
+            pelas notificações existentes e paginação do extrato. Manter HTTP
+            nos services, sem transporte ou regras financeiras nos componentes UI.
+      - [ ] Deixar a página como composição/entrada, preservando o alias
+            `/carteira`, redirecionamentos legados e o atalho de compra unificada.
+      - [ ] Reutilizar cards, estados de loading/erro/vazio, FlatList e infinite
+            scroll compartilhados; preservar saldo, pagamentos, alertas e fidelidade.
+      - [ ] Cobrir troca de usuário/tenant, respostas atrasadas, SSE, falhas de
+            rede, retry e paginação sem duplicação. Executar testes, typecheck e
+            lint; build e aceite mobile ficam com o usuário.
+- [~] Unificar a compra Carteira/Dashboard/Cantina, removendo somente o modo antigo
+      de pedido e mantendo saldo/extrato. Comprador sem menu operacional; carrinho
+      editável com Cantina fechada, envio condicionado à abertura e validação de
+      produtos no backend. Seguir
+      [canteen-purchase-unification-todo.md](./canteen-purchase-unification-todo.md)
+      para não duplicar contratos, testes ou critérios de aceite.
+      Entradas migradas para `/cantina`, UIs antigas removidas e consulta
+      própria em drawer padrão. Observação, idempotência/sync completo e aceite
+      mobile permanecem pendentes.
+      `CanteenCartView` é a única composição de catálogo/carrinho para compradores
+      e operadores; sem aba “Comprar” separada do carrinho. Banner no topo do
+      container independe de qual atalho abriu a Cantina.
+      Outbox agora captura usuário/tenant ao criar a operação; replay mantém a
+      chave e recupera envios interrompidos. ACK ausente/duplicado não apaga fila;
+      entradas antigas sem dono verificável são preservadas para revisão, sem
+      atribuição automática ao usuário atual. Retry idempotente da API direta,
+      checkout operacional e reconciliação dos caches continuam pendentes.
+- [ ] Compor filtros de relatórios/extrato em drawer shared e resultados em tela
+      de detalhes, sem duplicar resumos financeiros entre Web/Mobile/Carteira.
+      PDF/CSV usam o mesmo contrato por período e não só os itens da lista local.
+      Seguir [canteen-reports-todo.md](./canteen-reports-todo.md).
 - [ ] Refatorar tarefas, escalas e grupos/[id] reduzindo a responsabilidade das páginas.
 
 ### Fase 4 — experiências especiais

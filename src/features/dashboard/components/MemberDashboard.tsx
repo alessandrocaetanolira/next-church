@@ -1,77 +1,34 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type LocalProduct, type LocalSale } from '@/lib/db';
-import { useProducts } from '@/features/canteen/hooks/use-products';
-import { AppImage } from '@/components/shared';
-import { 
-  BookOpen, 
-  Flame, 
-  Trophy, 
-  Gift, 
-  Megaphone, 
-  Pin, 
-  ShoppingBag, 
-  Gamepad2, 
-  MessageCircle, 
-  UserPlus, 
-  CheckCircle2,
-  Search,
-  Plus,
-  Minus,
-  AlertCircle,
-  Package,
-} from 'lucide-react';
-import { 
-  getDailyDevotional, 
-  getDevotionalStreak, 
-  hasReadDevotionalToday,
-  markDevotionalRead, 
-  markChallengeCompleted, 
-  isChallengeCompleted, 
-  getTotalPoints, 
-  Devotional 
+import { BookOpen, Flame, Trophy, ShoppingBag, Gamepad2, MessageCircle, UserPlus, CheckCircle2 } from 'lucide-react';
+import {
+  getDailyDevotional, getDevotionalStreak, hasReadDevotionalToday, markDevotionalRead,
+  markChallengeCompleted, isChallengeCompleted, getTotalPoints,
 } from '@/lib/devotional';
-import { 
-  getLoyaltyConfig, 
-  getLoyaltyProgress, 
-  isLoyaltyActive 
-} from '@/lib/loyalty';
 import { toast } from 'sonner';
-import { useNotificationCenter } from '@/hooks/use-notification-center';
-import { syncMemberSalesFromServer } from '@/features/canteen/lib/sync-member-sales';
-import { generateId } from '@/lib/id';
 import { hasActionPermission, hasAnyActionPermission } from '@/lib/access-control';
+import { getCanteenAccess } from '@/lib/canteen/access';
+import { CANTEEN_PURCHASE_HREF } from '@/lib/canteen/navigation';
 import { getEngagementProfile, updateEngagementProfile } from '@/services/engagement/engagement-api';
 import type { EngagementProfile } from '@/services/engagement/engagement-api';
-import { createMemberSale } from '@/services/canteen/member-sales-api';
 import { useBibleReadingStore } from '@/features/bible/store';
 
 export function MemberDashboard() {
   const router = useRouter();
-  const { data: session } = useSession();
-  const user = session?.user;
-  const tenantId = user?.tenantId ?? '';
-  const canBrowseCanteen = hasAnyActionPermission(user, 'canteen', ['view', 'catalog', 'order']);
-  const canOrder = hasActionPermission(user, 'canteen', 'order');
+  const { user } = useAuth();
+  const { canOrder } = getCanteenAccess(user);
   const canPlayGames = hasActionPermission(user, 'games', 'view');
   const canReadBible = hasActionPermission(user, 'bible', 'view');
   const canViewFeed = hasActionPermission(user, 'feed', 'view');
   const canViewGroups = hasAnyActionPermission(user, 'groups', ['view', 'request']);
   const setBibleBook = useBibleReadingStore((state) => state.setBook);
   const setBibleChapter = useBibleReadingStore((state) => state.setChapter);
-  const products = useProducts(canBrowseCanteen);
-  const { notifications } = useNotificationCenter();
 
   // Devotional State - Inicialização direta
   const [devotional] = useState(() => getDailyDevotional());
@@ -81,50 +38,6 @@ export function MemberDashboard() {
   const [leaderboard, setLeaderboard] = useState<NonNullable<EngagementProfile['leaderboard']>>([]);
   const [challengeDone, setChallengeDone] = useState(false);
   const [devotionalRead, setDevotionalRead] = useState(() => hasReadDevotionalToday());
-  const [orderOpen, setOrderOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [cart, setCart] = useState<any[]>([]);
-  const seenNotificationIdsRef = useRef<Set<string>>(new Set());
-  const syncingRef = useRef(false);
-
-  const linkedMember = useLiveQuery(
-    () => user?.email && tenantId ? db.members.filter((member) => member.email === user.email && member.tenantId === tenantId).first() : undefined,
-    [user?.email, tenantId]
-  );
-
-  const pendingOrders = useLiveQuery(
-    async () => {
-      if (!linkedMember?.id) return [];
-
-      const sales = await db.sales.filter((sale) => sale.memberId === linkedMember.id && sale.tenantId === tenantId).toArray();
-      sales.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-      return sales
-        .reverse()
-        .filter((sale) => sale.paymentMethod === 'pending' || sale.orderStatus === 'preparing')
-        .slice(0, 5);
-    },
-    [linkedMember?.id, tenantId]
-  ) || [];
-
-  const categories = useMemo(() => {
-    const cats = new Set(products.map((product) => product.category));
-    return ['all', ...Array.from(cats)];
-  }, [products]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const isAvailableToday = product.active !== false && product.availableToday !== false;
-      return matchesSearch && matchesCategory && isAvailableToday;
-    });
-  }, [products, search, selectedCategory]);
-
-  const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart]);
-  const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
-
   useEffect(() => {
     if (devotional) {
       setChallengeDone(isChallengeCompleted(devotional.id));
@@ -152,40 +65,6 @@ export function MemberDashboard() {
 
     void loadEngagement();
   }, [devotional.id]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const refreshMemberSales = async () => {
-      if (syncingRef.current) return;
-      syncingRef.current = true;
-
-      try {
-        await syncMemberSalesFromServer(tenantId);
-      } catch {
-        // Próxima notificação ou recarga tenta de novo.
-      } finally {
-        if (!cancelled) syncingRef.current = false;
-      }
-    };
-
-    const nextIds = new Set(seenNotificationIdsRef.current);
-    const hasNewMemberOrderEvent = notifications.some((notification) => {
-      const isNew = !nextIds.has(notification.id);
-      nextIds.add(notification.id);
-      return isNew && notification.type.startsWith('canteen-order-');
-    });
-
-    seenNotificationIdsRef.current = nextIds;
-
-    if (hasNewMemberOrderEvent) {
-      void refreshMemberSales();
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [notifications, tenantId]);
 
   const handleReadDevotional = () => {
     const persist = async () => {
@@ -225,158 +104,6 @@ export function MemberDashboard() {
     };
 
     void persist();
-  };
-
-  const addToCart = (product: LocalProduct) => {
-    if (product.stock <= 0) {
-      toast.error('Sem estoque!');
-      return;
-    }
-
-    setCart((current) => {
-      const existing = current.find((item) => item.productId === product.id);
-      if (existing) {
-        if (existing.quantity >= product.stock) {
-          toast.error('Estoque insuficiente!');
-          return current;
-        }
-
-        return current.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.unitPrice }
-            : item
-        );
-      }
-
-      return [
-        ...current,
-        {
-          productId: product.id,
-          productName: product.name,
-          quantity: 1,
-          unitPrice: product.price,
-          total: product.price,
-          product,
-        },
-      ];
-    });
-  };
-
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart((current) => current
-      .map((item) => {
-        if (item.productId !== productId) return item;
-
-        const newQty = item.quantity + delta;
-        if (newQty <= 0) return { ...item, quantity: 0, total: 0 };
-        if (newQty > item.product.stock) {
-          toast.error('Estoque insuficiente!');
-          return item;
-        }
-
-        return { ...item, quantity: newQty, total: newQty * item.unitPrice };
-      })
-      .filter((item) => item.quantity > 0));
-  };
-
-  const handleOrder = async () => {
-    if (!linkedMember) {
-      toast.error('Você precisa estar vinculado a um membro!');
-      return;
-    }
-
-    if (cart.length === 0) {
-      toast.error('Carrinho vazio!');
-      return;
-    }
-
-    try {
-      const saleId = generateId();
-      const createdAt = new Date().toISOString();
-      const sale: LocalSale = {
-        id: saleId,
-        items: cart.map(({ product, ...item }) => ({
-          productId: item.productId,
-          name: item.productName,
-          quantity: item.quantity,
-          price: item.unitPrice,
-        })),
-        total: cartTotal,
-        paymentMethod: 'pending',
-        memberId: linkedMember.id,
-        memberName: linkedMember.name,
-        createdBy: user?.email || 'unknown',
-        createdAt,
-        tenantId,
-        _status: 'pending',
-      };
-
-      try {
-        await createMemberSale({
-          id: saleId,
-          items: sale.items,
-          total: sale.total,
-          paymentMethod: 'pending',
-          memberId: sale.memberId,
-          memberName: sale.memberName,
-          createdBy: sale.createdBy,
-          createdAt,
-        });
-        await db.sales.put({
-          ...sale,
-          _status: 'synced',
-        });
-        toast.success('Pedido enviado para aprovação da cantina!');
-      } catch {
-        await db.sales.add(sale);
-        await db.syncOutbox.add({
-          module: 'sales',
-          action: 'create',
-          data: sale,
-          timestamp: new Date().toISOString(),
-        });
-        toast.success('Pedido salvo e aguardando sincronização!');
-      }
-
-      setCart([]);
-      setCartOpen(false);
-      setOrderOpen(false);
-    } catch (error) {
-      try {
-        const sale: LocalSale = {
-          id: generateId(),
-          items: cart.map(({ product, ...item }) => ({
-            productId: item.productId,
-            name: item.productName,
-            quantity: item.quantity,
-            price: item.unitPrice,
-          })),
-          total: cartTotal,
-          paymentMethod: 'pending',
-          memberId: linkedMember.id,
-          memberName: linkedMember.name,
-          createdBy: user?.email || 'unknown',
-          createdAt: new Date().toISOString(),
-          tenantId,
-          _status: 'pending',
-        };
-
-        await db.sales.add(sale);
-        await db.syncOutbox.add({
-          module: 'sales',
-          action: 'create',
-          data: sale,
-          timestamp: new Date().toISOString(),
-        });
-        toast.success('Pedido salvo e aguardando sincronização!');
-        setCart([]);
-        setCartOpen(false);
-        setOrderOpen(false);
-      } catch (offlineError) {
-        toast.error('Erro ao processar pedido');
-        console.error(offlineError);
-      }
-    }
   };
 
   const openDevotionalVerse = () => {
@@ -492,7 +219,7 @@ export function MemberDashboard() {
 
       {/* Quick Actions Grid */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        {canOrder ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push('/carteira?view=order')}>
+        {canOrder ? <Button variant="outline" className="h-20 flex-col gap-2 border-border bg-card hover:bg-muted/50" onClick={() => router.push(CANTEEN_PURCHASE_HREF)}>
           <ShoppingBag className="w-6 h-6 text-primary" />
           <span className="text-xs font-medium">Fazer Pedido</span>
         </Button> : null}
@@ -518,185 +245,6 @@ export function MemberDashboard() {
         </Button> : null}
       </div>
 
-      {canOrder ? <Drawer open={orderOpen} onOpenChange={(open) => {
-        setOrderOpen(open);
-        if (!open) setCartOpen(false);
-      }}>
-        <DrawerContent className="relative max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>Fazer Pedido</DrawerTitle>
-          </DrawerHeader>
-          <Tabs defaultValue="menu" className="overflow-y-auto px-4 pb-24">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="menu">Cardápio</TabsTrigger>
-              <TabsTrigger value="pending">
-                Pendentes
-                {pendingOrders.length > 0 ? <Badge className="ml-2">{pendingOrders.length}</Badge> : null}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="menu" className="mt-4 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar produto..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="pl-9"
-                />
-              </div>
-
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {categories.map((category) => (
-                  <Badge
-                    key={category}
-                    variant={selectedCategory === category ? 'default' : 'outline'}
-                    className="cursor-pointer whitespace-nowrap"
-                    onClick={() => setSelectedCategory(category)}
-                  >
-                    {category === 'all' ? 'Todos' : category}
-                  </Badge>
-                ))}
-              </div>
-
-              {filteredProducts.length === 0 ? (
-                <div className="py-10 text-center text-muted-foreground">
-                  <p>Nenhum produto encontrado.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredProducts.map((product) => {
-                    const inCart = cart.find((item) => item.productId === product.id);
-
-                    return (
-                      <button
-                        key={product.id}
-                        onClick={() => addToCart(product)}
-                        className="rounded-xl border border-border bg-card p-3 text-left transition-all hover:border-primary/30 hover:shadow-sm"
-                        disabled={product.stock <= 0}
-                      >
-                        <div className="relative overflow-hidden rounded-lg border border-border bg-muted/30">
-                          <div className="aspect-[4/3] w-full">
-                            {product.imageUrl ? (
-                              <AppImage src={product.imageUrl} alt={product.name} width={640} height={480} className="h-full w-full object-cover" />
-                            ) : (
-                              <div className="flex h-full items-center justify-center">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                                  <Package className="h-5 w-5" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {inCart ? <Badge className="absolute right-2 top-2">{inCart.quantity}x</Badge> : null}
-                        </div>
-                        <div className="mt-3">
-                          <p className="font-medium text-sm line-clamp-2">{product.name}</p>
-                          <p className="text-xs text-muted-foreground">{product.category}</p>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <span className="font-bold text-primary">R$ {product.price.toFixed(2)}</span>
-                          {product.stock <= 0 ? <Badge variant="destructive">Esgotado</Badge> : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="pending" className="mt-4">
-              {pendingOrders.length > 0 ? (
-                <div className="space-y-2">
-                  {pendingOrders.map((order) => (
-                    <div key={order.id} className="rounded-lg border border-border p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">Pedido #{order.id.slice(-4)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.items.map((item) => `${item.quantity}x ${item.name}`).join(', ')}
-                          </p>
-                        </div>
-                        <Badge variant="outline">
-                          {order.paymentMethod === 'pending' ? 'Aguardando cantina' : 'Em preparo'}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-sm font-bold text-primary">R$ {order.total.toFixed(2)}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-10 text-center text-muted-foreground">
-                  <p>Nenhum pedido aguardando no momento.</p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-
-          {cart.length > 0 ? (
-            <>
-              <Button
-                type="button"
-                className="absolute bottom-4 left-4 right-4 h-12 justify-between shadow-lg"
-                onClick={() => setCartOpen(true)}
-              >
-                <span className="flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4" />
-                  Carrinho
-                  <Badge variant="secondary" className="text-xs">{cartCount}</Badge>
-                </span>
-                <span>R$ {cartTotal.toFixed(2)}</span>
-              </Button>
-
-              <Drawer open={cartOpen} onOpenChange={setCartOpen}>
-                <DrawerContent className="max-h-[80vh]">
-                  <DrawerHeader>
-                    <DrawerTitle>Seu Carrinho</DrawerTitle>
-                  </DrawerHeader>
-                  <div className="space-y-4 overflow-y-auto px-4 pb-6">
-                    <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-sm">Itens</h3>
-                        <span className="text-sm font-bold">R$ {cartTotal.toFixed(2)}</span>
-                      </div>
-
-                      <div className="space-y-2">
-                        {cart.map((item) => (
-                          <div key={item.productId} className="flex items-center gap-2 rounded-lg border border-border p-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{item.productName}</p>
-                              <p className="text-xs text-muted-foreground">R$ {item.unitPrice.toFixed(2)} un.</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.productId, -1)}>
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="w-6 text-center text-sm">{item.quantity}</span>
-                              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateQuantity(item.productId, 1)}>
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {!linkedMember ? (
-                        <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          <span>Você precisa estar vinculado a um membro para fazer pedidos.</span>
-                        </div>
-                      ) : null}
-
-                      <Button className="w-full" disabled={!linkedMember || cart.length === 0} onClick={handleOrder}>
-                        Confirmar Pedido
-                      </Button>
-                    </div>
-                  </div>
-                </DrawerContent>
-              </Drawer>
-            </>
-          ) : null}
-        </DrawerContent>
-      </Drawer> : null}
     </div>
   );
 }
