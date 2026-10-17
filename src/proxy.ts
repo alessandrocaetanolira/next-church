@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
 
   const isPublicRoute =
     nextUrl.pathname.startsWith("/auth/login") ||
+    nextUrl.pathname.startsWith("/admin/login") ||
     nextUrl.pathname.startsWith("/api/auth") ||
     nextUrl.pathname.startsWith("/api/public") ||
     nextUrl.pathname.startsWith("/pwa-start") ||
