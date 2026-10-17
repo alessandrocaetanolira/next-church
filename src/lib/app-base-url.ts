@@ -1,5 +1,3 @@
-const PUBLIC_SHARE_BASE_URL = 'https://church.bennipersonalizados.com.br';
-
 export function getAppBaseUrl() {
   if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin.replace(/\/+$/, '');
@@ -17,6 +15,7 @@ export function getAppBaseUrl() {
  * IP da rede local ou para um domínio administrativo diferente.
  */
 export function getPublicShareBaseUrl() {
-  const configuredUrl = process.env.NEXT_PUBLIC_SHARE_BASE_URL?.trim();
-  return (configuredUrl || PUBLIC_SHARE_BASE_URL).replace(/\/+$/, '');
+  const configuredUrl = process.env.NEXT_PUBLIC_SHARE_BASE_URL?.trim()
+    || process.env.NEXT_PUBLIC_APP_BASE_URL?.trim();
+  return (configuredUrl || '').replace(/\/+$/, '');
 }

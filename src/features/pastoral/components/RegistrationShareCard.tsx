@@ -15,6 +15,7 @@ interface RegistrationShareCardProps {
 
 export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps) {
   const normalizedTenantSlug = tenantSlug.trim().toLowerCase();
+  const shareBaseUrl = getPublicShareBaseUrl();
 
   const registrationLink = useMemo(() => {
     return `${getPublicShareBaseUrl()}/cadastro?igreja=${encodeURIComponent(normalizedTenantSlug)}`;
@@ -74,6 +75,14 @@ export function RegistrationShareCard({ tenantSlug }: RegistrationShareCardProps
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (!shareBaseUrl) {
+    return (
+      <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-muted-foreground">
+        Configure NEXT_PUBLIC_SHARE_BASE_URL no ambiente e gere um novo build para disponibilizar os links e QR Codes da igreja.
+      </p>
     );
   }
 

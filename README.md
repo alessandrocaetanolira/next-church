@@ -100,6 +100,12 @@ localmente usam `file:../databases/<nome>.db`.
 relativos são resolvidos a partir da raiz do projeto. Em produção, prefira caminhos
 absolutos em volume persistente.
 
+Os links e QR Codes da igreja usam `NEXT_PUBLIC_SHARE_BASE_URL` do ambiente,
+com `NEXT_PUBLIC_APP_BASE_URL` como alternativa. Não existe domínio padrão fixo.
+Configure uma URL absoluta (por exemplo, `https://sua-igreja.com.br`). Após alterar
+essas variáveis, execute `npm run build` e reinicie o processo: variáveis
+`NEXT_PUBLIC_*` são incorporadas ao frontend durante o build.
+
 Os bancos de tenant e o global são locais e ignorados pelo Git. O `bible.db` é uma
 exceção versionada, pois contém o catálogo bíblico compartilhado da aplicação. Ele
 deve ser preservado: não remova, recrie ou substitua esse arquivo ao resetar o
