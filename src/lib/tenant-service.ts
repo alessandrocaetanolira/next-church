@@ -8,6 +8,7 @@ import { disconnectTenant, getDatabaseDirectory, getGlobalClient } from './prism
 import { seedTenantStructure } from './tenant-seed';
 import { publishGlobalProvisioningEvent } from '@/infra/sse/sse-broker';
 import { notifyPlatformAdmin } from '@/server/notifications/platform-push.controller';
+import { getTenantUserUsage } from './tenant-user-usage';
 
 /**
  * Serviço para gerenciamento de Tenants (Igrejas).
@@ -280,7 +281,10 @@ export class TenantService {
 
   static async getTenant(id: string, options: { databaseDirectory?: string } = {}) {
     const globalClient = getGlobalClient(options.databaseDirectory);
-    return globalClient.church.findUnique({ where: { id } });
+    const tenant = await globalClient.church.findUnique({ where: { id } });
+    if (!tenant) return null;
+    const userUsage = await getTenantUserUsage(tenant, options.databaseDirectory);
+    return { ...tenant, userUsage };
   }
 
   /**

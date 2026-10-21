@@ -5,7 +5,6 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useConnectivity } from '@/hooks/use-connectivity';
 import { preserveOfflineLogos, readOfflineLogos } from '@/lib/branding/offline-logos';
 import { getUserBranding } from '@/services/settings/settings-api';
-import { PLATFORM_ADMIN_LOGO } from '@/lib/branding/defaults';
 
 export type ThemeVariant = 'default' | 'amber' | 'emerald' | 'violet' | 'rose' | 'slate';
 export type ThemeMode = 'system' | 'light' | 'dark';
@@ -66,6 +65,22 @@ const defaultSettings: AppSettings = {
   secondaryColor: null,
 };
 
+const platformAdminBranding = {
+  appName: 'Admin',
+  sidebarTitle: 'Admin',
+  sidebarSubtitle: null,
+  sidebarUseImage: false,
+  logoUrl: null,
+  logoLightUrl: null,
+  logoDarkUrl: null,
+  mobileIconUrl: null,
+  sidebarLogoUrl: null,
+  sidebarOpenLightUrl: null,
+  sidebarOpenDarkUrl: null,
+  sidebarCollapsedLightUrl: null,
+  sidebarCollapsedDarkUrl: null,
+};
+
 function hexToHsl(value?: string | null) {
   if (!value || !/^#[0-9a-f]{6}$/i.test(value)) return null;
   const n = Number.parseInt(value.slice(1), 16);
@@ -122,26 +137,16 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(settingsStorageKey(tenantKey));
       const base = isPlatformAdmin
-        ? { ...defaultSettings, appName: 'Church Hub Admin', sidebarTitle: 'Church Hub Admin', sidebarSubtitle: 'Administração global', logoUrl: PLATFORM_ADMIN_LOGO, logoLightUrl: PLATFORM_ADMIN_LOGO, logoDarkUrl: PLATFORM_ADMIN_LOGO, sidebarLogoUrl: PLATFORM_ADMIN_LOGO, sidebarOpenLightUrl: PLATFORM_ADMIN_LOGO, sidebarOpenDarkUrl: PLATFORM_ADMIN_LOGO, sidebarCollapsedLightUrl: PLATFORM_ADMIN_LOGO, sidebarCollapsedDarkUrl: PLATFORM_ADMIN_LOGO }
+        ? { ...defaultSettings, ...platformAdminBranding }
         : { ...defaultSettings };
       const storedSettings = stored ? { ...base, ...JSON.parse(stored) } : base;
       if (isPlatformAdmin) {
-        storedSettings.appName = 'Church Hub Admin';
-        storedSettings.sidebarTitle = 'Church Hub Admin';
-        storedSettings.sidebarSubtitle = 'Administração global';
-        storedSettings.logoUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.logoLightUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.logoDarkUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.sidebarLogoUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.sidebarOpenLightUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.sidebarOpenDarkUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.sidebarCollapsedLightUrl = PLATFORM_ADMIN_LOGO;
-        storedSettings.sidebarCollapsedDarkUrl = PLATFORM_ADMIN_LOGO;
+        Object.assign(storedSettings, platformAdminBranding);
       }
       setSettings(storedSettings);
     } catch {
       try { localStorage.removeItem(settingsStorageKey(tenantKey)); } catch { /* storage opcional */ }
-      setSettings({ ...defaultSettings });
+      setSettings({ ...defaultSettings, ...(isPlatformAdmin ? platformAdminBranding : {}) });
     }
     setLoadedKey(storageKey);
   }, [tenantKey, isPlatformAdmin, storageKey]);

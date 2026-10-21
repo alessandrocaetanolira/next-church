@@ -41,7 +41,8 @@ export function BottomNav() {
     <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-50 isolate w-full border-t border-border/70 bg-card/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl supports-[backdrop-filter]:bg-card/65">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {mainItems.map((item) => {
-          const isActive = pathname === item.to;
+          const isActive = pathname === item.to
+            || (item.to !== '/' && item.to !== '/admin' && pathname.startsWith(`${item.to}/`));
           return (
             <NavLink key={item.to} to={item.to}
               onClick={(event) => {

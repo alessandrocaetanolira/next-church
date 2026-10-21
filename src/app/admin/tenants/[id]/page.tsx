@@ -13,13 +13,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getAdminTenant, getAdminTenantBranding, updateAdminTenant, updateAdminTenantBranding } from '@/services/admin/tenants-api';
+import { getAdminTenant, getAdminTenantBranding, updateAdminTenant, updateAdminTenantBranding, type AdminTenant } from '@/services/admin/tenants-api';
 import { listAdminPlans, type AdminPlan } from '@/services/admin/plans-api';
 import { toast } from 'sonner';
 import { BrandingImagesEditor, type BrandingImages } from '@/features/settings/components/BrandingImagesEditor';
 import { WebPageContainer } from '@/components/shared/web';
 
-type Tenant = { id: string; name: string; slug: string; databaseKey?: string | null; plan: string; status?: string; active: boolean; createdAt: string; _count?: { users: number } };
+type Tenant = AdminTenant;
 type Branding = BrandingImages & { pwaName: string; pwaShortName: string; primaryColor: string; secondaryColor: string; themeColor: string; backgroundColor: string; logoUrl?: string | null; icon192Url?: string | null; icon512Url?: string | null };
 const brandingSchema = z.object({
   pwaName: z.string().trim().max(80, 'Máximo de 80 caracteres'),
@@ -97,7 +97,7 @@ export default function TenantDetailsPage() {
     setSavingTenant(true);
     try {
       const saved = await updateAdminTenant(id, tenantForm);
-      setTenant(saved);
+      setTenant((current) => current ? { ...current, ...saved } : saved);
       setTenantForm({ name: saved.name, slug: saved.slug });
       toast.success('Dados do tenant atualizados.');
     } catch (error) {
@@ -112,7 +112,7 @@ export default function TenantDetailsPage() {
     setSavingPlan(true);
     try {
       const saved = await updateAdminTenant(id, { plan: selectedPlan });
-      setTenant(saved);
+      setTenant((current) => current ? { ...current, ...saved } : saved);
       setSelectedPlan(saved.plan);
       toast.success(`Plano alterado para ${saved.plan}.`);
     } catch (error) {
@@ -127,7 +127,7 @@ export default function TenantDetailsPage() {
     setSavingTenant(true);
     try {
       const saved = await updateAdminTenant(id, { active: !tenant.active });
-      setTenant(saved);
+      setTenant((current) => current ? { ...current, ...saved } : saved);
       toast.success(saved.active ? 'Tenant ativado.' : 'Tenant desativado.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível alterar o status.');
@@ -138,9 +138,13 @@ export default function TenantDetailsPage() {
 
   if (loading) return <WebPageContainer size="narrow" className="text-center">Carregando tenant...</WebPageContainer>;
   if (!tenant) return <WebPageContainer size="narrow" className="space-y-3 text-center"><p>{loadingError ?? 'Tenant não encontrado.'}</p><Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Tentar novamente</Button></WebPageContainer>;
+  const currentPlan = plans.find((plan) => plan.code === tenant.plan);
+  const usage = tenant.userUsage;
+  const maxUsers = currentPlan?.maxUsers;
+  const remainingUsers = usage && typeof maxUsers === 'number' ? Math.max(0, maxUsers - usage.total) : null;
   return <WebPageContainer size="narrow" className="space-y-4">
-    <Button asChild variant="ghost"><Link href="/admin/tenants"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para tenants</Link></Button>
-    <Card><CardHeader><div className="flex items-start justify-between gap-3"><div><CardTitle>{tenant.name}</CardTitle><CardDescription>{tenant.slug} · {tenant.databaseKey ?? 'database não definido'}</CardDescription></div><Button type="button" variant="outline" size="sm" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button></div></CardHeader><CardContent>
+    <Button asChild variant="ghost" className="hidden min-[1025px]:inline-flex"><Link href="/admin/tenants"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para tenants</Link></Button>
+    <Card className="border-0 bg-transparent shadow-none min-[1025px]:border min-[1025px]:bg-card min-[1025px]:shadow-sm"><CardHeader className="px-0 pt-0 min-[1025px]:p-6"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><CardTitle className="break-words">{tenant.name}</CardTitle><CardDescription className="break-words">{tenant.slug} · {tenant.databaseKey ?? 'database não definido'}</CardDescription></div><Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button></div></CardHeader><CardContent className="px-0 pb-0 min-[1025px]:px-6 min-[1025px]:pb-6">
       <Tabs defaultValue="tenant">
         <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto"><TabsTrigger className="shrink-0" value="tenant">Tenant</TabsTrigger><TabsTrigger className="shrink-0" value="branding">Brand</TabsTrigger><TabsTrigger className="shrink-0" value="logos">Logos</TabsTrigger><TabsTrigger className="shrink-0" value="users">Usuários</TabsTrigger><TabsTrigger className="shrink-0" value="plan">Plano</TabsTrigger></TabsList>
         <TabsContent value="tenant" className="space-y-4 pt-4">
@@ -159,7 +163,24 @@ export default function TenantDetailsPage() {
             <Button type="submit" disabled={savingLogos || !Object.keys(imageChanges).length}>{savingLogos ? 'Salvando imagens...' : 'Salvar imagens'}</Button>
           </form>
         </TabsContent>
-        <TabsContent value="users" className="space-y-4 pt-4"><div className="rounded-lg border border-border p-4"><p className="font-medium">Usuários vinculados</p><p className="mt-1 text-sm text-muted-foreground">{tenant._count?.users ?? 0} usuário(s) cadastrado(s). A gestão detalhada ocorre dentro do ambiente da igreja.</p></div><Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar informações</Button></TabsContent>
+        <TabsContent value="users" className="space-y-4 pt-4">
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="font-medium">Uso de usuários</p>
+            {usage ? <>
+              <p className="text-2xl font-semibold">{usage.total}{typeof maxUsers === 'number' ? ` de ${maxUsers}` : ''} <span className="text-sm font-normal text-muted-foreground">usuários cadastrados</span></p>
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div><dt className="text-muted-foreground">Ativos</dt><dd className="font-medium">{usage.active}</dd></div>
+                <div><dt className="text-muted-foreground">Inativos</dt><dd className="font-medium">{usage.inactive}</dd></div>
+                <div><dt className="text-muted-foreground">Limite do plano {tenant.plan}</dt><dd className="font-medium">{maxUsers === null ? 'Sem limite' : maxUsers ?? 'Indisponível'}</dd></div>
+                {remainingUsers !== null && <div><dt className="text-muted-foreground">Vagas disponíveis</dt><dd className="font-medium">{remainingUsers}</dd></div>}
+              </dl>
+              {typeof maxUsers === 'number' && usage.total >= maxUsers && <p className="text-sm text-destructive">{usage.total > maxUsers ? 'Quantidade de usuários acima do limite do plano.' : 'Limite de usuários do plano atingido.'}</p>}
+              <p className="text-xs text-muted-foreground">A contagem inclui usuários ativos e inativos. Usuários excluídos não são contabilizados.</p>
+            </> : <p role="status" className="text-sm text-muted-foreground">Contagem indisponível. Não foi possível consultar os usuários desta igreja. Tente atualizar as informações.</p>}
+            <p className="text-sm text-muted-foreground">A gestão dos usuários ocorre dentro do ambiente da igreja.</p>
+          </div>
+          <Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar informações</Button>
+        </TabsContent>
         <TabsContent value="plan" className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="tenant-plan">Plano da igreja</Label>

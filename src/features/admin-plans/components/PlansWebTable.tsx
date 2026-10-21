@@ -16,9 +16,10 @@ type PlansWebTableProps = {
 export function PlansWebTable({ plans, onEdit, onDelete }: PlansWebTableProps) {
   return (
     <>
-      <div className="md:hidden">
+      <div className="min-[1025px]:hidden">
         <SharedFlatList
           data={plans}
+          className="grid-cols-1 sm:grid-cols-2"
           keyExtractor={(plan) => plan.id}
           emptyComponent={<p className="py-8 text-center text-sm text-muted-foreground">Nenhum plano cadastrado.</p>}
           renderItem={(plan) => (
@@ -44,7 +45,7 @@ export function PlansWebTable({ plans, onEdit, onDelete }: PlansWebTableProps) {
           )}
         />
       </div>
-      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card min-[1025px]:block">
         <Table>
           <TableHeader><TableRow><TableHead>Plano</TableHead><TableHead>Preço</TableHead><TableHead>Limites</TableHead><TableHead>Igrejas</TableHead><TableHead>Status</TableHead><TableHead className="w-[140px] text-right">Ações</TableHead></TableRow></TableHeader>
           <TableBody>

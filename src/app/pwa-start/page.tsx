@@ -13,14 +13,18 @@ import OfflinePage from '@/app/offline/page';
  */
 export default function PwaStartPage() {
   const router = useRouter();
-  const { status } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status === 'loading') return;
     // Uma abertura fria offline não deve iniciar outra navegação que exige RSC.
     if (!navigator.onLine) return;
-    router.replace(status === 'authenticated' ? '/' : '/auth/login');
-  }, [router, status]);
+    const adminStart = new URLSearchParams(window.location.search).get('admin') === '1';
+    const target = status === 'authenticated'
+      ? session?.user?.isPlatformAdmin ? '/admin' : '/'
+      : adminStart ? '/admin/login' : '/auth/login';
+    router.replace(target);
+  }, [router, session?.user?.isPlatformAdmin, status]);
 
   if (typeof navigator !== 'undefined' && !navigator.onLine) return <OfflinePage />;
   return <LoadingState label="Abrindo o Church App..." className="min-h-screen" />;

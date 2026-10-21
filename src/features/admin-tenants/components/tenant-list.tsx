@@ -79,7 +79,7 @@ export function TenantList() {
 
   return (
     <>
-    <div className="md:hidden">
+    <div className="min-[1025px]:hidden">
       <SharedFlatList
         data={tenants}
         keyExtractor={(tenant) => tenant.id}
@@ -106,7 +106,7 @@ export function TenantList() {
         )}
       />
     </div>
-    <div className="hidden overflow-x-auto rounded-md border border-border md:block">
+    <div className="hidden overflow-x-auto rounded-md border border-border min-[1025px]:block">
       <Table>
         <TableHeader>
           <TableRow>

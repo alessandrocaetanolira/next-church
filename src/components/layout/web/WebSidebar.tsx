@@ -9,7 +9,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { AppImage } from "@/components/shared";
-import { PLATFORM_ADMIN_LOGO } from "@/lib/branding/defaults";
+import { AppLogo } from "@/components/shared/AppLogo";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 interface WebSidebarProps {
@@ -19,13 +19,15 @@ interface WebSidebarProps {
 export function WebSidebar({ children }: WebSidebarProps) {
   const { settings } = useAppSettings();
   const { user } = useAuth();
-  const fallbackLogo = user?.isPlatformAdmin ? PLATFORM_ADMIN_LOGO : '/pwa-192x192.png';
+  const fallbackLogo = '/pwa-192x192.png';
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2">
         <div className="flex min-w-0 items-center justify-start gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
-          {settings.sidebarUseImage ? (
+          {user?.isPlatformAdmin ? (
+            <AppLogo className="h-10 text-sidebar-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:text-xs" />
+          ) : settings.sidebarUseImage ? (
             <>
               <div className="flex h-10 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl group-data-[collapsible=icon]:hidden">
                 <AppImage src={settings.sidebarOpenLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="h-full min-h-0 w-full min-w-0 max-h-full max-w-full object-contain dark:hidden" />
@@ -41,7 +43,7 @@ export function WebSidebar({ children }: WebSidebarProps) {
               <span className="text-lg font-bold text-primary-foreground">✝</span>
             </div>
           )}
-          {(settings.sidebarTitle || settings.sidebarSubtitle) && (
+          {!user?.isPlatformAdmin && (settings.sidebarTitle || settings.sidebarSubtitle) && (
             <div className="overflow-hidden group-data-[collapsible=icon]:hidden">
               {settings.sidebarTitle && <h1 className="truncate font-bold text-sidebar-foreground">{settings.sidebarTitle}</h1>}
               {settings.sidebarSubtitle && <p className="truncate text-xs text-sidebar-foreground/60">{settings.sidebarSubtitle}</p>}

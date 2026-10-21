@@ -137,15 +137,15 @@ export function Header() {
 
   return (
     <>
-      <header className={mobileBackTarget ? 'sticky top-0 z-40 border-transparent bg-transparent md:border-b md:border-border md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60' : 'sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}>
-        <div className={`relative flex h-16 items-center justify-between ${mobileBackTarget ? 'px-3 sm:px-4' : 'pl-0 pr-3 sm:px-4'}`}>
+      <header className={mobileBackTarget ? 'sticky top-0 z-40 border-transparent bg-transparent min-[1025px]:border-b min-[1025px]:border-border min-[1025px]:bg-background/95 min-[1025px]:backdrop-blur min-[1025px]:supports-[backdrop-filter]:bg-background/60' : 'sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}>
+        <div className={`relative flex h-16 items-center justify-between ${mobileBackTarget ? 'px-3 sm:px-4' : user?.isPlatformAdmin ? 'px-4' : 'pl-0 pr-3 sm:px-4'}`}>
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             {mobileBackTarget ? (
               <>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full md:hidden" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full min-[1025px]:hidden" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
                   <ChevronLeft className="h-6 w-6" strokeWidth={2.25} />
                 </Button>
-                <div className="hidden md:flex md:h-9 md:w-40 md:items-center">
+                <div className="hidden min-[1025px]:flex min-[1025px]:h-9 min-[1025px]:w-40 min-[1025px]:items-center">
                   <AppLogo className="h-full w-full" />
                 </div>
               </>
@@ -156,11 +156,11 @@ export function Header() {
             )}
           </div>
 
-          {mobileBackTarget ? <h1 className="pointer-events-none absolute inset-x-16 truncate text-center text-base font-semibold md:hidden">{mobileBackTarget.title}</h1> : null}
+          {mobileBackTarget ? <h1 className="pointer-events-none absolute inset-x-16 truncate text-center text-base font-semibold min-[1025px]:hidden">{mobileBackTarget.title}</h1> : null}
 
           <TooltipProvider>
             <div className="flex shrink-0 items-center gap-1.5">
-              {offline && <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
+              {offline && <div className={mobileBackTarget ? 'hidden min-[1025px]:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-destructive/10 text-destructive">
@@ -172,7 +172,7 @@ export function Header() {
                 </Tooltip>
               </div>}
 
-              {isMember && <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
+              {isMember && <div className={mobileBackTarget ? 'hidden min-[1025px]:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={handleCycleThemeMode}>
@@ -184,7 +184,7 @@ export function Header() {
                 </Tooltip>
               </div>}
 
-              <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
+              <div className={mobileBackTarget ? 'hidden min-[1025px]:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <NotificationBell />
@@ -193,7 +193,7 @@ export function Header() {
                 </Tooltip>
               </div>
 
-              <div className={mobileBackTarget ? 'hidden' : 'md:hidden'}>
+              <div className={mobileBackTarget ? 'hidden' : 'min-[1025px]:hidden'}>
                 <Button
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"
@@ -212,7 +212,7 @@ export function Header() {
                 </Button>
               </div>
 
-              <div className="hidden md:block">
+              <div className="hidden min-[1025px]:block">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full">

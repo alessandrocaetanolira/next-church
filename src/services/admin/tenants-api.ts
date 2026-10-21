@@ -1,4 +1,5 @@
 import { apiRequest } from '@/services/api/client';
+import type { TenantUserUsage } from '@/lib/tenant-user-usage';
 
 export type AdminTenant = {
   id: string;
@@ -10,6 +11,7 @@ export type AdminTenant = {
   databaseKey?: string | null;
   status?: string;
   _count?: { users: number };
+  userUsage?: TenantUserUsage | null;
 };
 
 export function listAdminTenants() {
@@ -41,7 +43,7 @@ export function updateAdminTenant(id: string, input: { name?: string; slug?: str
 }
 
 export function getAdminTenant<T = AdminTenant>(id: string) {
-  return apiRequest<T>(`/api/admin/tenants/${id}`);
+  return apiRequest<T>(`/api/admin/tenants/${id}`, { cache: 'no-store' });
 }
 
 export function getAdminTenantBranding<T = Record<string, unknown>>(id: string) {

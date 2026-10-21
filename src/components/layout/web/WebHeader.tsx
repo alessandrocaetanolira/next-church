@@ -41,6 +41,7 @@ export function WebHeader() {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur-lg">
       <div className="flex items-center gap-4">
         <SidebarTrigger />
+        {user?.isPlatformAdmin && <span className="text-lg font-semibold tracking-tight">Admin</span>}
         {isFeedDetailsPage || isFeedCommentPage ? (
           <Button variant="ghost" size="sm" className="gap-2 px-2" onClick={() => router.push(feedPostId ? `/feed/${feedPostId}` : '/feed')}>
             <ArrowLeft className="h-4 w-4" />
