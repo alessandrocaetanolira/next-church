@@ -10,12 +10,11 @@ export type AdminTenant = {
   createdAt: string;
   databaseKey?: string | null;
   status?: string;
-  _count?: { users: number };
   userUsage?: TenantUserUsage | null;
 };
 
 export function listAdminTenants() {
-  return apiRequest<AdminTenant[]>('/api/admin/tenants');
+  return apiRequest<AdminTenant[]>('/api/admin/tenants', { cache: 'no-store' });
 }
 
 export type ProvisioningStart = { runId: string; slug: string; status: string };

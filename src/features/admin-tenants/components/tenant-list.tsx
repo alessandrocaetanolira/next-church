@@ -96,7 +96,7 @@ export function TenantList() {
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <Badge variant={tenant.plan === 'PREMIUM' ? 'default' : 'outline'}>{tenant.plan}</Badge>
-              <span>{tenant._count?.users ?? 0} usuários</span>
+              <span>{tenant.userUsage ? `${tenant.userUsage.total} usuários` : 'Contagem indisponível'}</span>
             </div>
             <div className="mt-4 flex gap-2" onClick={(event) => event.stopPropagation()}>
               <Button asChild size="sm" className="flex-1"><Link href={`/admin/tenants/${tenant.id}`}>Detalhes</Link></Button>
@@ -128,7 +128,7 @@ export function TenantList() {
                   {tenant.plan}
                 </Badge>
               </TableCell>
-              <TableCell>{tenant._count?.users || 0}</TableCell>
+              <TableCell>{tenant.userUsage?.total ?? 'Indisponível'}</TableCell>
               <TableCell>
                 <Badge variant={tenant.active ? 'success' as any : 'destructive'}>
                   {tenant.active ? 'Ativa' : 'Inativa'}
@@ -186,14 +186,14 @@ export function TenantList() {
         {selectedTenant && (
           <SheetHeader className="text-left">
             <SheetTitle>{selectedTenant.name}</SheetTitle>
-            <SheetDescription>Detalhes da igreja e do tenant</SheetDescription>
+            <SheetDescription>Informações da igreja</SheetDescription>
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div><span className="text-muted-foreground">Slug</span><p className="font-medium">{selectedTenant.slug}</p></div>
                 <div><span className="text-muted-foreground">Database key</span><p className="font-medium">{selectedTenant.databaseKey ?? '—'}</p></div>
                 <div><span className="text-muted-foreground">Status</span><p className="font-medium">{selectedTenant.status ?? (selectedTenant.active ? 'ACTIVE' : 'INACTIVE')}</p></div>
                 <div><span className="text-muted-foreground">Criada em</span><p className="font-medium">{new Date(selectedTenant.createdAt).toLocaleDateString('pt-BR')}</p></div>
-                <div><span className="text-muted-foreground">Usuários</span><p className="font-medium">{selectedTenant._count?.users ?? 0}</p></div>
+                <div><span className="text-muted-foreground">Usuários</span><p className="font-medium">{selectedTenant.userUsage?.total ?? 'Indisponível'}</p></div>
               </div>
               <Button asChild className="w-full"><Link href={`/admin/tenants/${selectedTenant.id}`}>Abrir detalhes completos</Link></Button>
             </div>

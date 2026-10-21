@@ -11,7 +11,7 @@ export type MobileBackTarget = {
  * e detalhes são fluxos imersivos: TopBar contextual com retorno e sem NavBottom.
  */
 export function getMobileBackTarget(pathname: string): MobileBackTarget | null {
-  if (/^\/admin\/tenants\/[^/]+$/.test(pathname)) return { href: '/admin/tenants', label: 'Tenants', title: 'Detalhes da igreja' };
+  if (/^\/admin\/tenants\/[^/]+$/.test(pathname)) return { href: '/admin/tenants', label: 'Igrejas', title: 'Detalhes da igreja' };
   if (/^\/feed\/[^/]+\/comments\/new$/.test(pathname)) return { href: `/feed/${pathname.split('/')[2]}`, label: 'Publicação', title: 'Novo comentário' };
   if (/^\/feed\/[^/]+$/.test(pathname)) return { href: '/feed', label: 'Feed', title: 'Publicação' };
   if (pathname === '/members/new') return { href: '/members', label: 'Membros', title: 'Novo membro' };

@@ -56,7 +56,7 @@ export default function TenantDetailsPage() {
       setSelectedPlan(value.plan);
     } catch (error) {
       setTenant(null);
-      setLoadingError(error instanceof Error ? error.message : 'Não foi possível carregar o tenant.');
+      setLoadingError(error instanceof Error ? error.message : 'Não foi possível carregar a igreja.');
     } finally {
       setLoading(false);
     }
@@ -99,9 +99,9 @@ export default function TenantDetailsPage() {
       const saved = await updateAdminTenant(id, tenantForm);
       setTenant((current) => current ? { ...current, ...saved } : saved);
       setTenantForm({ name: saved.name, slug: saved.slug });
-      toast.success('Dados do tenant atualizados.');
+      toast.success('Dados da igreja atualizados.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o tenant.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar a igreja.');
     } finally {
       setSavingTenant(false);
     }
@@ -128,7 +128,7 @@ export default function TenantDetailsPage() {
     try {
       const saved = await updateAdminTenant(id, { active: !tenant.active });
       setTenant((current) => current ? { ...current, ...saved } : saved);
-      toast.success(saved.active ? 'Tenant ativado.' : 'Tenant desativado.');
+      toast.success(saved.active ? 'Igreja ativada.' : 'Igreja desativada.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível alterar o status.');
     } finally {
@@ -136,24 +136,24 @@ export default function TenantDetailsPage() {
     }
   }
 
-  if (loading) return <WebPageContainer size="narrow" className="text-center">Carregando tenant...</WebPageContainer>;
-  if (!tenant) return <WebPageContainer size="narrow" className="space-y-3 text-center"><p>{loadingError ?? 'Tenant não encontrado.'}</p><Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Tentar novamente</Button></WebPageContainer>;
+  if (loading) return <WebPageContainer size="narrow" className="text-center">Carregando igreja...</WebPageContainer>;
+  if (!tenant) return <WebPageContainer size="narrow" className="space-y-3 text-center"><p>{loadingError ?? 'Igreja não encontrada.'}</p><Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Tentar novamente</Button></WebPageContainer>;
   const currentPlan = plans.find((plan) => plan.code === tenant.plan);
   const usage = tenant.userUsage;
   const maxUsers = currentPlan?.maxUsers;
   const remainingUsers = usage && typeof maxUsers === 'number' ? Math.max(0, maxUsers - usage.total) : null;
   return <WebPageContainer size="narrow" className="space-y-4">
-    <Button asChild variant="ghost" className="hidden min-[1025px]:inline-flex"><Link href="/admin/tenants"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para tenants</Link></Button>
+    <Button asChild variant="ghost" className="hidden min-[1025px]:inline-flex"><Link href="/admin/tenants"><ArrowLeft className="mr-2 h-4 w-4" />Voltar para igrejas</Link></Button>
     <Card className="border-0 bg-transparent shadow-none min-[1025px]:border min-[1025px]:bg-card min-[1025px]:shadow-sm"><CardHeader className="px-0 pt-0 min-[1025px]:p-6"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><CardTitle className="break-words">{tenant.name}</CardTitle><CardDescription className="break-words">{tenant.slug} · {tenant.databaseKey ?? 'database não definido'}</CardDescription></div><Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar</Button></div></CardHeader><CardContent className="px-0 pb-0 min-[1025px]:px-6 min-[1025px]:pb-6">
       <Tabs defaultValue="tenant">
-        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto"><TabsTrigger className="shrink-0" value="tenant">Tenant</TabsTrigger><TabsTrigger className="shrink-0" value="branding">Brand</TabsTrigger><TabsTrigger className="shrink-0" value="logos">Logos</TabsTrigger><TabsTrigger className="shrink-0" value="users">Usuários</TabsTrigger><TabsTrigger className="shrink-0" value="plan">Plano</TabsTrigger></TabsList>
+        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto"><TabsTrigger className="shrink-0" value="tenant">Igreja</TabsTrigger><TabsTrigger className="shrink-0" value="branding">Brand</TabsTrigger><TabsTrigger className="shrink-0" value="logos">Logos</TabsTrigger><TabsTrigger className="shrink-0" value="users">Usuários</TabsTrigger><TabsTrigger className="shrink-0" value="plan">Plano</TabsTrigger></TabsList>
         <TabsContent value="tenant" className="space-y-4 pt-4">
           <form onSubmit={saveTenantDetails} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div><Label htmlFor="tenant-name">Nome da igreja</Label><Input id="tenant-name" value={tenantForm.name} onChange={(event) => setTenantForm((current) => ({ ...current, name: event.target.value }))} required /></div>
-              <div><Label htmlFor="tenant-slug">Slug da rota de login</Label><Input id="tenant-slug" value={tenantForm.slug} onChange={(event) => setTenantForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} pattern="[a-z0-9-]+" required /><p className="mt-1 text-xs text-muted-foreground">O database key permanece estável para preservar o banco do tenant.</p></div>
+              <div><Label htmlFor="tenant-slug">Slug da rota de login</Label><Input id="tenant-slug" value={tenantForm.slug} onChange={(event) => setTenantForm((current) => ({ ...current, slug: event.target.value.toLowerCase() }))} pattern="[a-z0-9-]+" required /><p className="mt-1 text-xs text-muted-foreground">O identificador do banco é preservado ao alterar o link de acesso.</p></div>
             </div>
-            <div className="flex flex-wrap gap-2"><Button type="submit" disabled={savingTenant}>{savingTenant ? 'Salvando...' : 'Salvar dados do tenant'}</Button><Button type="button" variant="outline" onClick={() => void toggleTenantStatus()} disabled={savingTenant}>{tenant.active ? 'Desativar tenant' : 'Ativar tenant'}</Button></div>
+            <div className="flex flex-wrap gap-2"><Button type="submit" disabled={savingTenant}>{savingTenant ? 'Salvando...' : 'Salvar dados da igreja'}</Button><Button type="button" variant="outline" onClick={() => void toggleTenantStatus()} disabled={savingTenant}>{tenant.active ? 'Desativar igreja' : 'Ativar igreja'}</Button></div>
           </form>
         </TabsContent>
         <TabsContent value="branding" className="space-y-4 pt-4"><form onSubmit={form.handleSubmit(saveBranding)}><div className="grid gap-4 sm:grid-cols-2">{([['pwaName', 'Nome do PWA'], ['pwaShortName', 'Nome curto'], ['primaryColor', 'Cor primária'], ['secondaryColor', 'Cor secundária'], ['themeColor', 'Cor do tema'], ['backgroundColor', 'Cor de fundo']] as const).map(([name, label]) => <div key={name}><Label htmlFor={name}>{label}</Label><Input id={name} {...form.register(name)} placeholder={name.includes('Color') ? '#123456' : undefined} />{form.formState.errors[name] && <p className="mt-1 text-xs text-destructive">{form.formState.errors[name]?.message}</p>}</div>)}</div><Button type="submit" className="mt-4" disabled={saving}>{saving ? 'Salvando...' : 'Salvar branding'}</Button></form></TabsContent>

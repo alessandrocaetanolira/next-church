@@ -82,7 +82,7 @@ export const WEB_NAVIGATION: WebNavigationGroup[] = [
     destructive: true,
     items: [
       { to: "/admin", icon: Building2, label: "Visão geral", platformAdminOnly: true },
-      { to: "/admin/tenants", icon: ShieldCheck, label: "Gerenciar Tenants", platformAdminOnly: true },
+      { to: "/admin/tenants", icon: ShieldCheck, label: "Igrejas", platformAdminOnly: true },
       { to: "/admin/plans", icon: CreditCard, label: "Planos", platformAdminOnly: true },
     ],
   },

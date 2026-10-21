@@ -25,7 +25,7 @@ export function BottomNav() {
   }, [closeDrawer, pathname]);
   const platformMainItems = [
     { to: '/admin', icon: LayoutDashboard, label: 'Visão geral', show: true, disabled: false },
-    { to: '/admin/tenants', icon: UsersIcon, label: 'Tenants', show: true, disabled: false },
+    { to: '/admin/tenants', icon: UsersIcon, label: 'Igrejas', show: true, disabled: false },
     { to: '/admin/plans', icon: Settings, label: 'Planos', show: true, disabled: false },
   ];
   const mainItems = user?.isPlatformAdmin ? platformMainItems : [

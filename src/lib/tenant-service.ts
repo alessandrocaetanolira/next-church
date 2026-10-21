@@ -210,7 +210,7 @@ export class TenantService {
       const church = await TenantService.createTenant(input.slug, input.name, input.adminEmail, input.adminPassword, input);
       await globalClient.provisioningJob.update({ where: { runId }, data: { churchId: church.id, status: 'ACTIVE', step: 'completed', finishedAt: new Date() } });
       const activeListeners = publishGlobalProvisioningEvent({ type: 'provisioning.updated', runId, tenantId: church.id, status: 'ACTIVE', step: 'completed', finishedAt: new Date().toISOString() });
-      if (!activeListeners && effectivePlatformAdminId) void notifyPlatformAdmin(effectivePlatformAdminId, { type: 'provisioning.updated', title: 'Tenant disponível', message: `${input.name} está disponível no painel.`, href: '/admin/tenants' });
+      if (!activeListeners && effectivePlatformAdminId) void notifyPlatformAdmin(effectivePlatformAdminId, { type: 'provisioning.updated', title: 'Igreja disponível', message: `${input.name} está disponível no painel.`, href: '/admin/tenants' });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const church = await globalClient.church.findUnique({ where: { slug: TenantService.normalizeSlug(input.slug) } });
@@ -223,21 +223,29 @@ export class TenantService {
   static async retryTenantProvisioning(tenantId: string, adminPassword: string, platformAdminId: string) {
     const globalClient = getGlobalClient();
     const church = await globalClient.church.findUnique({ where: { id: tenantId } });
-    if (!church) throw new Error('Tenant não encontrado.');
-    if (church.status !== 'FAILED') throw new Error('Somente tenants com falha podem ser retentados.');
+    if (!church) throw new Error('Igreja não encontrada.');
+    if (church.status !== 'FAILED') throw new Error('Somente igrejas com falha podem ser reprocessadas.');
     const failedJob = await globalClient.provisioningJob.findFirst({ where: { churchId: tenantId, status: 'FAILED' }, orderBy: { createdAt: 'desc' } });
-    if (!failedJob) throw new Error('Nenhuma execução falha encontrada para este tenant.');
+    if (!failedJob) throw new Error('Nenhuma execução com falha encontrada para esta igreja.');
     return TenantService.enqueueTenantProvisioning(church.slug, church.name, failedJob.adminEmail, adminPassword, { platformAdminId });
   }
 
   /**
    * Lista todos os tenants cadastrados.
    */
-  static async listTenants(options: { databaseDirectory?: string } = {}) {
+  static async listTenants(options: { databaseDirectory?: string; includeUserUsage?: boolean } = {}) {
     const globalClient = getGlobalClient(options.databaseDirectory);
-    return globalClient.church.findMany({
+    const tenants = await globalClient.church.findMany({
       orderBy: { createdAt: 'desc' }
     });
+    if (!options.includeUserUsage) return tenants;
+    const result = tenants.map((tenant) => ({ ...tenant, userUsage: null as Awaited<ReturnType<typeof getTenantUserUsage>> }));
+    for (let offset = 0; offset < result.length; offset += 4) {
+      await Promise.all(result.slice(offset, offset + 4).map(async (tenant) => {
+        tenant.userUsage = await getTenantUserUsage(tenant, options.databaseDirectory);
+      }));
+    }
+    return result;
   }
 
   /**

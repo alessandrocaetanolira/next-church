@@ -5,9 +5,18 @@ import { serverLogger } from '@/lib/server/logger';
 
 export const runtime = 'nodejs';
 
+function platformPushFailure(error: unknown, invalidInput: string) {
+  if (error instanceof Error && /no such table:.*Platform(?:PushSubscription|Notification)/i.test(error.message)) {
+    serverLogger.error('push', 'Migração de notificações globais pendente.');
+    return Response.json({ error: 'As notificações do administrador estão temporariamente indisponíveis.' }, { status: 503 });
+  }
+  return Response.json({ error: invalidInput }, { status: 400 });
+}
+
 export async function POST(request: Request) {
   serverLogger.info('push-server', 'POST /api/push/subscriptions recebido');
   const session = await auth();
+  if (session?.user?.authValid === false) return Response.json({ error: 'Não autorizado.' }, { status: 401 });
   const tenantId = session?.user?.tenantId;
   const email = session?.user?.email;
   const platformAdminId = session?.user?.isPlatformAdmin ? session.user.id : null;
@@ -15,8 +24,8 @@ export async function POST(request: Request) {
   if (platformAdminId) {
     try {
       return Response.json(await registerPlatformPushSubscription(platformAdminId, await request.json()));
-    } catch {
-      return Response.json({ error: 'Inscrição Push inválida.' }, { status: 400 });
+    } catch (error) {
+      return platformPushFailure(error, 'Inscrição Push inválida.');
     }
   }
   if (!tenantId || !email) {
@@ -41,14 +50,15 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   const session = await auth();
+  if (session?.user?.authValid === false) return Response.json({ error: 'Não autorizado.' }, { status: 401 });
   const tenantId = session?.user?.tenantId;
   const email = session?.user?.email;
   const platformAdminId = session?.user?.isPlatformAdmin ? session.user.id : null;
   if (platformAdminId) {
     try {
       return Response.json(await removePlatformPushSubscription(platformAdminId, await request.json()));
-    } catch {
-      return Response.json({ error: 'Endpoint inválido.' }, { status: 400 });
+    } catch (error) {
+      return platformPushFailure(error, 'Endpoint inválido.');
     }
   }
   if (!tenantId || !email) return Response.json({ error: 'Não autorizado.' }, { status: 401 });

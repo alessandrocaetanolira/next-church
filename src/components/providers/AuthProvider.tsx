@@ -8,6 +8,7 @@ import { useAuthStore } from '@/features/auth/store';
 import { clearCachedSession, readCachedSession, writeCachedSession } from '@/lib/offline-session';
 import { SessionRefreshProvider, useSessionRefresh } from '@/features/auth/session-refresh';
 import { logMobileResume } from '@/lib/mobile-resume-diagnostics';
+import { getLoginUrl, isLoginRoute } from '@/lib/login-routing';
 
 type OfflineSession = Session & {
   user: Session['user'] & {
@@ -36,11 +37,14 @@ function SessionCacheBridge() {
     if (session?.user?.authValid === false) {
       clearCachedSession();
       logout();
+      // Uma sessão antiga não deve expulsar o usuário do login escolhido,
+      // nem disputar a gravação de cookies com uma nova autenticação.
+      if (isLoginRoute(window.location.pathname)) return;
       if (!revoking.current) {
         revoking.current = true;
-        const slug = session.user.isPlatformAdmin ? '' : session.user.tenantSlug;
+        const loginUrl = getLoginUrl({ pathname: window.location.pathname, isPlatformAdmin: session.user.isPlatformAdmin, tenantSlug: session.user.tenantSlug });
         const redirect = () => {
-          window.location.replace(slug ? `/auth/login?igreja=${encodeURIComponent(slug)}` : '/auth/login');
+          if (!isLoginRoute(window.location.pathname)) window.location.replace(loginUrl);
         };
         void signOut({ redirect: false }).then(redirect, redirect);
       }

@@ -12,7 +12,8 @@ import { Card } from '@/components/ui/card';
 import { Palette, Gift, Lock, Trash2, LogOut, ImageIcon, Download, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import { hasActionPermission } from '@/lib/access-control';
 import { RegistrationShareCard } from '@/features/pastoral/components/RegistrationShareCard';
 import { PendingMembersCard } from '@/features/pastoral/components/PendingMembersCard';
@@ -31,6 +32,7 @@ import { useSettingsController } from '@/features/settings/hooks/use-settings-co
 import { SettingsScreen } from '@/features/settings/screens';
 
 export default function SettingsPage() {
+  const { logout } = useAuth();
   const router = useRouter();
   const { data: session } = useSession();
   const canUpdateSettings = hasActionPermission(session?.user, 'settings', 'update');
@@ -249,7 +251,7 @@ export default function SettingsPage() {
           onClick={() => void clearLegacyOfflineData()}
         >
           <Trash2 className="w-5 h-5" />
-          <span>Remover dados offline antigos sem tenant</span>
+          <span>Remover dados offline antigos sem igreja associada</span>
         </Button>
         <Button 
           variant="ghost" 
@@ -261,11 +263,7 @@ export default function SettingsPage() {
         </Button>
         </Card>
 
-        <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={async () => {
-          const tenantSlug = session?.user?.isPlatformAdmin ? '' : session?.user?.tenantSlug?.trim().toLowerCase();
-          await signOut({ redirect: false });
-          window.location.replace(tenantSlug ? `/auth/login?igreja=${encodeURIComponent(tenantSlug)}` : '/auth/login');
-        }}>
+        <Button variant="ghost" className="w-full gap-2 text-destructive" onClick={() => void logout()}>
           <LogOut className="w-4 h-4" /> Sair da conta
         </Button>
       </IgrejaTab>

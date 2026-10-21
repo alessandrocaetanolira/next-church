@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { canAccessRoute, hasPlanFeature } from "@/lib/access-control";
 import { getPlanFeatureForPath } from "@/lib/plan-features";
+import { getLoginUrl } from '@/lib/login-routing';
 
 export async function proxy(request: NextRequest) {
   const { nextUrl } = request;
@@ -60,14 +61,16 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!token) {
-    return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    return NextResponse.redirect(new URL(getLoginUrl({ pathname: nextUrl.pathname }), nextUrl));
   }
 
   if (token.authValid === false) {
     if (nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Sessão expirada. Faça login novamente." }, { status: 401 });
     }
-    return NextResponse.redirect(new URL("/auth/login?reason=session-expired", nextUrl));
+    const loginUrl = new URL(getLoginUrl({ pathname: nextUrl.pathname, isPlatformAdmin: token.isPlatformAdmin, tenantSlug: token.tenantSlug }), nextUrl);
+    loginUrl.searchParams.set('reason', 'session-expired');
+    return NextResponse.redirect(loginUrl);
   }
 
   if (nextUrl.pathname.startsWith("/admin") && !token.isPlatformAdmin) {

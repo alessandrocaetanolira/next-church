@@ -47,7 +47,7 @@ export class BrandingRepository {
 
   async findPublic(slug: string) {
     const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
-      `SELECT c.id, c.slug, c.databaseKey, c.name, c.logoUrl, c.themeVariant, c.themeMode, c.active,
+      `SELECT c.id, c.slug, c.databaseKey, c.name, c.logoUrl, c.themeVariant, c.themeMode, c.active, c.status,
               b.logoUrl AS brandingLogoUrl, b.logoLightUrl, b.logoDarkUrl, b.mobileIconUrl, b.sidebarLogoUrl,
               b.sidebarUseImage, b.sidebarTitle, b.sidebarSubtitle, b.sidebarOpenLightUrl, b.sidebarOpenDarkUrl,
               b.sidebarCollapsedLightUrl, b.sidebarCollapsedDarkUrl, b.pwaName, b.pwaShortName, b.icon192Url, b.icon512Url,

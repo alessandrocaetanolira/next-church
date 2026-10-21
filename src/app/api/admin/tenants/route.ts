@@ -25,7 +25,7 @@ export async function GET() {
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
 
   try {
-    const tenants = await TenantService.listTenants();
+    const tenants = await TenantService.listTenants({ includeUserUsage: true });
     return NextResponse.json(tenants);
   } catch (error) {
     console.error("API Error (List Tenants):", error);

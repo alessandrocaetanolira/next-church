@@ -14,7 +14,7 @@ export default function AdminTenantsPage() {
 
   return (
     <WebPageContainer size="wide" className="space-y-4">
-      <WebPageHeader title="Gerenciamento de Tenants" description="Controle de igrejas e provisionamento de bancos." actions={<CreateTenantForm onCreated={handleRefresh} />} />
+      <WebPageHeader title="Igrejas" description="Gerencie as igrejas cadastradas na plataforma." actions={<CreateTenantForm onCreated={handleRefresh} />} />
 
       <Card className="border-destructive/20 bg-destructive/5">
         <CardHeader className="py-3 px-4 flex flex-row items-center gap-3">

@@ -3,8 +3,11 @@
 import { useSync } from "../hooks/use-sync";
 import { Wifi, WifiOff, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getLoginUrl } from '@/lib/login-routing';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 export function SyncIndicator() {
+  const { user } = useAuth();
   const { isOnline, isSyncing, syncIssue, conflicts, resolveConflict, triggerSync } = useSync();
 
   if (isSyncing) {
@@ -35,7 +38,7 @@ export function SyncIndicator() {
       <div className="flex items-center gap-1.5 text-xs text-destructive">
         <AlertTriangle className="h-3 w-3" />
         <span>Sessão expirada</span>
-        <button type="button" className="underline" onClick={() => { window.location.href = '/auth/login'; }}>Entrar novamente</button>
+        <button type="button" className="underline" onClick={() => { window.location.href = getLoginUrl({ pathname: window.location.pathname, isPlatformAdmin: user?.isPlatformAdmin, tenantSlug: user?.tenantSlug }); }}>Entrar novamente</button>
       </div>
     );
   }

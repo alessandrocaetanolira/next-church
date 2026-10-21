@@ -12,7 +12,7 @@ export async function getPublicTenantMetadata(slug: string): Promise<Metadata | 
   try {
     const repository = new BrandingRepository(getGlobalClient());
     const row = await repository.findPublic(normalizedSlug);
-    if (!row || !row.active) return null;
+    if (!row || !row.active || row.status !== 'ACTIVE') return null;
 
     const branding = new BrandingService(repository).normalize(row);
     const title = branding.pwaName || branding.name || 'Church App';

@@ -50,7 +50,7 @@ export default function PlatformAdminDashboard() {
         actions={<Button asChild><Link href="/admin/tenants">Gerenciar igrejas</Link></Button>}
       />
 
-      {error && <Badge variant="destructive">Não foi possível carregar o resumo dos tenants.</Badge>}
+      {error && <Badge variant="destructive">Não foi possível carregar o resumo das igrejas.</Badge>}
 
       <div aria-label="Indicadores da plataforma" aria-busy={loading} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {cards.map(({ label, value, icon: Icon, tone }) => (
@@ -69,11 +69,11 @@ export default function PlatformAdminDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Operação global</CardTitle>
-          <CardDescription>O administrador global gerencia metadados e ciclo de vida dos tenants.</CardDescription>
+          <CardDescription>O administrador global gerencia metadados e ciclo de vida das igrejas.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
           <p>Provisionamento acontece antes da ativação da igreja.</p>
-          <p>Tenants arquivados permanecem registrados para auditoria.</p>
+          <p>Igrejas arquivadas permanecem registradas para auditoria.</p>
           <p>Dados operacionais continuam isolados nos bancos de cada igreja.</p>
         </CardContent>
       </Card>

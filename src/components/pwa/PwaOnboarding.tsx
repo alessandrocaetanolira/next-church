@@ -187,12 +187,12 @@ export function PwaOnboarding() {
           <AppLogo className="mx-auto h-12 w-40" />
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary" />{push.permission === 'denied' ? 'Notificações bloqueadas' : push.permission === 'granted' ? 'Sincronizar notificações' : 'Ativar notificações'}</DialogTitle>
-            <DialogDescription>Receba avisos importantes da sua igreja neste dispositivo.</DialogDescription>
+            <DialogDescription>{user?.isPlatformAdmin ? 'Receba avisos importantes da plataforma neste dispositivo.' : 'Receba avisos importantes da sua igreja neste dispositivo.'}</DialogDescription>
           </DialogHeader>
           {push.permission === 'denied' ? (
             <p className="text-sm text-muted-foreground">A permissão foi bloqueada nas configurações do navegador. Libere notificações para este site nas configurações do dispositivo e volte ao app; vamos detectar a mudança e permitir sincronizar.</p>
           ) : (
-            <p className="text-sm text-muted-foreground">Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.</p>
+            <p className="text-sm text-muted-foreground">{user?.isPlatformAdmin ? 'Você poderá acompanhar a preparação das igrejas e receber avisos da plataforma.' : 'Você poderá receber atualizações do feed, pedidos da cantina, permissões e outros avisos em tempo real.'}</p>
           )}
           {push.error && <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{push.error}</p>}
           <DialogFooter className="gap-2 pt-2 sm:space-x-0">

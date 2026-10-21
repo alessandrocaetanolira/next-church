@@ -13,6 +13,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useAuthStore } from '@/features/auth/store';
 import { clearCachedSession } from '@/lib/offline-session';
 import { useSessionRefresh } from '@/features/auth/session-refresh';
+import { getLoginUrl } from '@/lib/login-routing';
 
 /**
  * Interface que define a estrutura de um usuário autenticado.
@@ -100,11 +101,11 @@ export function useAuth() {
     refreshSession: coordinatedRefresh ?? update,
     /** Encerra a sessão e redireciona para a tela de login */
     logout: async () => {
-      const tenantSlug = user?.isPlatformAdmin ? '' : user?.tenantSlug?.trim().toLowerCase();
+      const loginUrl = getLoginUrl({ pathname: window.location.pathname, isPlatformAdmin: user?.isPlatformAdmin, tenantSlug: user?.tenantSlug });
       clearCachedSession();
       useAuthStore.getState().logout();
       await signOut({ redirect: false });
-      window.location.replace(tenantSlug ? `/auth/login?igreja=${encodeURIComponent(tenantSlug)}` : '/auth/login');
+      window.location.replace(loginUrl);
     },
   };
 }

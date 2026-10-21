@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { LoadingState } from '@/components/common';
 import OfflinePage from '@/app/offline/page';
+import { getLoginUrl } from '@/lib/login-routing';
 
 /**
  * Ponto de entrada estável do PWA.
@@ -20,9 +21,16 @@ export default function PwaStartPage() {
     // Uma abertura fria offline não deve iniciar outra navegação que exige RSC.
     if (!navigator.onLine) return;
     const adminStart = new URLSearchParams(window.location.search).get('admin') === '1';
+    let rememberedSlug: string | null = null;
+    if (!adminStart && status !== 'authenticated') {
+      try {
+        const cookieSlug = document.cookie.split('; ').find((entry) => entry.startsWith('church-tenant-slug='))?.split('=')[1];
+        rememberedSlug = cookieSlug ? decodeURIComponent(cookieSlug) : localStorage.getItem('church-last-tenant-slug');
+      } catch { /* Um contexto ausente leva à página de link inválido. */ }
+    }
     const target = status === 'authenticated'
       ? session?.user?.isPlatformAdmin ? '/admin' : '/'
-      : adminStart ? '/admin/login' : '/auth/login';
+      : adminStart ? '/admin/login' : getLoginUrl({ tenantSlug: rememberedSlug });
     router.replace(target);
   }, [router, session?.user?.isPlatformAdmin, status]);
 

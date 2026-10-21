@@ -52,26 +52,9 @@ export function LoginForm({
   const [logoLoaded, setLogoLoaded] = useState(false);
   const registerHref = churchSlug ? `/cadastro?igreja=${encodeURIComponent(churchSlug)}` : '/cadastro';
 
-  const rememberedTenantSlug = () => {
-    if (typeof document === 'undefined') return '';
-    const cookieSlug = document.cookie
-      .split('; ')
-      .find((entry) => entry.startsWith('church-tenant-slug='))
-      ?.split('=')[1];
-    if (cookieSlug) {
-      try { return decodeURIComponent(cookieSlug).trim().toLowerCase(); } catch { return cookieSlug.trim().toLowerCase(); }
-    }
-    try {
-      return localStorage.getItem('church-last-tenant-slug')?.trim().toLowerCase() ?? '';
-    } catch {
-      return '';
-    }
-  };
-
   useEffect(() => {
     const nextSlug = searchParams.get('igreja')?.trim().toLowerCase() ?? '';
-    const rememberedSlug = nextSlug || rememberedTenantSlug();
-    setChurchSlug(globalOnly ? '' : lockTenant ? initialSlug.trim().toLowerCase() : rememberedSlug);
+    setChurchSlug(globalOnly ? '' : lockTenant ? initialSlug.trim().toLowerCase() : nextSlug || initialSlug.trim().toLowerCase());
   }, [globalOnly, initialSlug, lockTenant, searchParams]);
 
   useEffect(() => {
@@ -132,8 +115,12 @@ export function LoginForm({
       toast.error(message);
       return;
     }
-    setLoading(true);
     const resolvedChurchSlug = (globalOnly ? '' : lockTenant ? initialSlug : churchSlug).trim().toLowerCase();
+    if (!globalOnly && !resolvedChurchSlug) {
+      setErrorMessage('Link de acesso inválido. Use o link fornecido pela sua igreja.');
+      return;
+    }
+    setLoading(true);
 
     try {
       if (resolvedChurchSlug) {
@@ -170,7 +157,7 @@ export function LoginForm({
   return (
     <Card className="w-full max-w-md shadow-lg border-border">
       <CardHeader className="text-center">
-        <div className="relative mx-auto mb-3 flex h-24 w-56 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/30 px-4 py-3">
+        {!globalOnly && <div className="relative mx-auto mb-3 flex h-24 w-56 items-center justify-center overflow-hidden rounded-2xl border border-border bg-muted/30 px-4 py-3">
           {!logoLoaded && !logoFailed && <Loader2 className="absolute h-6 w-6 animate-spin text-primary" aria-label="Carregando logo" />}
           <AppImage
             src={logoFailed ? (branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png') : (branding?.logoLightUrl || branding?.logoUrl || branding?.mobileIconUrl || branding?.icon192Url || '/pwa-192x192.png')}
@@ -190,9 +177,9 @@ export function LoginForm({
             onLoad={() => setLogoLoaded(true)}
             onError={() => { setLogoFailed(true); setLogoLoaded(true); }}
           />
-        </div>
-        <CardTitle className="text-3xl font-bold text-primary">{branding?.pwaName || branding?.name || 'Church App'}</CardTitle>
-        <CardDescription>Acesse sua conta para continuar</CardDescription>
+        </div>}
+        <CardTitle className="text-3xl font-bold text-primary">{globalOnly ? 'Admin' : branding?.pwaName || branding?.name || 'Church App'}</CardTitle>
+        <CardDescription>{globalOnly ? 'Acesso do administrador global' : 'Acesse sua conta para continuar'}</CardDescription>
       </CardHeader>
       
       <form onSubmit={handleSubmit}>
