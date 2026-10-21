@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
@@ -6,6 +6,17 @@ import sharp from 'sharp';
 const FILES_ROOT = path.resolve(process.cwd(), 'files');
 const ALLOWED_MODULES = new Set(['products', 'materials', 'feed', 'branding', 'profile']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+// Remove somente uploads de branding pertencentes à igreja, nunca arquivos públicos.
+export async function deleteTenantBrandingFile(url: string, tenantKeys: string[]) {
+  const match = /^\/api\/files\/([a-zA-Z0-9_-]+)\/branding\/([a-zA-Z0-9_-]+\.(?:png|jpe?g|webp|gif))$/.exec(url.split('?')[0]);
+  if (!match || !tenantKeys.includes(match[1])) return;
+  try {
+    await unlink(path.join(FILES_ROOT, match[1], 'branding', match[2]));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}
 
 function safeSegment(value: string, label: string) {
   if (!/^[a-zA-Z0-9_-]+$/.test(value)) throw new Error(`${label} inválido`);

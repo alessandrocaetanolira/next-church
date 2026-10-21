@@ -16,10 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getAdminTenant, getAdminTenantBranding, updateAdminTenant, updateAdminTenantBranding } from '@/services/admin/tenants-api';
 import { listAdminPlans, type AdminPlan } from '@/services/admin/plans-api';
 import { toast } from 'sonner';
+import { BrandingImagesEditor, type BrandingImages } from '@/features/settings/components/BrandingImagesEditor';
 import { WebPageContainer } from '@/components/shared/web';
 
 type Tenant = { id: string; name: string; slug: string; databaseKey?: string | null; plan: string; status?: string; active: boolean; createdAt: string; _count?: { users: number } };
-type Branding = { pwaName: string; pwaShortName: string; primaryColor: string; secondaryColor: string; themeColor: string; backgroundColor: string; logoUrl?: string | null; icon192Url?: string | null; icon512Url?: string | null };
+type Branding = BrandingImages & { pwaName: string; pwaShortName: string; primaryColor: string; secondaryColor: string; themeColor: string; backgroundColor: string; logoUrl?: string | null; icon192Url?: string | null; icon512Url?: string | null };
 const brandingSchema = z.object({
   pwaName: z.string().trim().max(80, 'Máximo de 80 caracteres'),
   pwaShortName: z.string().trim().max(30, 'Máximo de 30 caracteres'),
@@ -35,7 +36,7 @@ export default function TenantDetailsPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [branding, setBranding] = useState<Branding>({ pwaName: '', pwaShortName: '', primaryColor: '', secondaryColor: '', themeColor: '', backgroundColor: '' });
   const [saving, setSaving] = useState(false);
-  const [logoFiles, setLogoFiles] = useState<{ logoBase64?: File; icon192Base64?: File; icon512Base64?: File }>({});
+  const [imageChanges, setImageChanges] = useState<BrandingImages>({});
   const [savingLogos, setSavingLogos] = useState(false);
   const [savingTenant, setSavingTenant] = useState(false);
   const [plans, setPlans] = useState<AdminPlan[]>([]);
@@ -66,7 +67,6 @@ export default function TenantDetailsPage() {
   }, [id, loadTenant]);
   useEffect(() => { void getAdminTenantBranding<Branding>(id).then((value) => { setBranding((current) => ({ ...current, ...value })); form.reset({ pwaName: value.pwaName ?? '', pwaShortName: value.pwaShortName ?? '', primaryColor: value.primaryColor ?? '', secondaryColor: value.secondaryColor ?? '', themeColor: value.themeColor ?? '', backgroundColor: value.backgroundColor ?? '' }); }).catch(() => undefined); }, [id, form]);
 
-  const readImage = (file: File) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); });
   async function saveBranding(values: BrandingForm) {
     setSaving(true);
     try {
@@ -77,18 +77,16 @@ export default function TenantDetailsPage() {
   }
   async function saveLogos(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const entries = Object.entries(logoFiles) as Array<[keyof typeof logoFiles, File | undefined]>;
-    if (!entries.some(([, file]) => file)) return;
+    if (!Object.keys(imageChanges).length) return;
     setSavingLogos(true);
     try {
-      const body: Record<string, string> = {};
-      for (const [field, file] of entries) {
-        if (file) body[field] = await readImage(file);
-      }
+      const body = Object.fromEntries(Object.entries(imageChanges).map(([field, value]) => [field.replace(/Url$/, 'Base64'), value || null]));
       const saved = await updateAdminTenantBranding<Branding>(id, body);
       setBranding((current) => ({ ...current, ...saved }));
-      setLogoFiles({});
-      event.currentTarget.reset();
+      setImageChanges({});
+      toast.success('Logos atualizados.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar os logos.');
     } finally {
       setSavingLogos(false);
     }
@@ -155,7 +153,12 @@ export default function TenantDetailsPage() {
           </form>
         </TabsContent>
         <TabsContent value="branding" className="space-y-4 pt-4"><form onSubmit={form.handleSubmit(saveBranding)}><div className="grid gap-4 sm:grid-cols-2">{([['pwaName', 'Nome do PWA'], ['pwaShortName', 'Nome curto'], ['primaryColor', 'Cor primária'], ['secondaryColor', 'Cor secundária'], ['themeColor', 'Cor do tema'], ['backgroundColor', 'Cor de fundo']] as const).map(([name, label]) => <div key={name}><Label htmlFor={name}>{label}</Label><Input id={name} {...form.register(name)} placeholder={name.includes('Color') ? '#123456' : undefined} />{form.formState.errors[name] && <p className="mt-1 text-xs text-destructive">{form.formState.errors[name]?.message}</p>}</div>)}</div><Button type="submit" className="mt-4" disabled={saving}>{saving ? 'Salvando...' : 'Salvar branding'}</Button></form></TabsContent>
-        <TabsContent value="logos" className="space-y-4 pt-4"><p className="text-sm text-muted-foreground">Selecione os arquivos e clique em <strong>Salvar logos</strong>. O envio é feito como Base64 e o banco armazena apenas a URL.</p><form onSubmit={saveLogos}><div className="grid gap-4 sm:grid-cols-3">{([['logoBase64', 'Logo'], ['icon192Base64', 'Ícone 192x192'], ['icon512Base64', 'Ícone 512x512']] as const).map(([field, label]) => <div key={field}><Label htmlFor={field}>{label}</Label><Input id={field} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setLogoFiles((current) => ({ ...current, [field]: event.target.files?.[0] }))} /></div>)}</div><Button type="submit" className="mt-4" disabled={savingLogos}>{savingLogos ? 'Salvando logos...' : 'Salvar logos'}</Button></form></TabsContent>
+        <TabsContent value="logos" className="space-y-4 pt-4">
+          <form onSubmit={saveLogos} className="space-y-4">
+            <BrandingImagesEditor images={{ ...branding, ...imageChanges }} includePwa disabled={savingLogos} onChange={(field, value) => setImageChanges((current) => ({ ...current, [field]: value }))} />
+            <Button type="submit" disabled={savingLogos || !Object.keys(imageChanges).length}>{savingLogos ? 'Salvando imagens...' : 'Salvar imagens'}</Button>
+          </form>
+        </TabsContent>
         <TabsContent value="users" className="space-y-4 pt-4"><div className="rounded-lg border border-border p-4"><p className="font-medium">Usuários vinculados</p><p className="mt-1 text-sm text-muted-foreground">{tenant._count?.users ?? 0} usuário(s) cadastrado(s). A gestão detalhada ocorre dentro do ambiente da igreja.</p></div><Button type="button" variant="outline" onClick={() => void loadTenant()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar informações</Button></TabsContent>
         <TabsContent value="plan" className="space-y-4 pt-4">
           <div className="space-y-2">

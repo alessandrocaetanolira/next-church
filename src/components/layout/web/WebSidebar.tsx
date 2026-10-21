@@ -24,16 +24,16 @@ export function WebSidebar({ children }: WebSidebarProps) {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
+        <div className="flex min-w-0 items-center justify-start gap-3 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0">
           {settings.sidebarUseImage ? (
             <>
               <div className="flex h-10 w-32 shrink-0 items-center justify-center overflow-hidden rounded-xl group-data-[collapsible=icon]:hidden">
-                <AppImage src={settings.sidebarOpenLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="h-full w-full object-contain dark:hidden" />
-                <AppImage src={settings.sidebarOpenDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="hidden h-full w-full object-contain dark:block" />
+                <AppImage src={settings.sidebarOpenLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="h-full min-h-0 w-full min-w-0 max-h-full max-w-full object-contain dark:hidden" />
+                <AppImage src={settings.sidebarOpenDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={256} height={80} className="hidden h-full min-h-0 w-full min-w-0 max-h-full max-w-full object-contain dark:block" />
               </div>
               <div className="hidden h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl group-data-[collapsible=icon]:flex">
-                <AppImage src={settings.sidebarCollapsedLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="h-full w-full object-contain dark:hidden" />
-                <AppImage src={settings.sidebarCollapsedDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="hidden h-full w-full object-contain dark:block" />
+                <AppImage src={settings.sidebarCollapsedLightUrl || settings.logoLightUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="h-full min-h-0 w-full min-w-0 max-h-full max-w-full object-contain dark:hidden" />
+                <AppImage src={settings.sidebarCollapsedDarkUrl || settings.logoDarkUrl || settings.sidebarLogoUrl || settings.logoUrl || fallbackLogo} alt={settings.sidebarTitle || settings.appName} width={64} height={64} className="hidden h-full min-h-0 w-full min-w-0 max-h-full max-w-full object-contain dark:block" />
               </div>
             </>
           ) : (

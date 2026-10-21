@@ -139,7 +139,7 @@ export function Header() {
     <>
       <header className={mobileBackTarget ? 'sticky top-0 z-40 border-transparent bg-transparent md:border-b md:border-border md:bg-background/95 md:backdrop-blur md:supports-[backdrop-filter]:bg-background/60' : 'sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'}>
         <div className={`relative flex h-16 items-center justify-between ${mobileBackTarget ? 'px-3 sm:px-4' : 'pl-0 pr-3 sm:px-4'}`}>
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             {mobileBackTarget ? (
               <>
                 <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full md:hidden" onClick={() => router.push(mobileBackTarget.href)} aria-label={`Voltar para ${mobileBackTarget.label}`}>
@@ -150,7 +150,7 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <div className="-ml-2 flex h-13 w-[12.5rem] max-w-[54vw] items-center justify-start sm:ml-0 sm:h-9 sm:w-40 sm:max-w-none">
+              <div className="flex h-10 w-[12.5rem] min-w-0 max-w-full items-center justify-start overflow-hidden sm:h-9 sm:w-40">
                 <AppLogo className="h-full w-full" />
               </div>
             )}
@@ -159,7 +159,7 @@ export function Header() {
           {mobileBackTarget ? <h1 className="pointer-events-none absolute inset-x-16 truncate text-center text-base font-semibold md:hidden">{mobileBackTarget.title}</h1> : null}
 
           <TooltipProvider>
-            <div className="flex items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1.5">
               {offline && <div className={mobileBackTarget ? 'hidden md:block' : undefined}>
                 <Tooltip>
                   <TooltipTrigger asChild>

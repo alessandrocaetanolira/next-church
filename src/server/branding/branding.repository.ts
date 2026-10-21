@@ -1,13 +1,24 @@
 import type { PrismaClient as GlobalPrismaClient } from '@/generated/prisma-global';
 
 export type BrandingRow = Record<string, any>;
+export const BRANDING_IMAGE_COLUMNS = ['logoUrl', 'logoLightUrl', 'logoDarkUrl', 'mobileIconUrl', 'sidebarLogoUrl', 'sidebarOpenLightUrl', 'sidebarOpenDarkUrl', 'sidebarCollapsedLightUrl', 'sidebarCollapsedDarkUrl', 'icon192Url', 'icon512Url'] as const;
 
 export class BrandingRepository {
   constructor(private readonly prisma: GlobalPrismaClient) {}
 
+  async isImageReferenced(url: string) {
+    const matches = (column: string) => `(${column} = ? OR substr(${column}, 1, instr(${column}, '?') - 1) = ?)`;
+    const rows = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
+      `SELECT 1 FROM "Church" WHERE ${matches('logoUrl')}
+       UNION ALL SELECT 1 FROM "ChurchBranding" WHERE ${BRANDING_IMAGE_COLUMNS.map(matches).join(' OR ')} LIMIT 1`,
+      ...Array.from({ length: BRANDING_IMAGE_COLUMNS.length + 1 }, () => [url, url]).flat(),
+    );
+    return rows.length > 0;
+  }
+
   async findByTenant(tenantId: string, tenantSlug?: string | null) {
     const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
-      `SELECT c.id, c.slug, c.name, c.logoUrl, c.themeVariant, c.themeMode,
+      `SELECT c.id, c.slug, c.databaseKey, c.name, c.logoUrl, c.themeVariant, c.themeMode,
               b.logoUrl AS brandingLogoUrl, b.logoLightUrl, b.logoDarkUrl, b.mobileIconUrl, b.sidebarLogoUrl,
               b.sidebarUseImage, b.sidebarTitle, b.sidebarSubtitle, b.sidebarOpenLightUrl, b.sidebarOpenDarkUrl,
               b.sidebarCollapsedLightUrl, b.sidebarCollapsedDarkUrl, b.pwaName, b.pwaShortName, b.icon192Url, b.icon512Url,
@@ -22,7 +33,7 @@ export class BrandingRepository {
 
   async findByChurchId(churchId: string) {
     const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
-      `SELECT c.id, c.slug, c.name, c.logoUrl, c.themeVariant, c.themeMode,
+      `SELECT c.id, c.slug, c.databaseKey, c.name, c.logoUrl, c.themeVariant, c.themeMode,
               b.logoUrl AS brandingLogoUrl, b.logoLightUrl, b.logoDarkUrl, b.mobileIconUrl, b.sidebarLogoUrl,
               b.sidebarUseImage, b.sidebarTitle, b.sidebarSubtitle, b.sidebarOpenLightUrl, b.sidebarOpenDarkUrl,
               b.sidebarCollapsedLightUrl, b.sidebarCollapsedDarkUrl, b.pwaName, b.pwaShortName, b.icon192Url, b.icon512Url,
@@ -36,7 +47,7 @@ export class BrandingRepository {
 
   async findPublic(slug: string) {
     const [row] = await this.prisma.$queryRawUnsafe<BrandingRow[]>(
-      `SELECT c.id, c.slug, c.name, c.logoUrl, c.themeVariant, c.themeMode, c.active,
+      `SELECT c.id, c.slug, c.databaseKey, c.name, c.logoUrl, c.themeVariant, c.themeMode, c.active,
               b.logoUrl AS brandingLogoUrl, b.logoLightUrl, b.logoDarkUrl, b.mobileIconUrl, b.sidebarLogoUrl,
               b.sidebarUseImage, b.sidebarTitle, b.sidebarSubtitle, b.sidebarOpenLightUrl, b.sidebarOpenDarkUrl,
               b.sidebarCollapsedLightUrl, b.sidebarCollapsedDarkUrl, b.pwaName, b.pwaShortName, b.icon192Url, b.icon512Url,

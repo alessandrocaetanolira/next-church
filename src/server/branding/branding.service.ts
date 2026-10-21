@@ -1,5 +1,5 @@
-import { saveTenantDataUrl, saveTenantImageDataUrl } from '@/lib/server/tenant-file-storage';
-import { BrandingRepository } from './branding.repository';
+import { deleteTenantBrandingFile, saveTenantDataUrl, saveTenantImageDataUrl } from '@/lib/server/tenant-file-storage';
+import { BRANDING_IMAGE_COLUMNS, BrandingRepository } from './branding.repository';
 
 const COLOR_RE = /^(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|transparent)$/;
 
@@ -76,6 +76,8 @@ export class BrandingService {
     const logoLightUrl = await upload('logoLightBase64', current.logoLightUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
     const logoDarkUrl = await upload('logoDarkBase64', current.logoDarkUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
     const mobileIconUrl = await upload('mobileIconBase64', current.mobileIconUrl ?? current.icon192Url ?? null, { width: 192, height: 192, format: 'png' });
+    // O ícone principal e a referência de 192 px compartilham o mesmo arquivo.
+    const icon192Url = await upload('icon192Base64', body.mobileIconBase64 !== undefined ? mobileIconUrl : current.icon192Url ?? null, { width: 192, height: 192, format: 'png' });
     const sidebarLogoUrl = await upload('sidebarLogoBase64', current.sidebarLogoUrl ?? current.brandingLogoUrl ?? current.logoUrl ?? null);
     const sidebarOpenLightUrl = await upload('sidebarOpenLightBase64', current.sidebarOpenLightUrl ?? current.logoLightUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
     const sidebarOpenDarkUrl = await upload('sidebarOpenDarkBase64', current.sidebarOpenDarkUrl ?? current.logoDarkUrl ?? current.sidebarLogoUrl ?? current.logoUrl ?? null);
@@ -98,10 +100,30 @@ export class BrandingService {
       themeVariant: typeof body.themeVariant === 'string' && body.themeVariant.trim() ? body.themeVariant.trim() : current.themeVariant ?? 'default',
       pwaName: typeof body.pwaName === 'string' && body.pwaName.trim() ? body.pwaName.trim() : current.pwaName ?? name,
       pwaShortName: typeof body.pwaShortName === 'string' && body.pwaShortName.trim() ? body.pwaShortName.trim() : current.pwaShortName ?? current.pwaName ?? name,
-      icon192Url: await upload('icon192Base64', current.icon192Url ?? null, { width: 192, height: 192, format: 'png' }), icon512Url: await upload('icon512Base64', current.icon512Url ?? null, { width: 512, height: 512, format: 'png' }),
+      icon192Url, icon512Url: await upload('icon512Base64', current.icon512Url ?? null, { width: 512, height: 512, format: 'png' }),
       primaryColor, secondaryColor, themeColor: color(body.themeColor, current.themeColor ?? null), backgroundColor: color(body.backgroundColor, current.backgroundColor ?? null),
       configJson: body.configJson === undefined ? current.configJson ?? null : JSON.stringify(body.configJson),
     });
-    return this.repository.findByTenant(current.databaseKey ?? current.slug, current.slug);
+    const updated = await this.repository.findByTenant(current.databaseKey ?? current.slug, current.slug);
+    if (updated) {
+      const imageUrls = (row: Record<string, any>) => new Set(
+        [...BRANDING_IMAGE_COLUMNS.map((field) => row[field]), row.brandingLogoUrl]
+          .filter((value): value is string => typeof value === 'string' && Boolean(value))
+          .map((value) => value.split('?')[0]),
+      );
+      const remaining = imageUrls(updated);
+      const obsolete = [...imageUrls(current)].filter((url) => !remaining.has(url));
+      // A persistência já terminou. Uma falha ao excluir não desfaz a troca salva.
+      await Promise.all(obsolete.map(async (url) => {
+        try {
+          if (!await this.repository.isImageReferenced(url)) {
+            await deleteTenantBrandingFile(url, [current.slug, current.databaseKey].filter((key): key is string => typeof key === 'string'));
+          }
+        } catch (error) {
+          console.warn('Não foi possível excluir a imagem antiga do branding.', error);
+        }
+      }));
+    }
+    return updated;
   }
 }

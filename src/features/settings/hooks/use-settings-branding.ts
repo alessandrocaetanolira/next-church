@@ -5,8 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useAppSettings, type ThemeVariant } from '@/components/providers/AppSettingsProvider';
 import { getUserBranding, updateUserBranding } from '@/services/settings/settings-api';
 
-export type BrandingImageField = 'mobileIconUrl' | 'sidebarOpenLightUrl' | 'sidebarOpenDarkUrl' | 'sidebarCollapsedLightUrl' | 'sidebarCollapsedDarkUrl';
-
 export function useSettingsBranding() {
   const { data: session } = useSession();
   const { settings, updateSettings } = useAppSettings();
@@ -95,15 +93,5 @@ export function useSettingsBranding() {
     }
   };
 
-  const handleLogoUpload = (field: BrandingImageField, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') setBranding((current) => ({ ...current, [field]: reader.result }));
-    };
-    reader.readAsDataURL(file);
-  };
-
-  return { session, settings, updateSettings, branding, setBranding, savingBranding, saveBranding, handleLogoUpload };
+  return { session, settings, updateSettings, branding, setBranding, savingBranding, saveBranding };
 }

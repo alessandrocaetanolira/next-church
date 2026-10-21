@@ -18,13 +18,14 @@ import { RegistrationShareCard } from '@/features/pastoral/components/Registrati
 import { PendingMembersCard } from '@/features/pastoral/components/PendingMembersCard';
 import { BibleDownloadControl } from '@/features/bible/components/BibleDownloadControl';
 import { usePushSubscription } from '@/hooks/use-push-subscription';
-import { AppImage, MobileThemePreview } from '@/components/shared';
+import { MobileThemePreview } from '@/components/shared';
 import { AparenciaTab } from './tabs/aparenciaTab';
 import { BibliaOfflineTab } from './tabs/bibliaOfflineTab';
 import { IgrejaTab } from './tabs/igrejaTab';
 import { NotificacoesTab } from './tabs/notificacoesTab';
 import { SettingsSection } from '@/features/settings/components/SettingsSection';
 import { ThemeOption, themeModes, themeOptions } from '@/features/settings/components/ThemeOptions';
+import { BrandingImagesEditor } from '@/features/settings/components/BrandingImagesEditor';
 import { useSettingsBranding } from '@/features/settings/hooks/use-settings-branding';
 import { useSettingsController } from '@/features/settings/hooks/use-settings-controller';
 import { SettingsScreen } from '@/features/settings/screens';
@@ -37,14 +38,14 @@ export default function SettingsPage() {
   const { settings, updateSettings } = useAppSettings();
   const brandingController = useSettingsBranding();
   const push = usePushSubscription();
-  const { branding, setBranding, savingBranding, saveBranding, handleLogoUpload } = brandingController;
+  const { branding, setBranding, savingBranding, saveBranding } = brandingController;
   const { settingsTab, setSettingsTab, clearCache, clearLegacyOfflineData } = useSettingsController();
 
   useEffect(() => { setPageTitle('Configurações'); }, [setPageTitle]);
 
   const handleSaveBranding = async () => {
     try { await saveBranding(); toast.success('Branding atualizado.'); }
-    catch { toast.error('Erro ao salvar branding.'); }
+    catch (error) { toast.error(error instanceof Error ? error.message : 'Erro ao salvar identidade visual.'); }
   };
 
   return (
@@ -130,24 +131,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <p className="font-medium">Logos por contexto</p>
-              <p className="text-sm text-muted-foreground">Use arquivos separados para preservar contraste e leitura em cada tema.</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {([
-                  ['mobileIconUrl', 'Ícone mobile', 'Ícone quadrado usado no mobile e atalhos.'],
-                  ['sidebarOpenLightUrl', 'Sidebar aberta · tema claro', 'Logo retangular usada quando a sidebar está expandida no tema claro.'],
-                  ['sidebarOpenDarkUrl', 'Sidebar aberta · tema escuro', 'Logo retangular usada quando a sidebar está expandida no tema escuro.'],
-                  ['sidebarCollapsedLightUrl', 'Sidebar recolhida · tema claro', 'Ícone quadrado usado quando a sidebar está recolhida no tema claro.'],
-                  ['sidebarCollapsedDarkUrl', 'Sidebar recolhida · tema escuro', 'Ícone quadrado usado quando a sidebar está recolhida no tema escuro.'],
-                ] as const).map(([field, label, hint]) => (
-                  <div key={field} className="space-y-2 rounded-lg border border-border p-3">
-                    <Label>{label}</Label>
-                    <p className="text-xs text-muted-foreground">{hint}</p>
-                    <Input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void handleLogoUpload(field, event)} />
-                    {branding[field] && <AppImage src={branding[field]} alt={label} width={320} height={160} className={field === 'mobileIconUrl' ? 'h-20 w-20 rounded-lg object-contain' : 'h-16 w-full rounded-lg object-contain'} />}
-                    {branding[field] && <Button type="button" variant="outline" size="sm" onClick={() => setBranding((current) => ({ ...current, [field]: '' }))}>Remover</Button>}
-                  </div>
-                ))}
-              </div>
+              <BrandingImagesEditor images={branding} disabled={savingBranding} onChange={(field, value) => setBranding((current) => ({ ...current, [field]: value }))} />
             </div>
             <div className="space-y-3 rounded-lg border border-border p-3">
               <div>
