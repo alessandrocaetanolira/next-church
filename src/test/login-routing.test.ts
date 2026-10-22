@@ -45,4 +45,11 @@ describe('destino do login', () => {
     const response = await proxy(new NextRequest('https://church.test/members'));
     expect(response.headers.get('location')).toBe('https://church.test/auth/login?igreja=igreja-a&reason=session-expired');
   });
+
+  it('recusa uma sessão invalidada antes de liberar a API', async () => {
+    runtime.auth.mockResolvedValue({ user: { authValid: false, tenantId: 'igreja-a', role: 'ADMIN' } });
+    const response = await proxy(new NextRequest('https://church.test/api/members'));
+    expect(response.status).toBe(401);
+    expect(response.headers.get('location')).toBeNull();
+  });
 });

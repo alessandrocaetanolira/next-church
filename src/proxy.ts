@@ -53,6 +53,9 @@ export async function proxy(request: NextRequest) {
   const token = session?.user;
 
   if (nextUrl.pathname.startsWith("/api/")) {
+    if (token?.authValid === false) {
+      return NextResponse.json({ error: "Sessão expirada. Faça login novamente." }, { status: 401 });
+    }
     const planFeature = getPlanFeatureForPath(nextUrl.pathname);
     if (token && planFeature && !hasPlanFeature(token, planFeature)) {
       return NextResponse.json({ error: "Recurso não disponível no plano atual." }, { status: 403 });
@@ -65,9 +68,6 @@ export async function proxy(request: NextRequest) {
   }
 
   if (token.authValid === false) {
-    if (nextUrl.pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Sessão expirada. Faça login novamente." }, { status: 401 });
-    }
     const loginUrl = new URL(getLoginUrl({ pathname: nextUrl.pathname, isPlatformAdmin: token.isPlatformAdmin, tenantSlug: token.tenantSlug }), nextUrl);
     loginUrl.searchParams.set('reason', 'session-expired');
     return NextResponse.redirect(loginUrl);

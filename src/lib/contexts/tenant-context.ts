@@ -17,7 +17,7 @@ export async function requireTenantContext(): Promise<TenantContext> {
     tenantSlug?: string;
   }) | undefined;
 
-  if (!session?.user) throw new UnauthenticatedError();
+  if (!session?.user || session.user.authValid === false) throw new UnauthenticatedError();
   if (!user?.tenantId || !user.id) throw new ForbiddenError('A sessão não possui um tenant válido.');
 
   return {

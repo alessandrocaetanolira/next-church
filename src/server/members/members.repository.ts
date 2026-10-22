@@ -1,12 +1,24 @@
-import type { PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+import type { Prisma, PrismaClient as TenantPrismaClient } from '@/generated/prisma-tenant';
+
+// Seleção pública explícita: campos de credencial nunca entram nos DTOs.
+const memberFields = {
+  id: true, name: true, email: true, phone: true, teamIds: true, parentPhone: true,
+  creditBalance: true, active: true, approved: true, birthDate: true,
+  conversionDate: true, baptismDate: true, previousChurch: true, aboutMe: true,
+  maritalStatus: true, createdAt: true, updatedAt: true, deletedAt: true,
+} satisfies Prisma.MemberSelect;
+
+const userFields = {
+  id: true, email: true, linkedMemberId: true, avatarUrl: true, role: true, permissions: true,
+} satisfies Prisma.UserSelect;
 
 export class MembersRepository {
   constructor(private readonly prisma: TenantPrismaClient) {}
 
   async list() {
     const [members, users] = await Promise.all([
-      this.prisma.member.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } }),
-      this.prisma.user.findMany({ where: { deletedAt: null } }),
+      this.prisma.member.findMany({ where: { deletedAt: null }, select: memberFields, orderBy: { name: 'asc' } }),
+      this.prisma.user.findMany({ where: { deletedAt: null }, select: userFields }),
     ]);
 
     return members.map((member) => {
@@ -26,8 +38,8 @@ export class MembersRepository {
 
   async findById(id: string) {
     const [member, users] = await Promise.all([
-      this.prisma.member.findFirst({ where: { id, deletedAt: null } }),
-      this.prisma.user.findMany({ where: { deletedAt: null } }),
+      this.prisma.member.findFirst({ where: { id, deletedAt: null }, select: memberFields }),
+      this.prisma.user.findMany({ where: { deletedAt: null }, select: userFields }),
     ]);
     if (!member) return null;
 
@@ -44,7 +56,7 @@ export class MembersRepository {
   }
 
   async findPublicProfile(id: string) {
-    const member = await this.prisma.member.findFirst({ where: { id, deletedAt: null, active: true, approved: true } });
+    const member = await this.prisma.member.findFirst({ where: { id, deletedAt: null, active: true, approved: true }, select: memberFields });
     if (!member) return null;
     const user = await this.prisma.user.findFirst({ where: { deletedAt: null, active: true, OR: [{ linkedMemberId: id }, { email: member.email }] }, select: { avatarUrl: true, coverUrl: true, role: true } });
     return { id: member.id, name: member.name, email: member.email, aboutMe: member.aboutMe, phone: member.phone, maritalStatus: member.maritalStatus, avatarUrl: user?.avatarUrl ?? null, coverUrl: user?.coverUrl ?? null, role: user?.role ?? 'MEMBER' };
@@ -60,6 +72,7 @@ export class MembersRepository {
     previousChurch?: string | null; aboutMe?: string | null; maritalStatus?: string | null; approved: boolean;
   }) {
     return this.prisma.member.create({
+      select: memberFields,
       data: {
         id: data.id, name: data.name, email: data.email, phone: data.phone,
         parentPhone: data.parentPhone ?? null, birthDate: data.birthDate ?? null,
@@ -77,6 +90,7 @@ export class MembersRepository {
   }) {
     return this.prisma.member.update({
       where: { id },
+      select: memberFields,
       data: {
         name: data.name, email: data.email, phone: data.phone,
         parentPhone: data.parentPhone ?? null, birthDate: data.birthDate ?? null,

@@ -4,8 +4,13 @@ import { getGlobalClient, getTenantClient } from '@/lib/prisma-factory';
 import { normalizeMemberInput, validateMemberInput } from '@/features/members/lib/member-registration';
 import { generateId } from '@/lib/id';
 import { notifyPendingMemberRegistration } from '@/lib/server/notification-service';
+import { protectPublicAuthRequest } from '@/lib/server/public-auth-rate-limit';
 
 export async function POST(request: NextRequest) {
+  return protectPublicAuthRequest(request, 'register', register);
+}
+
+async function register(request: NextRequest) {
   const body = await request.json();
   const churchSlug = typeof body.churchSlug === 'string' ? body.churchSlug.trim() : '';
 

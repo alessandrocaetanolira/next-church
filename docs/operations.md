@@ -93,6 +93,82 @@ npm run db:tenant:migrate:all -- --tenant ig2 --backup-dir /tmp/church-hub-migra
 
 Use `--output /caminho/relatorio.json` para persistir o relatorio. Uma falha em um tenant nao interrompe os demais, mas encerra o comando com codigo diferente de zero.
 
+## Rate limit de login e cadastro público
+
+O limiter protege somente as tentativas de credenciais do Auth.js e o POST público
+de cadastro. Sessões válidas, atualização de sessão, logout, SSE, Push, sync,
+branding, assets e navegação não consomem essas quotas.
+
+Os contadores ficam em `auth-security.db`, no mesmo diretório configurado por
+`CHURCH_DATABASE_DIR` (padrão: `prisma/databases`). Esse arquivo é independente dos
+bancos global, de igrejas e da Bíblia; sua tabela técnica é inicializada na primeira
+tentativa protegida. O processo precisa de permissão de escrita nesse diretório.
+Não remover o arquivo como procedimento de restart: isso apagaria quotas ativas.
+Todos os processos precisam apontar para o mesmo arquivo persistente, em filesystem
+local compatível com locking SQLite. A implementação não compartilha contadores
+entre hosts com discos independentes; essa topologia exige outro store antes do deploy.
+
+O limiter usa `AUTH_SECRET` ou `NEXTAUTH_SECRET` para derivar chaves HMAC. Não
+armazena senhas ou e-mails em texto nas chaves. Falha do store retorna 503 no
+login/cadastro e não libera tentativas ilimitadas; outras rotas não dependem dele.
+
+| Variável opcional | Padrão | Janela |
+| --- | --- | --- |
+| `AUTH_LOGIN_ACCOUNT_LIMIT` | 5 | 15 minutos por conta e igreja/global |
+| `AUTH_LOGIN_IP_LIMIT` | 60 | 5 minutos, agregado entre contextos de login |
+| `AUTH_REGISTER_ACCOUNT_LIMIT` | 3 | 1 hora por e-mail e igreja |
+| `AUTH_REGISTER_IP_LIMIT` | 5 | 15 minutos, agregado entre igrejas |
+
+Para distinguir IPs reais, definir `AUTH_RATE_LIMIT_IP_HEADER` como
+`cf-connecting-ip`, `x-real-ip` ou `x-forwarded-for` **somente se o proxy conhecido
+sobrescrever o header e impedir acesso direto que permita falsificá-lo**. Em
+`x-forwarded-for`, definir também `AUTH_RATE_LIMIT_PROXY_HOPS` com o número de
+endereços confiáveis a contar da direita. Validar a cadeia real antes de configurar.
+Sem header confiável, ou com valor ausente/inválido, as requisições compartilham
+um bucket de origem não verificada. Isso impede bypass por header arbitrário,
+mas pode bloquear usuários legítimos juntos. Validar configuração de proxy, volume
+em Wi-Fi compartilhado e limites antes de publicar; não presumir IP individual.
+
+Excesso retorna 429 com `Retry-After`. A janela não se estende por novas recusas;
+logout, login bem-sucedido ou restart não zeram o contador. Corpo de tentativa
+pública é limitado a 16 KiB; cadastro exige JSON (charset é aceito), e o callback
+de credenciais preserva o form-urlencoded usado pelo Auth.js.
+
+Roteiro completo, lacunas restantes e aceites de produção:
+[public-auth-security-todo.md](./public-auth-security-todo.md).
+
+### Cloudflare Tunnel em produção
+
+Ambiente confirmado pelo usuário: Cloudflare Tunnel com serviço de origem local.
+Quando `cloudflared` e Next.js executam no mesmo host/namespace de rede:
+
+```bash
+npm run build
+npm run start:tunnel
+```
+
+O script `start:tunnel` define `AUTH_RATE_LIMIT_IP_HEADER=cf-connecting-ip` no
+processo e inicia Next.js somente em `127.0.0.1:3001`. Não precisa alterar `.env`
+para selecionar o header. `npm run dev` e `npm run start` mantêm seus comandos
+existentes para outros cenários.
+
+No serviço publicado pelo túnel, usar `http://127.0.0.1:3001`. O hostname público
+continua HTTPS. Não abrir/redirecionar a porta 3001 no roteador/firewall nem expor
+outro proxy público que aceite esse header arbitrário. Se o conector estiver em
+outro container/host, não presumir que seu loopback aponta para o app: primeiro
+definir a rede privada e a restrição de acesso da origem.
+
+O [CF-Connecting-IP](https://developers.cloudflare.com/fundamentals/reference/http-headers/)
+fornecido pela Cloudflare identifica o visitante. Nesse modo, o limiter ignora
+`X-Forwarded-For`, não exige `AUTH_RATE_LIMIT_PROXY_HOPS`, mantém quotas distintas
+por IP e preserva o limite por conta ao trocar de IP. Header ausente/inválido usa
+quota agregada; nunca confiar automaticamente em outro header enviado pelo cliente.
+
+Antes de publicar, confirmar no ambiente real que o header chega ao Next.js e
+validar tráfego de usuários no mesmo Wi-Fi. Testes com headers simulados e build
+local não comprovam a configuração remota do Tunnel. Não registrar IPs/e-mails
+em texto ou tokens para fazer essa conferência.
+
 ## Sincronização offline da Cantina
 
 Pedidos criados ou operados sem conexão são persistidos no Dexie do dispositivo:
@@ -121,9 +197,12 @@ Senha: 123456
 ```
 
 O usuário acima é do tenant `amesachurch`, cujo `databaseKey` físico é
-`igreja-teste`; comandos de migration usam essa chave física. Na mesma tela `/auth/login`, deixe o
-campo de slug vazio para autenticar o administrador global; nesse caso o sistema
-redireciona para `/admin/tenants`. O administrador global não é um usuário de tenant.
+`igreja-teste`; comandos de migration usam essa chave física. O login da igreja
+usa `/auth/login?igreja=amesachurch`; `/auth/login` sem igreja válida exibe a UI
+404 sem formulário. O smoke local identificou HTTP 200 nessa resposta em streaming;
+o status HTTP é uma pendência separada registrada no plano de segurança.
+O administrador global usa `/admin/login` e segue para `/admin/tenants`, sem
+depender do slug de uma igreja. Ele não é um usuário de tenant.
 
 ## Bíblia completa
 

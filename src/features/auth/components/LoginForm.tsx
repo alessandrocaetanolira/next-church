@@ -135,7 +135,9 @@ export function LoginForm({
       });
 
       if (!result || result.error || result.ok !== true) {
-        const message = result?.error === 'Configuration'
+        const message = result?.status === 429 || result?.code === 'rate_limited'
+          ? 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+          : result?.status === 503 || result?.code === 'temporarily_unavailable' || result?.error === 'Configuration'
           ? 'Não foi possível concluir o acesso agora. Tente novamente mais tarde.'
           : 'Não foi possível entrar. Verifique seus dados e tente novamente.';
         setErrorMessage(message);

@@ -1,7 +1,8 @@
 # TODO principal — Church App
 
-Atualizado em **16/10/2026**, incluindo o plano de compra unificada da Cantina e a
-análise do módulo de Escalas, após auditoria
+Atualizado em **21/10/2026**, incluindo o plano de segurança do login/cadastro
+público com rate limit e testes de não regressão, além do plano de compra unificada
+da Cantina e da análise do módulo de Escalas, após auditoria
 de código, documentação, histórico recente e testes existentes. Este é o índice
 canônico de prioridade. Os documentos de domínio continuam contendo contratos e
 checklists detalhados, mas não substituem a ordem definida aqui.
@@ -73,6 +74,14 @@ Referência: [production-stability-todo.md](./production-stability-todo.md) e
 
 ### 2. Sessões, revogação e acesso
 
+- [~] Executar o plano de [segurança do login e cadastro público](./public-auth-security-todo.md)
+      na ordem S0–S8: conter hashes nas respostas, corrigir revogação nas APIs e no
+      global, garantir rate limit atômico no servidor e validar entrada/origem/XSS.
+      Preservar fluxos legítimos, aprovação pastoral, PWA/offline e outros forms;
+      usar Zod/RHF já declarados, sem downloads ou mudança de política das senhas
+      existentes. Implementação inicial P0 de hashes, sessão e limiter aplicada,
+      com testes locais; faltam os demais itens e aceites operacionais descritos
+      no registro do plano. Cada etapa possui testes e critérios de aceite próprios.
 - [~] Validar em produção que membro arquivado/revogado perde acesso na requisição
       seguinte; tenant desativado já possui aceite local, mas precisa repetir no
       ambiente publicado.
@@ -377,6 +386,15 @@ Referência: [email-todo.md](./email-todo.md).
 
 ## Próxima ação recomendada
 
+**Frente solicitada em 21/10 — segurança pública:** seguir
+[public-auth-security-todo.md](./public-auth-security-todo.md). Caracterização local
+e implementação inicial P0 de segredos, sessões e rate limit já aplicadas, com
+testes; concluir aceites operacionais e demais etapas sem mudar fluxos legítimos.
+A evidência de produção não comprova execução de XSS; lacunas restantes,
+implementação e resultados estão separados no registro do plano.
+Esta frente tem prioridade de segurança; as pendências de produto abaixo permanecem
+registradas, sem alteração dos seus fluxos nesta entrega.
+
 **Frente solicitada em 16/10 — compra unificada da Cantina:** base de acesso,
 vínculo, validação transacional e migração das entradas aplicada. Pull/push
 agregados autorizados e separados em camadas; replay do push é transacional.
@@ -407,6 +425,7 @@ suspensão continua necessário para considerar sua correção concluída.
 
 ## Documentos de detalhe
 
+- [Segurança do login e cadastro público](./public-auth-security-todo.md)
 - [Estabilização de produção](./production-stability-todo.md)
 - [Separação de tenants](./tenant-separation-todo.md)
 - [Offline-first](./offline-first-todo.md)

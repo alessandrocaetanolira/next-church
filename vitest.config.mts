@@ -13,6 +13,8 @@ export default defineConfig({
     fileParallelism: false,
     maxWorkers: 1,
     setupFiles: ['./src/test/setup.ts'],
+    // Auth.js usa imports next/server sem extensão que exigem resolução pelo Vite.
+    server: { deps: { inline: ['next-auth'] } },
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
     },

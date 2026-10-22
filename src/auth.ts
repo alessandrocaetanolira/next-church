@@ -15,6 +15,7 @@ import { getGlobalClient, getTenantClient } from "@/lib/prisma-factory";
 import bcrypt from "bcryptjs";
 import { normalizePlanFeatures } from '@/lib/plan-features';
 import { serverLogger } from '@/lib/server/logger';
+import { ensureLoginRateLimit } from '@/lib/server/public-auth-rate-limit';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -30,8 +31,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
        * @param {Object} credentials - Credenciais enviadas pelo formulário de login.
        * @returns {Promise<Object|null>} Objeto do usuário autenticado ou null se falhar.
        */
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+      async authorize(credentials, request) {
+        await ensureLoginRateLimit(request, credentials);
+        if (typeof credentials?.email !== 'string' || typeof credentials?.password !== 'string'
+          || !credentials.email.trim() || !credentials.password) {
           serverLogger.warn('Auth', 'Credenciais incompletas.');
           return null;
         }
@@ -93,7 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             where: { email },
           });
 
-          if (!user || !user.active || !user.passwordHash) {
+          if (!user || !user.active || user.deletedAt || !user.passwordHash) {
              serverLogger.warn('Auth', 'Usuário não encontrado, inativo ou sem senha', { email, churchSlug, databaseKey });
              return null;
           }
@@ -168,6 +171,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.planFeatures = (user as any).planFeatures as string[] | undefined;
       }
 
+      // O global não possui tenantSlug; sua revogação precisa de checagem própria.
+      if (!user && token.isPlatformAdmin && token.authValid !== false) {
+        try {
+          const administrator = token.id
+            ? await getGlobalClient().platformAdmin.findUnique({ where: { id: String(token.id) } })
+            : null;
+          if (!administrator || !administrator.active || administrator.version !== token.version) {
+            token.authValid = false;
+          } else {
+            token.role = administrator.role;
+            token.permissions = administrator.permissions?.split(',').map((permission) => permission.trim()).filter(Boolean) ?? [];
+          }
+        } catch (error) {
+          serverLogger.error('Auth', 'Não foi possível revalidar a sessão global', error);
+          token.authValid = false;
+        }
+      }
+
       // Revalida o tenant a cada leitura do JWT para invalidar sessões antigas
       // quando o tenant é desativado ou sua versão de autorização muda.
       if (!user && token.tenantSlug && token.authValid !== false) {
@@ -200,19 +221,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // O SSE de permissões dispara `useSession().update()` no cliente. Como
       // as APIs usam o JWT no servidor, recarregamos o acesso do banco para
       // evitar exigir logout/login após uma alteração de permissões.
-      if (trigger === 'update' && token.email) {
+      if (trigger === 'update' && token.email && token.authValid !== false) {
         try {
-          if (token.isPlatformAdmin) {
-            const platformAdmin = await getGlobalClient().platformAdmin.findUnique({ where: { email: token.email } });
-            if (platformAdmin) {
-              token.role = platformAdmin.role;
-              token.permissions = platformAdmin.permissions?.split(',').map((permission: string) => permission.trim()).filter(Boolean) ?? [];
-              token.version = platformAdmin.version;
-            }
-          } else if (token.tenantId) {
+          if (!token.isPlatformAdmin && token.tenantId) {
             const tenantClient = getTenantClient(String(token.tenantId));
             const currentUser = await tenantClient.user.findUnique({ where: { email: token.email } });
-            if (currentUser) {
+            if (currentUser && currentUser.active && !currentUser.deletedAt) {
               token.role = currentUser.role;
               token.permissions = currentUser.permissions?.split(',').map((permission: string) => permission.trim()).filter(Boolean) ?? [];
               token.linkedMemberId = currentUser.linkedMemberId;
@@ -222,11 +236,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               );
               token.picture = userProfile?.avatarUrl ?? null;
               token.version = currentUser.version;
-              token.authValid = Boolean(currentUser.active && !currentUser.deletedAt);
               const linkedMember = currentUser.linkedMemberId
                 ? await tenantClient.member.findUnique({ where: { id: currentUser.linkedMemberId }, select: { teamIds: true } })
                 : null;
               token.teamIds = linkedMember?.teamIds?.split(',').map((teamId) => teamId.trim()).filter(Boolean) ?? [];
+            } else {
+              token.authValid = false;
             }
           }
         } catch (error) {

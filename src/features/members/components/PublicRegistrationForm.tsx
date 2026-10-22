@@ -14,6 +14,7 @@ import type { MaritalStatus } from '@/features/members/lib/member-registration';
 import { registerPublicMember, getPublicChurchBranding, type PublicChurchBranding } from '@/services/auth/public-auth-api';
 import { AppImage } from '@/components/shared';
 import { maskPhone } from '@/lib/utils';
+import { ApiRequestError } from '@/lib/api';
 
 interface RegistrationState {
   name: string;
@@ -115,8 +116,12 @@ export function PublicRegistrationForm() {
 
       setSubmitted(true);
       toast.success('Cadastro enviado para aprovação.');
-    } catch {
-      toast.error('Não foi possível enviar seu cadastro. Verifique os dados e tente novamente.');
+    } catch (error) {
+      toast.error(error instanceof ApiRequestError && error.status === 429
+        ? 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+        : error instanceof ApiRequestError && error.status === 503
+          ? 'Não foi possível enviar agora. Tente novamente mais tarde.'
+          : 'Não foi possível enviar seu cadastro. Verifique os dados e tente novamente.');
     } finally {
       setLoading(false);
     }

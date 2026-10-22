@@ -8,7 +8,7 @@ import { MembersService } from '@/server/members/members.service';
 
 async function getController() {
   const session = await auth();
-  if (!session?.user?.tenantId) throw new UnauthenticatedError();
+  if (!session?.user?.tenantId || session.user.authValid === false) throw new UnauthenticatedError();
   const prisma = getTenantClient(session.user.tenantId);
   return { user: session.user, service: new MembersService(new MembersRepository(prisma)) };
 }

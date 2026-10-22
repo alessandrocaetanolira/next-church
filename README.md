@@ -328,11 +328,22 @@ o app com o administrador padrão.
 npm run dev
 ```
 
-Os comandos `npm run dev` e `npm run start` usam a porta **3001**. Ao usar túnel
-SSH ou proxy reverso, configure o destino para `localhost:3001`.
+Os comandos `npm run dev` e `npm run start` usam a porta **3001**.
 
-Abra `http://localhost:3001/auth/login` para usuários da igreja. O administrador
-global usa a mesma tela deixando o campo de slug vazio.
+Em produção com Cloudflare Tunnel no mesmo host, use:
+
+```bash
+npm run build
+npm run start:tunnel
+```
+
+Esse comando limita a escuta a `127.0.0.1:3001` e configura o rate limit para ler
+`CF-Connecting-IP`. O serviço de origem do túnel deve apontar para
+`http://127.0.0.1:3001`. Operação, quotas e testes:
+[docs/operations.md](./docs/operations.md#cloudflare-tunnel-em-produção).
+
+Usuários da igreja acessam `/auth/login?igreja=<slug>`; o administrador global usa
+`/admin/login`. A rota de igreja sem slug válido não exibe formulário.
 
 ## Organizacao
 

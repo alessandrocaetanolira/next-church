@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack --port 3001",
     "build": "next build --turbopack",
     "start": "next start --port 3001",
+    "start:tunnel": "AUTH_RATE_LIMIT_IP_HEADER=cf-connecting-ip next start --hostname 127.0.0.1 --port 3001",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --pretty false",
     "typecheck:build": "tsc -p tsconfig.build.json --noEmit --pretty false",
